@@ -1,0 +1,486 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-menu_category-1",
+  "proposals": [
+    {
+      "concept_id": "9653499a-a3c9-4f91-8980-73d2ba1d4403",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "brunch",
+      "base": {
+        "description": "Offres brunch",
+        "description_i18n": {
+          "de": "Brunch-Angebote",
+          "en": "Brunch offers",
+          "es": "Ofertas de brunch",
+          "fr": "Offres brunch"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9653499a-a3c9-4f91-8980-73d2ba1d4403. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9653499a-a3c9-4f91-8980-73d2ba1d4403"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie pour une offre de repas combinant des éléments de petit-déjeuner et de déjeuner, ou pour les plats rattachés à cette offre.",
+        "description_i18n": {
+          "de": "Kategorie für ein Mahlzeitenangebot mit Frühstücks- und Mittagessenelementen oder für die diesem Angebot zugeordneten Gerichte.",
+          "en": "Category for a meal offer combining breakfast and lunch elements, or for dishes belonging to that offer.",
+          "es": "Categoría para una oferta que combina elementos de desayuno y almuerzo, o para los platos asociados a ella.",
+          "fr": "Catégorie pour une offre de repas combinant des éléments de petit-déjeuner et de déjeuner, ou pour les plats rattachés à cette offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9653499a-a3c9-4f91-8980-73d2ba1d4403. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9653499a-a3c9-4f91-8980-73d2ba1d4403"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d8f1c6b5-b3de-45c9-b3d8-3b5c4104dfc3",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "cocktails",
+      "base": {
+        "description": "Cocktails à la carte",
+        "description_i18n": {
+          "de": "Cocktails auf der Karte",
+          "en": "Cocktails on the menu",
+          "es": "Cócteles de la carta",
+          "fr": "Cocktails à la carte"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d8f1c6b5-b3de-45c9-b3d8-3b5c4104dfc3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d8f1c6b5-b3de-45c9-b3d8-3b5c4104dfc3"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Rubrique regroupant les boissons préparées par mélange d'ingrédients et proposées comme cocktails, avec ou sans alcool selon la recette.",
+        "description_i18n": {
+          "de": "Rubrik für aus mehreren Zutaten gemischte und als Cocktails angebotene Getränke, je nach Rezept mit oder ohne Alkohol.",
+          "en": "Section grouping drinks prepared by mixing ingredients and offered as cocktails, with or without alcohol depending on the recipe.",
+          "es": "Sección que agrupa bebidas preparadas mezclando ingredientes y ofrecidas como cócteles, con o sin alcohol según la receta.",
+          "fr": "Rubrique regroupant les boissons préparées par mélange d'ingrédients et proposées comme cocktails, avec ou sans alcool selon la recette."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d8f1c6b5-b3de-45c9-b3d8-3b5c4104dfc3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d8f1c6b5-b3de-45c9-b3d8-3b5c4104dfc3"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8dc161c0-4796-4609-a79a-fa625aa39e3d",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "dessert",
+      "base": {
+        "description": "Desserts et douceurs",
+        "description_i18n": {
+          "de": "Desserts und süße Speisen",
+          "en": "Desserts and sweets",
+          "es": "Postres y dulces",
+          "fr": "Desserts et douceurs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8dc161c0-4796-4609-a79a-fa625aa39e3d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8dc161c0-4796-4609-a79a-fa625aa39e3d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Rubrique pour les préparations sucrées et douceurs proposées en fin de repas ou comme desserts à la carte.",
+        "description_i18n": {
+          "de": "Rubrik für süße Zubereitungen und Süßspeisen zum Abschluss einer Mahlzeit oder als Desserts auf der Karte.",
+          "en": "Section for sweet preparations and treats offered at the end of a meal or as desserts on the menu.",
+          "es": "Sección para preparaciones dulces y otras elaboraciones ofrecidas al final de la comida o como postres a la carta.",
+          "fr": "Rubrique pour les préparations sucrées et douceurs proposées en fin de repas ou comme desserts à la carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8dc161c0-4796-4609-a79a-fa625aa39e3d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8dc161c0-4796-4609-a79a-fa625aa39e3d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3375a5aa-b9d4-4c3f-9509-a3b2b99d7692",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "drinks",
+      "base": {
+        "description": "Boissons et cocktails",
+        "description_i18n": {
+          "de": "Getränke und Cocktails",
+          "en": "Beverages and cocktails",
+          "es": "Bebidas y cócteles",
+          "fr": "Boissons et cocktails"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3375a5aa-b9d4-4c3f-9509-a3b2b99d7692. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3375a5aa-b9d4-4c3f-9509-a3b2b99d7692"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Rubrique générale des boissons proposées dans la carte ; des catégories plus précises, telles que vins ou cocktails, peuvent être utilisées pour les distinguer.",
+        "description_i18n": {
+          "de": "Allgemeine Rubrik für angebotene Getränke; genauere Kategorien wie Weine oder Cocktails können zur Unterscheidung dienen.",
+          "en": "General section for drinks offered on the menu; more specific categories, such as wines or cocktails, may be used to distinguish them.",
+          "es": "Sección general de bebidas ofrecidas en la carta; pueden utilizarse categorías más específicas, como vinos o cócteles, para distinguirlas.",
+          "fr": "Rubrique générale des boissons proposées dans la carte ; des catégories plus précises, telles que vins ou cocktails, peuvent être utilisées pour les distinguer."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3375a5aa-b9d4-4c3f-9509-a3b2b99d7692. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3375a5aa-b9d4-4c3f-9509-a3b2b99d7692"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b533583e-d601-4240-b87d-cf7ffdb634ad",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "entree",
+      "base": {
+        "description": "Entrées et apéritifs",
+        "description_i18n": {
+          "de": "Vorspeisen und Appetithäppchen",
+          "en": "Starters and appetisers",
+          "es": "Entrantes y aperitivos",
+          "fr": "Entrées et apéritifs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b533583e-d601-4240-b87d-cf7ffdb634ad. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b533583e-d601-4240-b87d-cf7ffdb634ad"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Rubrique des plats servis au début d'un repas, avant le plat principal ; elle ne désigne pas le droit d'entrée dans un établissement.",
+        "description_i18n": {
+          "de": "Rubrik für zu Beginn einer Mahlzeit vor dem Hauptgericht servierte Speisen; sie bezeichnet keinen Eintritt in einen Betrieb.",
+          "en": "Section for dishes served at the start of a meal before the main course; it does not designate admission to an establishment.",
+          "es": "Sección de platos servidos al comienzo de una comida, antes del plato principal; no designa el acceso a un establecimiento.",
+          "fr": "Rubrique des plats servis au début d'un repas, avant le plat principal ; elle ne désigne pas le droit d'entrée dans un établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b533583e-d601-4240-b87d-cf7ffdb634ad. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b533583e-d601-4240-b87d-cf7ffdb634ad"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3834f6a9-8cd1-449d-8482-e47ba7615adb",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "main",
+      "base": {
+        "description": "Plats principaux et spécialités",
+        "description_i18n": {
+          "de": "Hauptgerichte und Spezialitäten",
+          "en": "Main courses and specialties",
+          "es": "Platos principales y especialidades",
+          "fr": "Plats principaux et spécialités"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3834f6a9-8cd1-449d-8482-e47ba7615adb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3834f6a9-8cd1-449d-8482-e47ba7615adb"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Rubrique des plats constituant la partie principale du repas, notamment les spécialités proposées par l'établissement.",
+        "description_i18n": {
+          "de": "Rubrik für Gerichte, die den Hauptteil einer Mahlzeit bilden, einschließlich der Spezialitäten des Betriebs.",
+          "en": "Section for dishes forming the main part of a meal, including the establishment's specialities.",
+          "es": "Sección de platos que constituyen la parte principal de la comida, incluidas las especialidades del establecimiento.",
+          "fr": "Rubrique des plats constituant la partie principale du repas, notamment les spécialités proposées par l'établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3834f6a9-8cd1-449d-8482-e47ba7615adb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3834f6a9-8cd1-449d-8482-e47ba7615adb"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "22dc101b-c412-46a3-9c15-4477a9783cdf",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "menu_degustation",
+      "base": {
+        "description": "Menus gastronomiques dégustation",
+        "description_i18n": {
+          "de": "Gastronomische Degustationsmenüs",
+          "en": "Gastronomic tasting menus",
+          "es": "Menús gastronómicos de degustación",
+          "fr": "Menus gastronomiques dégustation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/22dc101b-c412-46a3-9c15-4477a9783cdf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/22dc101b-c412-46a3-9c15-4477a9783cdf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie de menu proposant une succession de préparations pour découvrir la cuisine de l'établissement, selon une composition annoncée.",
+        "description_i18n": {
+          "de": "Menükategorie mit einer Abfolge von Zubereitungen zum Kennenlernen der Küche des Betriebs nach einer angegebenen Zusammenstellung.",
+          "en": "Menu category offering a succession of preparations to explore the establishment's cooking, according to a stated composition.",
+          "es": "Categoría de menú que propone una sucesión de preparaciones para descubrir la cocina del establecimiento, según una composición anunciada.",
+          "fr": "Catégorie de menu proposant une succession de préparations pour découvrir la cuisine de l'établissement, selon une composition annoncée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/22dc101b-c412-46a3-9c15-4477a9783cdf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/22dc101b-c412-46a3-9c15-4477a9783cdf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "95afc25f-d2ba-4a2f-a532-11873011e556",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "menu_enfant",
+      "base": {
+        "description": "Menus dédiés aux enfants",
+        "description_i18n": {
+          "de": "Menüs für Kinder",
+          "en": "Menus for children",
+          "es": "Menús para niños",
+          "fr": "Menus dédiés aux enfants"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95afc25f-d2ba-4a2f-a532-11873011e556. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95afc25f-d2ba-4a2f-a532-11873011e556"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie de menu ou de plats conçus pour le public enfant ; les portions, le contenu et les conditions d'âge sont précisés par l'établissement.",
+        "description_i18n": {
+          "de": "Kategorie für auf Kinder ausgerichtete Menüs oder Gerichte; Portionen, Inhalt und Altersbedingungen werden vom Betrieb angegeben.",
+          "en": "Category for menus or dishes designed for children; portions, contents and age conditions are specified by the establishment.",
+          "es": "Categoría de menús o platos concebidos para niños; el establecimiento precisa las raciones, el contenido y las condiciones de edad.",
+          "fr": "Catégorie de menu ou de plats conçus pour le public enfant ; les portions, le contenu et les conditions d'âge sont précisés par l'établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95afc25f-d2ba-4a2f-a532-11873011e556. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95afc25f-d2ba-4a2f-a532-11873011e556"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a1a78b88-8d7a-4624-81ba-5d854eed3050",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "menu_groupe",
+      "base": {
+        "description": "Menus pour groupes",
+        "description_i18n": {
+          "de": "Menüs für Gruppen",
+          "en": "Menus for groups",
+          "es": "Menús para grupos",
+          "fr": "Menus pour groupes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a1a78b88-8d7a-4624-81ba-5d854eed3050. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a1a78b88-8d7a-4624-81ba-5d854eed3050"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie de menu préparé pour l'accueil de plusieurs convives en groupe, dont la composition et les conditions sont annoncées par l'établissement.",
+        "description_i18n": {
+          "de": "Kategorie für ein Menü zur Bewirtung mehrerer Gäste als Gruppe, dessen Zusammenstellung und Bedingungen der Betrieb angibt.",
+          "en": "Category for a menu prepared for several diners attending as a group, with composition and conditions stated by the establishment.",
+          "es": "Categoría de menú preparado para varios comensales en grupo, con composición y condiciones indicadas por el establecimiento.",
+          "fr": "Catégorie de menu préparé pour l'accueil de plusieurs convives en groupe, dont la composition et les conditions sont annoncées par l'établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a1a78b88-8d7a-4624-81ba-5d854eed3050. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a1a78b88-8d7a-4624-81ba-5d854eed3050"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "68da955a-411e-47d7-b7b3-e4e814fbfb3a",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "petit_dejeuner",
+      "base": {
+        "description": "Formules petit-déjeuner",
+        "description_i18n": {
+          "de": "Frühstücksangebote",
+          "en": "Breakfast options",
+          "es": "Opciones de desayuno",
+          "fr": "Formules petit-déjeuner"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/68da955a-411e-47d7-b7b3-e4e814fbfb3a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/68da955a-411e-47d7-b7b3-e4e814fbfb3a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie de formule ou de préparations proposées pour le premier repas de la journée ; elle ne désigne pas à elle seule un forfait d'hébergement.",
+        "description_i18n": {
+          "de": "Kategorie für ein Angebot oder Zubereitungen zur ersten Mahlzeit des Tages; sie bezeichnet für sich genommen kein Unterkunftspaket.",
+          "en": "Category for a set offer or preparations served as the first meal of the day; it does not by itself designate an accommodation package.",
+          "es": "Categoría de fórmula o preparaciones ofrecidas para la primera comida del día; por sí sola no designa un paquete de alojamiento.",
+          "fr": "Catégorie de formule ou de préparations proposées pour le premier repas de la journée ; elle ne désigne pas à elle seule un forfait d'hébergement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/68da955a-411e-47d7-b7b3-e4e814fbfb3a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/68da955a-411e-47d7-b7b3-e4e814fbfb3a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5b64bf84-7da7-4ee9-8667-c3dc25406908",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "snacks",
+      "base": {
+        "description": "En-cas et collations",
+        "description_i18n": {
+          "de": "Kleine Speisen und Zwischenmahlzeiten",
+          "en": "Snacks and light bites",
+          "es": "Tentempiés y aperitivos",
+          "fr": "En-cas et collations"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b64bf84-7da7-4ee9-8667-c3dc25406908. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b64bf84-7da7-4ee9-8667-c3dc25406908"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Rubrique des petites préparations ou collations proposées entre les repas ou pour une consommation légère, sans constituer nécessairement un menu complet.",
+        "description_i18n": {
+          "de": "Rubrik für kleine Speisen oder Zwischenmahlzeiten zum Verzehr zwischen Mahlzeiten oder als leichte Verpflegung, ohne zwangsläufig ein vollständiges Menü zu bilden.",
+          "en": "Section for small preparations or light refreshments offered between meals or for light eating, without necessarily forming a complete set menu.",
+          "es": "Sección de pequeñas preparaciones o tentempiés ofrecidos entre comidas o para un consumo ligero, sin constituir necesariamente un menú completo.",
+          "fr": "Rubrique des petites préparations ou collations proposées entre les repas ou pour une consommation légère, sans constituer nécessairement un menu complet."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b64bf84-7da7-4ee9-8667-c3dc25406908. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b64bf84-7da7-4ee9-8667-c3dc25406908"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a1fbd7c4-f37b-48d2-b850-d68a7e0c8183",
+      "domain": "menu_category",
+      "context_key": "",
+      "code": "wines",
+      "base": {
+        "description": "Vins à la carte",
+        "description_i18n": {
+          "de": "Weine auf der Speisekarte",
+          "en": "Wines on the menu",
+          "es": "Vinos de la carta",
+          "fr": "Vins à la carte"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a1fbd7c4-f37b-48d2-b850-d68a7e0c8183. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a1fbd7c4-f37b-48d2-b850-d68a7e0c8183"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Rubrique réservée aux vins proposés par l'établissement, au verre, à la bouteille ou selon les présentations indiquées sur la carte.",
+        "description_i18n": {
+          "de": "Rubrik für die vom Betrieb angebotenen Weine, im Glas, in der Flasche oder in den auf der Karte angegebenen Formen.",
+          "en": "Section for wines offered by the establishment, by the glass, bottle or other presentations stated on the menu.",
+          "es": "Sección de vinos ofrecidos por el establecimiento, por copa, botella u otras presentaciones indicadas en la carta.",
+          "fr": "Rubrique réservée aux vins proposés par l'établissement, au verre, à la bouteille ou selon les présentations indiquées sur la carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a1fbd7c4-f37b-48d2-b850-d68a7e0c8183. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a1fbd7c4-f37b-48d2-b850-d68a7e0c8183"
+          }
+        ]
+      }
+    }
+  ]
+}

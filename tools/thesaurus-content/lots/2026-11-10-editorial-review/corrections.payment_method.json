@@ -1,0 +1,664 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-payment_method-1",
+  "proposals": [
+    {
+      "concept_id": "1fb2e1cf-e0f2-42ac-9798-212ad7873706",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "american_express",
+      "base": {
+        "description": "Carte American Express",
+        "description_i18n": {
+          "de": "Karte von American Express",
+          "en": "American Express card",
+          "es": "Tarjeta American Express",
+          "fr": "Carte American Express"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1fb2e1cf-e0f2-42ac-9798-212ad7873706. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1fb2e1cf-e0f2-42ac-9798-212ad7873706"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Paiement par une carte du réseau American Express déclaré comme accepté par le prestataire ; les autres réseaux de cartes sont renseignés séparément.",
+        "description_i18n": {
+          "de": "Vom Anbieter als akzeptiert angegebene Zahlung mit einer Karte des American-Express-Netzes; andere Kartennetze werden gesondert erfasst.",
+          "en": "Payment using an American Express network card declared as accepted by the provider; other card networks are recorded separately.",
+          "es": "Pago con una tarjeta de la red American Express declarado como aceptado por el prestador; las demás redes se registran por separado.",
+          "fr": "Paiement par une carte du réseau American Express déclaré comme accepté par le prestataire ; les autres réseaux de cartes sont renseignés séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1fb2e1cf-e0f2-42ac-9798-212ad7873706. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1fb2e1cf-e0f2-42ac-9798-212ad7873706"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7011df08-332a-4659-a98d-8c6b60a864dd",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "apple_pay",
+      "base": {
+        "description": "Paiement sans contact Apple Pay",
+        "description_i18n": {
+          "de": "Kontaktloses Bezahlen mit Apple Pay",
+          "en": "Apple Pay contactless payment",
+          "es": "Pago sin contacto con Apple Pay",
+          "fr": "Paiement sans contact Apple Pay"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7011df08-332a-4659-a98d-8c6b60a864dd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7011df08-332a-4659-a98d-8c6b60a864dd"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Moyen de paiement utilisant le portefeuille numérique Apple Pay, renseigné lorsque le prestataire déclare accepter ce service.",
+        "description_i18n": {
+          "de": "Zahlungsart über die digitale Geldbörse Apple Pay, wenn der Anbieter die Akzeptanz dieses Dienstes angibt.",
+          "en": "Payment method using the Apple Pay digital wallet, recorded when the provider declares acceptance of that service.",
+          "es": "Medio de pago mediante la cartera digital Apple Pay, registrado cuando el prestador declara aceptar ese servicio.",
+          "fr": "Moyen de paiement utilisant le portefeuille numérique Apple Pay, renseigné lorsque le prestataire déclare accepter ce service."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7011df08-332a-4659-a98d-8c6b60a864dd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7011df08-332a-4659-a98d-8c6b60a864dd"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "85559901-4521-4c0a-a67b-5b06e00d868a",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "carte_bleue",
+      "base": {
+        "description": "Carte bancaire française",
+        "description_i18n": {
+          "de": "Französische Bankkarte",
+          "en": "French Carte Bleue card",
+          "es": "Tarjeta francesa Carte Bleue",
+          "fr": "Carte bancaire française"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/85559901-4521-4c0a-a67b-5b06e00d868a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/85559901-4521-4c0a-a67b-5b06e00d868a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Paiement par carte bancaire enregistré sous l'appellation « Carte Bleue » ; les réseaux de cartes spécifiquement acceptés peuvent être renseignés séparément.",
+        "description_i18n": {
+          "de": "Unter der Bezeichnung Carte Bleue erfasste Bankkartenzahlung; konkret akzeptierte Kartennetze können gesondert angegeben werden.",
+          "en": "Bank-card payment recorded under the name Carte Bleue; specifically accepted card networks may be recorded separately.",
+          "es": "Pago con tarjeta bancaria registrado con la denominación Carte Bleue; las redes específicas aceptadas pueden indicarse por separado.",
+          "fr": "Paiement par carte bancaire enregistré sous l'appellation « Carte Bleue » ; les réseaux de cartes spécifiquement acceptés peuvent être renseignés séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/85559901-4521-4c0a-a67b-5b06e00d868a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/85559901-4521-4c0a-a67b-5b06e00d868a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f5877b61-1aa3-4f91-8519-dca6af9f259d",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "cheque",
+      "base": {
+        "description": "Chèques bancaires",
+        "description_i18n": {
+          "de": "Bankschecks",
+          "en": "Cheque payment",
+          "es": "Pago con cheque",
+          "fr": "Chèques bancaires"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f5877b61-1aa3-4f91-8519-dca6af9f259d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f5877b61-1aa3-4f91-8519-dca6af9f259d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Règlement au moyen d'un chèque bancaire remis au prestataire, selon les conditions d'acceptation qu'il indique.",
+        "description_i18n": {
+          "de": "Zahlung mit einem dem Anbieter übergebenen Bankscheck nach dessen angegebenen Annahmebedingungen.",
+          "en": "Payment by a bank cheque delivered to the provider, subject to the acceptance conditions it states.",
+          "es": "Pago mediante un cheque bancario entregado al prestador, según las condiciones de aceptación que indique.",
+          "fr": "Règlement au moyen d'un chèque bancaire remis au prestataire, selon les conditions d'acceptation qu'il indique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f5877b61-1aa3-4f91-8519-dca6af9f259d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f5877b61-1aa3-4f91-8519-dca6af9f259d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8bd8968e-170a-4585-af87-f4c59ffe6ec8",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "cheque_vacances",
+      "base": {
+        "description": "Chèques vacances ANCV",
+        "description_i18n": {
+          "de": "ANCV-Urlaubsgutscheine",
+          "en": "ANCV holiday vouchers",
+          "es": "Cheques de vacaciones ANCV",
+          "fr": "Chèques vacances ANCV"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8bd8968e-170a-4585-af87-f4c59ffe6ec8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8bd8968e-170a-4585-af87-f4c59ffe6ec8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Règlement au moyen de Chèques-Vacances ANCV accepté par le prestataire ; les formats et modalités admis sont ceux qu'il précise.",
+        "description_i18n": {
+          "de": "Vom Anbieter akzeptierte Zahlung mit ANCV-Urlaubsgutscheinen Chèques-Vacances; zugelassene Formate und Modalitäten werden von ihm angegeben.",
+          "en": "Payment using ANCV Chèques-Vacances holiday vouchers accepted by the provider; permitted formats and arrangements are those it specifies.",
+          "es": "Pago mediante vales vacacionales Chèques-Vacances de ANCV aceptado por el prestador; los formatos y modalidades admitidos son los que este precise.",
+          "fr": "Règlement au moyen de Chèques-Vacances ANCV accepté par le prestataire ; les formats et modalités admis sont ceux qu'il précise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8bd8968e-170a-4585-af87-f4c59ffe6ec8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8bd8968e-170a-4585-af87-f4c59ffe6ec8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "41bdb385-6f5c-45d4-8c1e-be88f4179825",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "crypto",
+      "base": {
+        "description": "Paiement en cryptomonnaies acceptées",
+        "description_i18n": {
+          "de": "Bezahlung mit akzeptierten Kryptowährungen",
+          "en": "Payment in accepted cryptocurrencies",
+          "es": "Pago con criptomonedas aceptadas",
+          "fr": "Paiement en cryptomonnaies acceptées"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/41bdb385-6f5c-45d4-8c1e-be88f4179825. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/41bdb385-6f5c-45d4-8c1e-be88f4179825"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Règlement dans une ou plusieurs cryptomonnaies que le prestataire déclare accepter et précise dans les conditions de son offre.",
+        "description_i18n": {
+          "de": "Zahlung in einer oder mehreren Kryptowährungen, deren Akzeptanz der Anbieter in seinen Angebotsbedingungen angibt und näher bestimmt.",
+          "en": "Payment in one or more cryptocurrencies that the provider declares as accepted and specifies in its offer conditions.",
+          "es": "Pago en una o varias criptomonedas que el prestador declara aceptar y precisa en las condiciones de su oferta.",
+          "fr": "Règlement dans une ou plusieurs cryptomonnaies que le prestataire déclare accepter et précise dans les conditions de son offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/41bdb385-6f5c-45d4-8c1e-be88f4179825. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/41bdb385-6f5c-45d4-8c1e-be88f4179825"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "61d0a36f-076e-4b76-b204-3cd2b0e6de4b",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "especes",
+      "base": {
+        "description": "Paiement en liquide",
+        "description_i18n": {
+          "de": "Barzahlung",
+          "en": "Cash payment",
+          "es": "Pago en efectivo",
+          "fr": "Paiement en liquide"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/61d0a36f-076e-4b76-b204-3cd2b0e6de4b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/61d0a36f-076e-4b76-b204-3cd2b0e6de4b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Paiement par remise de billets ou de pièces au prestataire, distinct d'un virement ou d'un paiement par carte.",
+        "description_i18n": {
+          "de": "Zahlung durch Übergabe von Banknoten oder Münzen an den Anbieter, im Unterschied zu einer Überweisung oder Kartenzahlung.",
+          "en": "Payment by handing banknotes or coins to the provider, distinct from a bank transfer or card payment.",
+          "es": "Pago mediante la entrega de billetes o monedas al prestador, distinto de una transferencia bancaria o de un pago con tarjeta.",
+          "fr": "Paiement par remise de billets ou de pièces au prestataire, distinct d'un virement ou d'un paiement par carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/61d0a36f-076e-4b76-b204-3cd2b0e6de4b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/61d0a36f-076e-4b76-b204-3cd2b0e6de4b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aff75366-045f-420d-afa7-3840785c544b",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "google_pay",
+      "base": {
+        "description": "Paiement sans contact Google Pay",
+        "description_i18n": {
+          "de": "Kontaktloses Bezahlen mit Google Pay",
+          "en": "Google Pay contactless payment",
+          "es": "Pago sin contacto con Google Pay",
+          "fr": "Paiement sans contact Google Pay"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aff75366-045f-420d-afa7-3840785c544b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aff75366-045f-420d-afa7-3840785c544b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Moyen de paiement utilisant le service Google Pay, renseigné lorsque le prestataire déclare accepter ce portefeuille numérique.",
+        "description_i18n": {
+          "de": "Zahlungsart über Google Pay, wenn der Anbieter die Akzeptanz dieser digitalen Geldbörse angibt.",
+          "en": "Payment method using Google Pay, recorded when the provider declares acceptance of that digital wallet.",
+          "es": "Medio de pago mediante Google Pay, registrado cuando el prestador declara aceptar esa cartera digital.",
+          "fr": "Moyen de paiement utilisant le service Google Pay, renseigné lorsque le prestataire déclare accepter ce portefeuille numérique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aff75366-045f-420d-afa7-3840785c544b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aff75366-045f-420d-afa7-3840785c544b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a0ceac55-7210-4faf-ac82-40c0429c50a2",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "maestro",
+      "base": {
+        "description": "Paiement par carte de débit.",
+        "description_i18n": {
+          "de": "Zahlung mit Debitkarte.",
+          "en": "Payment by debit card.",
+          "es": "Pago con tarjeta de débito.",
+          "fr": "Paiement par carte de débit."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a0ceac55-7210-4faf-ac82-40c0429c50a2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a0ceac55-7210-4faf-ac82-40c0429c50a2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Paiement par carte de débit déclaré comme accepté par le prestataire ; cette catégorie couvre les cartes de débit sans se limiter à la marque Maestro.",
+        "description_i18n": {
+          "de": "Vom Anbieter als akzeptiert angegebene Debitkartenzahlung; diese Kategorie umfasst Debitkarten und ist nicht auf die Marke Maestro beschränkt.",
+          "en": "Debit-card payment declared as accepted by the provider; this category covers debit cards without being limited to the Maestro brand.",
+          "es": "Pago con tarjeta de débito declarado como aceptado por el prestador; esta categoría abarca las tarjetas de débito sin limitarse a la marca Maestro.",
+          "fr": "Paiement par carte de débit déclaré comme accepté par le prestataire ; cette catégorie couvre les cartes de débit sans se limiter à la marque Maestro."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a0ceac55-7210-4faf-ac82-40c0429c50a2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a0ceac55-7210-4faf-ac82-40c0429c50a2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2e2bddbc-62ed-4870-ba63-0750a6e8b636",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "mastercard",
+      "base": {
+        "description": "Carte Mastercard",
+        "description_i18n": {
+          "de": "Karte von Mastercard",
+          "en": "Mastercard card",
+          "es": "Tarjeta Mastercard",
+          "fr": "Carte Mastercard"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2e2bddbc-62ed-4870-ba63-0750a6e8b636. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2e2bddbc-62ed-4870-ba63-0750a6e8b636"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Paiement par une carte du réseau Mastercard déclaré comme accepté par le prestataire, distinct du type de tarif appliqué.",
+        "description_i18n": {
+          "de": "Vom Anbieter als akzeptiert angegebene Zahlung mit einer Mastercard-Netzwerkkarte, unabhängig von der angewendeten Tarifart.",
+          "en": "Payment using a Mastercard network card declared as accepted by the provider, distinct from the type of rate charged.",
+          "es": "Pago con una tarjeta de la red Mastercard declarado como aceptado por el prestador, distinto del tipo de tarifa aplicada.",
+          "fr": "Paiement par une carte du réseau Mastercard déclaré comme accepté par le prestataire, distinct du type de tarif appliqué."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2e2bddbc-62ed-4870-ba63-0750a6e8b636. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2e2bddbc-62ed-4870-ba63-0750a6e8b636"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c115fabe-3f20-4304-9dd2-dfdcccde6acc",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "paypal",
+      "base": {
+        "description": "Paiement via PayPal",
+        "description_i18n": {
+          "de": "Bezahlung über PayPal",
+          "en": "PayPal payment",
+          "es": "Pago vía PayPal",
+          "fr": "Paiement via PayPal"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c115fabe-3f20-4304-9dd2-dfdcccde6acc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c115fabe-3f20-4304-9dd2-dfdcccde6acc"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Règlement utilisant le service de paiement PayPal, proposé comme moyen de paiement par le prestataire.",
+        "description_i18n": {
+          "de": "Vom Anbieter angebotene Zahlungsart über den Zahlungsdienst PayPal.",
+          "en": "Payment using the PayPal payment service, offered as a payment method by the provider.",
+          "es": "Pago mediante el servicio PayPal, ofrecido como medio de pago por el prestador.",
+          "fr": "Règlement utilisant le service de paiement PayPal, proposé comme moyen de paiement par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c115fabe-3f20-4304-9dd2-dfdcccde6acc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c115fabe-3f20-4304-9dd2-dfdcccde6acc"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b80ea0cf-43db-4564-87c5-2792730e0463",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "tickets_restaurant",
+      "base": {
+        "description": "Titres-restaurant (Sodexo, Edenred, Up) acceptés",
+        "description_i18n": {
+          "de": "Akzeptierte Essensgutscheine (Sodexo, Edenred, Up)",
+          "en": "Meal vouchers (Sodexo, Edenred, Up) accepted",
+          "es": "Vales de comida (Sodexo, Edenred, Up) aceptados",
+          "fr": "Titres-restaurant (Sodexo, Edenred, Up) acceptés"
+        },
+        "name": "Tickets restaurant",
+        "name_i18n": {
+          "de": "Essensgutscheine",
+          "en": "Meal vouchers",
+          "es": "Vales de comida",
+          "fr": "Tickets restaurant"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Restaurantgutscheine"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Restaurant meal vouchers"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Vales de restaurante"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titres-restaurant"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b80ea0cf-43db-4564-87c5-2792730e0463. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b80ea0cf-43db-4564-87c5-2792730e0463"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Règlement au moyen de titres-restaurant accepté par le prestataire ; les émetteurs, supports et conditions admis sont ceux qu'il indique.",
+        "description_i18n": {
+          "de": "Vom Anbieter akzeptierte Zahlung mit Essensgutscheinen; zugelassene Aussteller, Formate und Bedingungen werden von ihm angegeben.",
+          "en": "Payment using meal vouchers accepted by the provider; the permitted issuers, formats and conditions are those it specifies.",
+          "es": "Pago mediante vales de comida aceptado por el prestador; los emisores, soportes y condiciones admitidos son los que este indique.",
+          "fr": "Règlement au moyen de titres-restaurant accepté par le prestataire ; les émetteurs, supports et conditions admis sont ceux qu'il indique."
+        },
+        "name": "Titres-restaurant",
+        "name_i18n": {
+          "de": "Essensgutscheine",
+          "en": "Meal vouchers",
+          "es": "Vales de comida",
+          "fr": "Titres-restaurant"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Restaurantgutscheine"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Restaurant meal vouchers"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Vales de restaurante"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Tickets restaurant"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b80ea0cf-43db-4564-87c5-2792730e0463. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b80ea0cf-43db-4564-87c5-2792730e0463"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "092d7ea0-26e0-4fa8-87b4-f28c2ff3c4ce",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "vacaf",
+      "base": {
+        "description": "Aide VACAF acceptée",
+        "description_i18n": {
+          "de": "VACAF-Beihilfe wird akzeptiert",
+          "en": "VACAF aid accepted",
+          "es": "Ayuda VACAF aceptada",
+          "fr": "Aide VACAF acceptée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/092d7ea0-26e0-4fa8-87b4-f28c2ff3c4ce. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/092d7ea0-26e0-4fa8-87b4-f28c2ff3c4ce"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prise en compte d'une aide aux vacances du dispositif VACAF déclarée par le prestataire ; cette mention ne détermine pas l'éligibilité d'une personne à l'aide.",
+        "description_i18n": {
+          "de": "Vom Anbieter angegebene Berücksichtigung einer Urlaubshilfe aus dem VACAF-Programm; dieser Eintrag entscheidet nicht über den Förderanspruch einer Person.",
+          "en": "Provider-declared acceptance of holiday assistance under the VACAF scheme; this entry does not determine a person's eligibility for that assistance.",
+          "es": "Aceptación declarada por el prestador de una ayuda vacacional del programa VACAF; esta mención no determina la elegibilidad de una persona para la ayuda.",
+          "fr": "Prise en compte d'une aide aux vacances du dispositif VACAF déclarée par le prestataire ; cette mention ne détermine pas l'éligibilité d'une personne à l'aide."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/092d7ea0-26e0-4fa8-87b4-f28c2ff3c4ce. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/092d7ea0-26e0-4fa8-87b4-f28c2ff3c4ce"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "71b97ebe-0056-4b85-b270-3a48c1bb26b5",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "virement",
+      "base": {
+        "description": "Transfert bancaire",
+        "description_i18n": {
+          "de": "Zahlung per Banküberweisung",
+          "en": "Bank transfer payment",
+          "es": "Pago por transferencia bancaria",
+          "fr": "Transfert bancaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/71b97ebe-0056-4b85-b270-3a48c1bb26b5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/71b97ebe-0056-4b85-b270-3a48c1bb26b5"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Paiement par transfert de fonds vers le compte bancaire indiqué par le prestataire, selon les modalités de règlement de l'offre.",
+        "description_i18n": {
+          "de": "Zahlung durch Überweisung auf das vom Anbieter angegebene Bankkonto nach den Zahlungsmodalitäten des Angebots.",
+          "en": "Payment by transferring funds to the bank account specified by the provider, according to the offer's payment arrangements.",
+          "es": "Pago mediante transferencia de fondos a la cuenta bancaria indicada por el prestador, según las modalidades de pago de la oferta.",
+          "fr": "Paiement par transfert de fonds vers le compte bancaire indiqué par le prestataire, selon les modalités de règlement de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/71b97ebe-0056-4b85-b270-3a48c1bb26b5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/71b97ebe-0056-4b85-b270-3a48c1bb26b5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "85379486-6191-4ef7-b7ce-203a9c0ff779",
+      "domain": "payment_method",
+      "context_key": "",
+      "code": "visa",
+      "base": {
+        "description": "Carte Visa",
+        "description_i18n": {
+          "de": "Visa-Karte",
+          "en": "Visa card",
+          "es": "Tarjeta Visa",
+          "fr": "Carte Visa"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/85379486-6191-4ef7-b7ce-203a9c0ff779. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/85379486-6191-4ef7-b7ce-203a9c0ff779"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Paiement par une carte du réseau Visa déclaré comme accepté par le prestataire ; la mention du réseau ne précise pas à elle seule le fonctionnement de la carte.",
+        "description_i18n": {
+          "de": "Vom Anbieter als akzeptiert angegebene Zahlung mit einer Visa-Netzwerkkarte; die Netzbezeichnung allein legt die Funktionsweise der Karte nicht fest.",
+          "en": "Payment using a Visa network card declared as accepted by the provider; the network name alone does not specify how the card operates.",
+          "es": "Pago con una tarjeta de la red Visa declarado como aceptado por el prestador; el nombre de la red por sí solo no precisa el funcionamiento de la tarjeta.",
+          "fr": "Paiement par une carte du réseau Visa déclaré comme accepté par le prestataire ; la mention du réseau ne précise pas à elle seule le fonctionnement de la carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/85379486-6191-4ef7-b7ce-203a9c0ff779. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/85379486-6191-4ef7-b7ce-203a9c0ff779"
+          }
+        ]
+      }
+    }
+  ]
+}

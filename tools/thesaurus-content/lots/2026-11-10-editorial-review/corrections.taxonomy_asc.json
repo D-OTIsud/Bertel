@@ -1,0 +1,300 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_asc-1",
+  "proposals": [
+    {
+      "concept_id": "a6d5a91d-982d-4e2d-a3c9-dcdf5e12b195",
+      "domain": "taxonomy_asc",
+      "context_key": "",
+      "code": "cultural_association",
+      "base": {
+        "description": "Association culturelle accueillant du public",
+        "description_i18n": {
+          "de": "Kulturverein mit Publikumsangebot.",
+          "en": "Cultural association that welcomes the public.",
+          "es": "Asociación cultural que recibe público.",
+          "fr": "Association culturelle accueillant du public"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a6d5a91d-982d-4e2d-a3c9-dcdf5e12b195. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a6d5a91d-982d-4e2d-a3c9-dcdf5e12b195"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Association proposant au public des activités ou une découverte culturelle. Cette catégorie décrit la structure organisatrice, distincte d’une manifestation culturelle datée.",
+        "description_i18n": {
+          "de": "Verein mit kulturellen Aktivitäten oder Entdeckungsangeboten für das Publikum. Die Kategorie bezeichnet die Einrichtung und keine terminierte Kulturveranstaltung.",
+          "en": "Association offering cultural activities or discovery to the public. This category describes the organising body rather than a dated cultural event.",
+          "es": "Asociación que ofrece al público actividades o descubrimiento cultural. Describe la entidad organizadora, no un evento cultural con fecha.",
+          "fr": "Association proposant au public des activités ou une découverte culturelle. Cette catégorie décrit la structure organisatrice, distincte d’une manifestation culturelle datée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a6d5a91d-982d-4e2d-a3c9-dcdf5e12b195. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a6d5a91d-982d-4e2d-a3c9-dcdf5e12b195"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "91e51e14-9cc4-4e15-bb6a-b7dad01b196e",
+      "domain": "taxonomy_asc",
+      "context_key": "",
+      "code": "cultural_school",
+      "base": {
+        "description": "École de danse, musique, atelier artistique",
+        "description_i18n": {
+          "de": "Schule oder Atelier für Tanz, Musik oder künstlerische Workshops.",
+          "en": "School or studio for dance, music or artistic workshops.",
+          "es": "Escuela o taller de danza, música o talleres artísticos.",
+          "fr": "École de danse, musique, atelier artistique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/91e51e14-9cc4-4e15-bb6a-b7dad01b196e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/91e51e14-9cc4-4e15-bb6a-b7dad01b196e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Structure d’enseignement ou atelier proposant une pratique culturelle ou artistique, par exemple danse ou musique. Elle décrit le lieu ou l’organisme de pratique plutôt qu’une séance isolée.",
+        "description_i18n": {
+          "de": "Lehreinrichtung oder Atelier für kulturelle oder künstlerische Praxis, etwa Tanz oder Musik. Sie bezeichnet den Ort oder Anbieter und keine einzelne Unterrichtseinheit.",
+          "en": "Teaching organisation or studio offering cultural or artistic practice, such as dance or music. It describes the venue or organisation rather than an individual session.",
+          "es": "Escuela o taller que ofrece una práctica cultural o artística, como danza o música. Describe el lugar o entidad de práctica, no una sesión aislada.",
+          "fr": "Structure d’enseignement ou atelier proposant une pratique culturelle ou artistique, par exemple danse ou musique. Elle décrit le lieu ou l’organisme de pratique plutôt qu’une séance isolée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/91e51e14-9cc4-4e15-bb6a-b7dad01b196e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/91e51e14-9cc4-4e15-bb6a-b7dad01b196e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6f38c0c8-9a35-44b0-92a5-6ed92cf9b66d",
+      "domain": "taxonomy_asc",
+      "context_key": "",
+      "code": "equestrian_center",
+      "base": {
+        "description": "Centre ou ferme équestre",
+        "description_i18n": {
+          "de": "Reitzentrum oder Reiterhof.",
+          "en": "Riding centre or equestrian farm.",
+          "es": "Centro o granja ecuestre.",
+          "fr": "Centre ou ferme équestre"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f38c0c8-9a35-44b0-92a5-6ed92cf9b66d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f38c0c8-9a35-44b0-92a5-6ed92cf9b66d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Structure ou ferme équestre accueillant des pratiquants pour l’équitation, les cours ou les promenades à cheval. Elle se distingue de la sortie équestre décrite comme prestation.",
+        "description_i18n": {
+          "de": "Reitzentrum oder Reiterhof für Reitpraxis, Unterricht oder Ausritte. Die Einrichtung unterscheidet sich von einem als Leistung beschriebenen Reitausflug.",
+          "en": "Riding centre or equestrian farm welcoming riders for riding, lessons or horseback outings. It differs from a riding outing described as a service.",
+          "es": "Centro o granja ecuestre que recibe a participantes para equitación, clases o paseos a caballo. Se distingue de una salida ecuestre descrita como prestación.",
+          "fr": "Structure ou ferme équestre accueillant des pratiquants pour l’équitation, les cours ou les promenades à cheval. Elle se distingue de la sortie équestre décrite comme prestation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f38c0c8-9a35-44b0-92a5-6ed92cf9b66d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f38c0c8-9a35-44b0-92a5-6ed92cf9b66d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c8b66ae5-a174-4347-aaa3-7760dec64833",
+      "domain": "taxonomy_asc",
+      "context_key": "",
+      "code": "mountain_school",
+      "base": {
+        "description": "Structure d'encadrement canyoning, escalade, montagne",
+        "description_i18n": {
+          "de": "Einrichtung für begleitete Canyoning-, Kletter- und Bergaktivitäten.",
+          "en": "Organisation that supervises canyoning, climbing or mountain activities.",
+          "es": "Organización que enseña o acompaña barranquismo, escalada o actividades de montaña.",
+          "fr": "Structure d'encadrement canyoning, escalade, montagne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c8b66ae5-a174-4347-aaa3-7760dec64833. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c8b66ae5-a174-4347-aaa3-7760dec64833"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Structure proposant un apprentissage ou un encadrement des activités de montagne, notamment canyoning et escalade. Elle classe l’organisme plutôt qu’un parcours ou une sortie particulière.",
+        "description_i18n": {
+          "de": "Einrichtung für Unterricht oder Begleitung bei Bergaktivitäten, insbesondere Canyoning und Klettern. Sie bezeichnet den Anbieter und keine einzelne Strecke oder Ausfahrt.",
+          "en": "Organisation providing instruction or supervision in mountain activities, particularly canyoning and climbing. It classifies the organisation rather than a particular route or outing.",
+          "es": "Entidad que ofrece enseñanza o acompañamiento en actividades de montaña, especialmente barranquismo y escalada. Clasifica la entidad, no un recorrido o salida concretos.",
+          "fr": "Structure proposant un apprentissage ou un encadrement des activités de montagne, notamment canyoning et escalade. Elle classe l’organisme plutôt qu’un parcours ou une sortie particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c8b66ae5-a174-4347-aaa3-7760dec64833. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c8b66ae5-a174-4347-aaa3-7760dec64833"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8e6647aa-8c39-4a49-af9d-dfcbe89e0eb8",
+      "domain": "taxonomy_asc",
+      "context_key": "",
+      "code": "nautical_club",
+      "base": {
+        "description": "Club ou base nautique",
+        "description_i18n": {
+          "de": "Verein oder Stützpunkt für Wassersport.",
+          "en": "Club or base for nautical and water sports.",
+          "es": "Club o base para deportes náuticos.",
+          "fr": "Club ou base nautique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8e6647aa-8c39-4a49-af9d-dfcbe89e0eb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8e6647aa-8c39-4a49-af9d-dfcbe89e0eb8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Club ou base accueillant la pratique de sports et loisirs nautiques. La catégorie décrit la structure d’accueil, distincte de chaque activité ou sortie sur l’eau.",
+        "description_i18n": {
+          "de": "Verein oder Stützpunkt für Wassersport und Freizeit auf dem Wasser. Die Kategorie bezeichnet die Einrichtung und nicht jede einzelne Aktivität oder Ausfahrt.",
+          "en": "Club or base hosting nautical sports and leisure. This category describes the host organisation rather than each water activity or outing.",
+          "es": "Club o base que acoge deportes y ocio náuticos. Describe la estructura de acogida, no cada actividad o salida en el agua.",
+          "fr": "Club ou base accueillant la pratique de sports et loisirs nautiques. La catégorie décrit la structure d’accueil, distincte de chaque activité ou sortie sur l’eau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8e6647aa-8c39-4a49-af9d-dfcbe89e0eb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8e6647aa-8c39-4a49-af9d-dfcbe89e0eb8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bbb471b5-8893-41d7-a4f9-26c7c211a64e",
+      "domain": "taxonomy_asc",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Activité",
+        "description_i18n": {
+          "de": "Technische Wurzel für Einrichtungen mit Aktivitätsangebot; nicht direkt zuweisbar.",
+          "en": "Technical root for activity-based establishments; not directly assignable.",
+          "es": "Raíz técnica para establecimientos de actividad; no asignable directamente.",
+          "fr": "Racine technique — Activité"
+        },
+        "name_i18n": {
+          "de": "Aktivität",
+          "en": "Activity",
+          "es": "Actividad",
+          "fr": "Activité"
+        },
+        "name": "Activité",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bbb471b5-8893-41d7-a4f9-26c7c211a64e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bbb471b5-8893-41d7-a4f9-26c7c211a64e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des structures proposant une pratique sportive ou culturelle : clubs, écoles, associations et centres. Elle classe les organismes d’accueil, distincts des séances et sorties qu’ils proposent.",
+        "description_i18n": {
+          "de": "Oberkategorie für Einrichtungen mit Sport- oder Kulturangeboten, etwa Vereine, Schulen und Zentren. Sie klassifiziert die Einrichtungen und nicht ihre Kurse oder Ausflüge.",
+          "en": "General category for organisations providing sports or cultural activities, including clubs, schools, associations and centres. It classifies the host organisations rather than their sessions or outings.",
+          "es": "Categoría general de entidades que ofrecen actividades deportivas o culturales: clubes, escuelas, asociaciones y centros. Clasifica las entidades de acogida, no sus sesiones o salidas.",
+          "fr": "Catégorie générale des structures proposant une pratique sportive ou culturelle : clubs, écoles, associations et centres. Elle classe les organismes d’accueil, distincts des séances et sorties qu’ils proposent."
+        },
+        "name_i18n": {
+          "de": "Sport- oder Kultureinrichtung",
+          "en": "Sports or cultural organisation",
+          "es": "Entidad deportiva o cultural",
+          "fr": "Structure sportive ou culturelle"
+        },
+        "name": "Structure sportive ou culturelle",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bbb471b5-8893-41d7-a4f9-26c7c211a64e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bbb471b5-8893-41d7-a4f9-26c7c211a64e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "10935492-1456-4022-aefa-00d39078e73b",
+      "domain": "taxonomy_asc",
+      "context_key": "",
+      "code": "sports_club",
+      "base": {
+        "description": "Club ou école sportive",
+        "description_i18n": {
+          "de": "Sportverein oder Sportschule mit angeleiteter Sportpraxis.",
+          "en": "Club or sports school offering supervised sports practice.",
+          "es": "Club o escuela deportiva que ofrece práctica deportiva supervisada.",
+          "fr": "Club ou école sportive"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/10935492-1456-4022-aefa-00d39078e73b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/10935492-1456-4022-aefa-00d39078e73b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Club ou école organisant une pratique sportive et, selon son offre, des cours ou un encadrement. Il décrit la structure, distincte d’un équipement sportif autonome ou d’un événement.",
+        "description_i18n": {
+          "de": "Verein oder Schule für Sportpraxis und je nach Angebot Unterricht oder Betreuung. Die Angabe bezeichnet die Einrichtung und keine eigenständige Sportanlage oder Veranstaltung.",
+          "en": "Club or school organising sports practice and, depending on its offer, lessons or supervision. It describes the organisation rather than a standalone sports facility or event.",
+          "es": "Club o escuela que organiza práctica deportiva y, según su oferta, clases o acompañamiento. Describe la entidad, no una instalación deportiva autónoma ni un evento.",
+          "fr": "Club ou école organisant une pratique sportive et, selon son offre, des cours ou un encadrement. Il décrit la structure, distincte d’un équipement sportif autonome ou d’un événement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/10935492-1456-4022-aefa-00d39078e73b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/10935492-1456-4022-aefa-00d39078e73b"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-crm_sentiment-1",
+  "proposals": [
+    {
+      "concept_id": "652b557e-32f5-426c-b4e9-3e960d714b25",
+      "domain": "crm_sentiment",
+      "context_key": "",
+      "code": "inquiet",
+      "base": {
+        "description": "Source import : 😨",
+        "description_i18n": {
+          "fr": "Source import : 😨"
+        },
+        "name_i18n": {
+          "fr": "Inquiet"
+        }
+      },
+      "changes": {
+        "description": "Sentiment d'inquiétude exprimé dans une demande ou un échange avec l'office de tourisme, à distinguer d'une réclamation ou d'un statut de traitement.",
+        "description_i18n": {
+          "fr": "Sentiment d'inquiétude exprimé dans une demande ou un échange avec l'office de tourisme, à distinguer d'une réclamation ou d'un statut de traitement.",
+          "en": "Concern expressed in an enquiry or exchange with the tourist office, distinct from a complaint or a processing status.",
+          "es": "Preocupación expresada en una consulta o un intercambio con la oficina de turismo, distinta de una reclamación o de un estado de tramitación.",
+          "de": "In einer Anfrage oder im Austausch mit dem Tourismusbüro ausgedrückte Sorge; sie ist von einer Beschwerde und vom Bearbeitungsstatus zu unterscheiden."
+        },
+        "name_i18n": {
+          "fr": "Inquiet",
+          "en": "Concerned",
+          "es": "Preocupado",
+          "de": "Besorgt"
+        }
+      }
+    },
+    {
+      "concept_id": "71721586-c427-4de1-8ff6-e6596588de7a",
+      "domain": "crm_sentiment",
+      "context_key": "",
+      "code": "interrogatif",
+      "base": {
+        "description": "Source import : 🤔",
+        "description_i18n": {
+          "fr": "Source import : 🤔"
+        },
+        "name_i18n": {
+          "fr": "Interrogatif"
+        }
+      },
+      "changes": {
+        "description": "Attitude de questionnement ou d'hésitation exprimée dans un échange CRM, sans que cette qualification indique à elle seule satisfaction ou mécontentement.",
+        "description_i18n": {
+          "fr": "Attitude de questionnement ou d'hésitation exprimée dans un échange CRM, sans que cette qualification indique à elle seule satisfaction ou mécontentement.",
+          "en": "Questioning or hesitant attitude expressed in a CRM exchange; this qualification alone indicates neither satisfaction nor dissatisfaction.",
+          "es": "Actitud de duda o interrogación expresada en un intercambio de CRM; por sí sola no indica satisfacción ni descontento.",
+          "de": "Fragende oder zögernde Haltung in einem CRM-Austausch; diese Einordnung allein sagt nichts über Zufriedenheit oder Unzufriedenheit aus."
+        },
+        "name_i18n": {
+          "fr": "Interrogatif",
+          "en": "Questioning",
+          "es": "Interrogativo",
+          "de": "Fragend"
+        }
+      }
+    },
+    {
+      "concept_id": "a3cc4ecf-c7c8-4539-85ff-7c651e2423ff",
+      "domain": "crm_sentiment",
+      "context_key": "",
+      "code": "mecontent",
+      "base": {
+        "description": "Source import : 😡",
+        "description_i18n": {
+          "fr": "Source import : 😡"
+        },
+        "name_i18n": {
+          "fr": "Mécontent"
+        }
+      },
+      "changes": {
+        "description": "Mécontentement exprimé par l'interlocuteur dans un échange avec l'office, sans préjuger du motif, de la gravité ni du traitement de la demande.",
+        "description_i18n": {
+          "fr": "Mécontentement exprimé par l'interlocuteur dans un échange avec l'office, sans préjuger du motif, de la gravité ni du traitement de la demande.",
+          "en": "Dissatisfaction expressed by the contact in an exchange with the tourist office, without determining its cause, severity or handling.",
+          "es": "Descontento expresado por el interlocutor en un intercambio con la oficina de turismo, sin determinar su causa, gravedad o tratamiento.",
+          "de": "Vom Gesprächspartner im Austausch mit dem Tourismusbüro ausgedrückte Unzufriedenheit, ohne damit Ursache, Schwere oder Bearbeitung festzulegen."
+        },
+        "name_i18n": {
+          "fr": "Mécontent",
+          "en": "Dissatisfied",
+          "es": "Descontento",
+          "de": "Unzufrieden"
+        }
+      }
+    },
+    {
+      "concept_id": "883bdc54-9864-4a1e-a356-ac62b3b39c13",
+      "domain": "crm_sentiment",
+      "context_key": "",
+      "code": "positif",
+      "base": {
+        "description": "Source import : 🙂 / ok",
+        "description_i18n": {
+          "fr": "Source import : 🙂 / ok"
+        },
+        "name_i18n": {
+          "fr": "Positif"
+        }
+      },
+      "changes": {
+        "description": "Appréciation favorable ou satisfaction exprimée dans l'échange CRM ; elle qualifie le sentiment de l'interlocuteur, pas la clôture de sa demande.",
+        "description_i18n": {
+          "fr": "Appréciation favorable ou satisfaction exprimée dans l'échange CRM ; elle qualifie le sentiment de l'interlocuteur, pas la clôture de sa demande.",
+          "en": "Favourable appreciation or satisfaction expressed in the CRM exchange; it describes the contact's sentiment, not the closure of the enquiry.",
+          "es": "Valoración favorable o satisfacción expresada en el intercambio de CRM; describe el sentimiento del interlocutor, no el cierre de la consulta.",
+          "de": "Im CRM-Austausch ausgedrückte positive Bewertung oder Zufriedenheit; sie beschreibt die Haltung des Gesprächspartners und nicht den Abschluss der Anfrage."
+        },
+        "name_i18n": {
+          "fr": "Positif",
+          "en": "Positive",
+          "es": "Positivo",
+          "de": "Positiv"
+        }
+      }
+    },
+    {
+      "concept_id": "3b9f77b0-6c13-4ac6-a13b-1f9468f27e1d",
+      "domain": "crm_sentiment",
+      "context_key": "",
+      "code": "tres_mecontent",
+      "base": {
+        "description": "Source import : 😭",
+        "description_i18n": {
+          "fr": "Source import : 😭"
+        },
+        "name_i18n": {
+          "fr": "Très mécontent"
+        }
+      },
+      "changes": {
+        "description": "Mécontentement particulièrement marqué exprimé dans l'échange CRM, distinct du niveau « Mécontent » sans constituer une catégorie juridique de réclamation.",
+        "description_i18n": {
+          "fr": "Mécontentement particulièrement marqué exprimé dans l'échange CRM, distinct du niveau « Mécontent » sans constituer une catégorie juridique de réclamation.",
+          "en": "Particularly strong dissatisfaction expressed in a CRM exchange, distinct from the dissatisfied level without constituting a legal category of complaint.",
+          "es": "Descontento especialmente intenso expresado en un intercambio de CRM, distinto del nivel de descontento ordinario y sin constituir una categoría jurídica de reclamación.",
+          "de": "Besonders stark ausgeprägte Unzufriedenheit in einem CRM-Austausch; sie unterscheidet sich von einfacher Unzufriedenheit, ohne eine rechtliche Beschwerdekategorie darzustellen."
+        },
+        "name_i18n": {
+          "fr": "Très mécontent",
+          "en": "Very dissatisfied",
+          "es": "Muy descontento",
+          "de": "Sehr unzufrieden"
+        }
+      }
+    },
+    {
+      "concept_id": "ea72d99a-81ee-4461-b6bf-a13492d93ae1",
+      "domain": "crm_sentiment",
+      "context_key": "",
+      "code": "tres_positif",
+      "base": {
+        "description": "Source import : 😃",
+        "description_i18n": {
+          "fr": "Source import : 😃"
+        },
+        "name_i18n": {
+          "fr": "Très positif"
+        }
+      },
+      "changes": {
+        "description": "Satisfaction ou enthousiasme particulièrement marqué exprimé dans l'échange CRM, distinct d'une appréciation simplement favorable.",
+        "description_i18n": {
+          "fr": "Satisfaction ou enthousiasme particulièrement marqué exprimé dans l'échange CRM, distinct d'une appréciation simplement favorable.",
+          "en": "Particularly strong satisfaction or enthusiasm expressed in a CRM exchange, distinct from a merely favourable appreciation.",
+          "es": "Satisfacción o entusiasmo especialmente intenso expresado en un intercambio de CRM, distinto de una valoración simplemente favorable.",
+          "de": "Besonders ausgeprägte Zufriedenheit oder Begeisterung in einem CRM-Austausch, die über eine lediglich positive Bewertung hinausgeht."
+        },
+        "name_i18n": {
+          "fr": "Très positif",
+          "en": "Very positive",
+          "es": "Muy positivo",
+          "de": "Sehr positiv"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,2202 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-cuisine_type-1",
+  "proposals": [
+    {
+      "concept_id": "b9d71979-92f0-43d4-990d-95c510da1db7",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "africaine",
+      "base": {
+        "description": "Cuisine africaine",
+        "description_i18n": {
+          "de": "Afrikanische Küche",
+          "en": "African cuisine",
+          "es": "Cocina africana",
+          "fr": "Cuisine africaine"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b9d71979-92f0-43d4-990d-95c510da1db7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b9d71979-92f0-43d4-990d-95c510da1db7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Orientation culinaire regroupant des traditions de différentes régions d'Afrique ; la carte précise les cuisines ou spécialités proposées plutôt qu'une recette africaine unique.",
+        "description_i18n": {
+          "de": "Kulinarische Ausrichtung mit Traditionen verschiedener afrikanischer Regionen; die Karte nennt die angebotenen Küchen oder Spezialitäten statt einer einheitlichen afrikanischen Rezeptur.",
+          "en": "Culinary orientation covering traditions from different African regions; the menu specifies the cuisines or specialities offered rather than a single African recipe.",
+          "es": "Orientación culinaria que agrupa tradiciones de distintas regiones de África; la carta precisa las cocinas o especialidades ofrecidas en lugar de una única receta africana.",
+          "fr": "Orientation culinaire regroupant des traditions de différentes régions d'Afrique ; la carte précise les cuisines ou spécialités proposées plutôt qu'une recette africaine unique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b9d71979-92f0-43d4-990d-95c510da1db7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b9d71979-92f0-43d4-990d-95c510da1db7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f2110477-27ff-4066-9858-30d95292f8d2",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "amerique_latine",
+      "base": {
+        "description": "Cuisine latino-américaine",
+        "description_i18n": {
+          "de": "Lateinamerikanische Küche",
+          "en": "Latin American cuisine",
+          "es": "Cocina latinoamericana",
+          "fr": "Cuisine latino-américaine"
+        },
+        "name": "Amérique latine",
+        "name_i18n": {
+          "de": "Lateinamerikanisch",
+          "en": "Latin American",
+          "es": "Latinoamericana",
+          "fr": "Amérique latine"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Lateinamerikanische Küche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Latin American cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina latinoamericana"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine latino-américaine"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f2110477-27ff-4066-9858-30d95292f8d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f2110477-27ff-4066-9858-30d95292f8d2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions des pays d'Amérique latine, catégorie large permettant de signaler plusieurs influences nationales ou régionales présentes dans l'offre.",
+        "description_i18n": {
+          "de": "Von den Traditionen lateinamerikanischer Länder geprägte Küche als breite Kategorie für mehrere nationale oder regionale Einflüsse im Angebot.",
+          "en": "Cuisine inspired by Latin American countries' traditions, a broad category identifying several national or regional influences within the offer.",
+          "es": "Cocina inspirada en las tradiciones de los países de América Latina, categoría amplia que identifica varias influencias nacionales o regionales en la oferta.",
+          "fr": "Cuisine inspirée des traditions des pays d'Amérique latine, catégorie large permettant de signaler plusieurs influences nationales ou régionales présentes dans l'offre."
+        },
+        "name": "Latino-américaine",
+        "name_i18n": {
+          "de": "Lateinamerikanisch",
+          "en": "Latin American",
+          "es": "Latinoamericana",
+          "fr": "Latino-américaine"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Lateinamerikanische Küche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Latin American cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina latinoamericana"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine latino-américaine"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Amérique latine"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f2110477-27ff-4066-9858-30d95292f8d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f2110477-27ff-4066-9858-30d95292f8d2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dde0a9ee-95f9-4ec7-b449-ce0018db04c8",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "antillaise",
+      "base": {
+        "description": "Cuisine des Antilles",
+        "description_i18n": {
+          "de": "Küche der Antillen",
+          "en": "Cuisine of the Antilles",
+          "es": "Cocina de las Antillas",
+          "fr": "Cuisine des Antilles"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dde0a9ee-95f9-4ec7-b449-ce0018db04c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dde0a9ee-95f9-4ec7-b449-ce0018db04c8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine des îles des Antilles, notamment de tradition créole, pouvant proposer des préparations telles que colombo ou accras ; elle se distingue ici de la cuisine créole réunionnaise.",
+        "description_i18n": {
+          "de": "Küche der Antilleninseln, insbesondere kreolischer Tradition, etwa mit Colombo oder Accras; sie wird hier von der kreolischen Küche Réunions unterschieden.",
+          "en": "Cuisine of the Antillean islands, notably Creole traditions, potentially including dishes such as colombo or accras; it is distinguished here from Réunion Creole cuisine.",
+          "es": "Cocina de las islas antillanas, especialmente de tradición criolla, que puede ofrecer preparaciones como colombo o accras; se distingue aquí de la cocina criolla de Reunión.",
+          "fr": "Cuisine des îles des Antilles, notamment de tradition créole, pouvant proposer des préparations telles que colombo ou accras ; elle se distingue ici de la cuisine créole réunionnaise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dde0a9ee-95f9-4ec7-b449-ce0018db04c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dde0a9ee-95f9-4ec7-b449-ce0018db04c8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1e0e73df-4f10-487d-aaa5-c5aaf141192c",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "bar_a_vin",
+      "base": {
+        "description": "Bar à vin, planches et tapas",
+        "description_i18n": {
+          "de": "Weinbar mit Brettchen und Tapas",
+          "en": "Wine bar serving boards and tapas",
+          "es": "Bar de vinos con tablas y tapas",
+          "fr": "Bar à vin, planches et tapas"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e0e73df-4f10-487d-aaa5-c5aaf141192c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e0e73df-4f10-487d-aaa5-c5aaf141192c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre de restauration centrée sur les vins accompagnés de tapas, planches ou petites préparations à partager ; le terme décrit une orientation de carte.",
+        "description_i18n": {
+          "de": "Gastronomisches Angebot mit Schwerpunkt auf Wein und dazu servierten Tapas, Platten oder kleinen Gerichten zum Teilen; die Bezeichnung beschreibt die Kartenausrichtung.",
+          "en": "Food offer centred on wines accompanied by tapas, sharing boards or small dishes; the term describes the menu's orientation.",
+          "es": "Oferta gastronómica centrada en vinos acompañados de tapas, tablas o pequeñas preparaciones para compartir; el término describe la orientación de la carta.",
+          "fr": "Offre de restauration centrée sur les vins accompagnés de tapas, planches ou petites préparations à partager ; le terme décrit une orientation de carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e0e73df-4f10-487d-aaa5-c5aaf141192c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e0e73df-4f10-487d-aaa5-c5aaf141192c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "192acdb1-0587-4b23-8341-37d7f5c318a6",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "bbq",
+      "base": {
+        "description": "Cuisine grillades & barbecue",
+        "description_i18n": {
+          "de": "Grill- und Barbecue-Spezialitäten",
+          "en": "Barbecue and grilled specialties",
+          "es": "Especialidades de parrilla y barbacoa",
+          "fr": "Cuisine grillades & barbecue"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/192acdb1-0587-4b23-8341-37d7f5c318a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/192acdb1-0587-4b23-8341-37d7f5c318a6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Style de cuisine privilégiant les aliments cuits au gril ou au barbecue, notamment viandes, poissons ou légumes ; il ne précise pas à lui seul le combustible utilisé.",
+        "description_i18n": {
+          "de": "Küchenstil mit Schwerpunkt auf gegrillten Speisen wie Fleisch, Fisch oder Gemüse; die Bezeichnung legt den verwendeten Brennstoff nicht fest.",
+          "en": "Cooking style focusing on grilled or barbecued food, including meat, fish or vegetables; it does not itself specify the fuel used.",
+          "es": "Estilo culinario que prioriza alimentos a la parrilla o barbacoa, como carnes, pescados o verduras; no precisa por sí solo el combustible utilizado.",
+          "fr": "Style de cuisine privilégiant les aliments cuits au gril ou au barbecue, notamment viandes, poissons ou légumes ; il ne précise pas à lui seul le combustible utilisé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/192acdb1-0587-4b23-8341-37d7f5c318a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/192acdb1-0587-4b23-8341-37d7f5c318a6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2cd28507-661d-4011-a430-b8e5537af78b",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "brasserie",
+      "base": {
+        "description": "Cuisine brasserie et bistronomique",
+        "description_i18n": {
+          "de": "Brasserie- und Bistro-Küche",
+          "en": "Brasserie and bistronomic cuisine",
+          "es": "Cocina brasserie y bistronómica",
+          "fr": "Cuisine brasserie et bistronomique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2cd28507-661d-4011-a430-b8e5537af78b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2cd28507-661d-4011-a430-b8e5537af78b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Restauration de style brasserie proposant une carte de plats et de boissons pour le repas ; cette catégorie concerne la cuisine et non la fabrication de bière.",
+        "description_i18n": {
+          "de": "Gastronomie im Brasserie-Stil mit einer Speisen- und Getränkekarte für Mahlzeiten; die Kategorie betrifft die Bewirtung und nicht das Bierbrauen.",
+          "en": "Brasserie-style dining with a menu of dishes and drinks for a meal; this category concerns food service rather than beer production.",
+          "es": "Restauración de estilo brasserie con una carta de platos y bebidas para comer; esta categoría se refiere a la cocina, no a la fabricación de cerveza.",
+          "fr": "Restauration de style brasserie proposant une carte de plats et de boissons pour le repas ; cette catégorie concerne la cuisine et non la fabrication de bière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2cd28507-661d-4011-a430-b8e5537af78b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2cd28507-661d-4011-a430-b8e5537af78b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dd35ba97-9eae-4edf-bbe2-9256e58bbdd0",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "burger",
+      "base": {
+        "description": "Spécialités de burgers",
+        "description_i18n": {
+          "de": "Burger-Spezialitäten",
+          "en": "Burger specialties",
+          "es": "Especialidades de hamburguesas",
+          "fr": "Spécialités de burgers"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dd35ba97-9eae-4edf-bbe2-9256e58bbdd0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dd35ba97-9eae-4edf-bbe2-9256e58bbdd0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre de restauration spécialisée dans les burgers, sandwichs composés d'un pain garni, avec les variantes de viande ou autres garnitures précisées sur la carte.",
+        "description_i18n": {
+          "de": "Gastronomisches Angebot mit Schwerpunkt auf Burgern, also gefüllten Brötchen, deren Fleisch- oder andere Belagvarianten in der Karte stehen.",
+          "en": "Food offer specialising in burgers, filled-bun sandwiches with meat or other filling options specified on the menu.",
+          "es": "Oferta de restauración especializada en hamburguesas, bocadillos de pan relleno cuyas variantes de carne u otros ingredientes se precisan en la carta.",
+          "fr": "Offre de restauration spécialisée dans les burgers, sandwichs composés d'un pain garni, avec les variantes de viande ou autres garnitures précisées sur la carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dd35ba97-9eae-4edf-bbe2-9256e58bbdd0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dd35ba97-9eae-4edf-bbe2-9256e58bbdd0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9f990c39-c4f1-469f-9d95-bb2aefa86e4f",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "cafe",
+      "base": {
+        "description": "Café, brunch et petite restauration",
+        "description_i18n": {
+          "de": "Café, Brunch und kleine Gerichte",
+          "en": "Cafés, brunch and light meals",
+          "es": "Cafés, brunch y comida ligera",
+          "fr": "Café, brunch et petite restauration"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9f990c39-c4f1-469f-9d95-bb2aefa86e4f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9f990c39-c4f1-469f-9d95-bb2aefa86e4f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre associant boissons de café et petite restauration, pouvant comprendre un brunch combinant des éléments de petit-déjeuner et de déjeuner.",
+        "description_i18n": {
+          "de": "Angebot aus Cafégetränken und kleinen Speisen, gegebenenfalls mit Brunch aus Frühstücks- und Mittagessenelementen.",
+          "en": "Offer combining café drinks and light food, potentially including brunch bringing together breakfast and lunch elements.",
+          "es": "Oferta que combina bebidas de cafetería y restauración ligera, y que puede incluir un brunch con elementos de desayuno y almuerzo.",
+          "fr": "Offre associant boissons de café et petite restauration, pouvant comprendre un brunch combinant des éléments de petit-déjeuner et de déjeuner."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9f990c39-c4f1-469f-9d95-bb2aefa86e4f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9f990c39-c4f1-469f-9d95-bb2aefa86e4f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9622d4e4-770f-4893-be28-b5486920fd3c",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "chinese",
+      "base": {
+        "description": "Cuisine chinoise traditionnelle",
+        "description_i18n": {
+          "de": "Traditionelle chinesische Küche",
+          "en": "Traditional Chinese cuisine",
+          "es": "Cocina china tradicional",
+          "fr": "Cuisine chinoise traditionnelle"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9622d4e4-770f-4893-be28-b5486920fd3c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9622d4e4-770f-4893-be28-b5486920fd3c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine issue des traditions chinoises et de leurs différentes régions, avec des préparations pouvant notamment être sautées, mijotées ou cuites à la vapeur.",
+        "description_i18n": {
+          "de": "Küche aus den Traditionen Chinas und seiner Regionen, beispielsweise mit pfannengerührten, geschmorten oder gedämpften Zubereitungen.",
+          "en": "Cuisine rooted in Chinese traditions and regions, with preparations that may include stir-fried, braised or steamed dishes.",
+          "es": "Cocina procedente de las tradiciones chinas y de sus distintas regiones, con preparaciones que pueden incluir salteados, guisos o cocciones al vapor.",
+          "fr": "Cuisine issue des traditions chinoises et de leurs différentes régions, avec des préparations pouvant notamment être sautées, mijotées ou cuites à la vapeur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9622d4e4-770f-4893-be28-b5486920fd3c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9622d4e4-770f-4893-be28-b5486920fd3c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4aba5920-ea9f-46bd-9600-77b4ca9e2ea4",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "coreenne",
+      "base": {
+        "description": "Cuisine coréenne",
+        "description_i18n": {
+          "de": "Koreanische Küche",
+          "en": "Korean cuisine",
+          "es": "Cocina coreana",
+          "fr": "Cuisine coréenne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4aba5920-ea9f-46bd-9600-77b4ca9e2ea4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4aba5920-ea9f-46bd-9600-77b4ca9e2ea4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions de Corée, pouvant associer riz, légumes préparés ou fermentés, grillades et accompagnements ; les plats proposés sont précisés sur la carte.",
+        "description_i18n": {
+          "de": "Von koreanischen Traditionen geprägte Küche, etwa mit Reis, zubereitetem oder fermentiertem Gemüse, Grillgerichten und Beilagen; die Karte nennt die angebotenen Gerichte.",
+          "en": "Cuisine inspired by Korean traditions, potentially combining rice, prepared or fermented vegetables, grilled dishes and side dishes; the menu identifies the dishes offered.",
+          "es": "Cocina inspirada en las tradiciones de Corea, que puede combinar arroz, verduras preparadas o fermentadas, parrilladas y acompañamientos; la carta indica los platos ofrecidos.",
+          "fr": "Cuisine inspirée des traditions de Corée, pouvant associer riz, légumes préparés ou fermentés, grillades et accompagnements ; les plats proposés sont précisés sur la carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4aba5920-ea9f-46bd-9600-77b4ca9e2ea4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4aba5920-ea9f-46bd-9600-77b4ca9e2ea4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "44383120-522b-4a0d-b501-9ab83f85ccd9",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "creole",
+      "base": {
+        "description": "Cuisine créole réunionnaise traditionnelle",
+        "description_i18n": {
+          "de": "Traditionelle kreolische Küche von La Réunion",
+          "en": "Traditional Réunion Creole cuisine",
+          "es": "Cocina criolla tradicional de Reunión",
+          "fr": "Cuisine créole réunionnaise traditionnelle"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/44383120-522b-4a0d-b501-9ab83f85ccd9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/44383120-522b-4a0d-b501-9ab83f85ccd9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine créole de La Réunion, issue des influences culinaires de l'île et représentée notamment par caris, rougails et accompagnements ; l'origine des ingrédients reste une information distincte.",
+        "description_i18n": {
+          "de": "Kreolische Küche Réunions aus den kulinarischen Einflüssen der Insel, etwa mit Caris, Rougails und Beilagen; die Zutatenherkunft ist eine gesonderte Angabe.",
+          "en": "Réunion Creole cuisine rooted in the island's culinary influences, represented notably by caris, rougails and accompaniments; ingredient origin is separate information.",
+          "es": "Cocina criolla de Reunión, procedente de las influencias culinarias de la isla y representada especialmente por caris, rougails y acompañamientos; el origen de los ingredientes es un dato distinto.",
+          "fr": "Cuisine créole de La Réunion, issue des influences culinaires de l'île et représentée notamment par caris, rougails et accompagnements ; l'origine des ingrédients reste une information distincte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/44383120-522b-4a0d-b501-9ab83f85ccd9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/44383120-522b-4a0d-b501-9ab83f85ccd9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "64288915-dcee-4382-b040-81fe6e419051",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "creperie",
+      "base": {
+        "description": "Crêpes et galettes",
+        "description_i18n": {
+          "de": "Crêpes und Galettes",
+          "en": "Crêpes and buckwheat galettes",
+          "es": "Crepes y galettes de trigo sarraceno",
+          "fr": "Crêpes et galettes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/64288915-dcee-4382-b040-81fe6e419051. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/64288915-dcee-4382-b040-81fe6e419051"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre spécialisée dans les crêpes et galettes, salées ou sucrées selon la carte ; elle décrit le type de restauration proposé.",
+        "description_i18n": {
+          "de": "Angebot mit Schwerpunkt auf Crêpes und Galettes, je nach Karte herzhaft oder süß; es beschreibt die angebotene Gastronomieart.",
+          "en": "Offer specialising in crêpes and galettes, savoury or sweet according to the menu; it identifies the style of food service.",
+          "es": "Oferta especializada en crêpes y galettes, saladas o dulces según la carta; identifica el tipo de restauración ofrecido.",
+          "fr": "Offre spécialisée dans les crêpes et galettes, salées ou sucrées selon la carte ; elle décrit le type de restauration proposé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/64288915-dcee-4382-b040-81fe6e419051. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/64288915-dcee-4382-b040-81fe6e419051"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1e6cd4d6-4870-4ed3-a4fa-89154cba455c",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "espagnole",
+      "base": {
+        "description": "Tapas et cuisine espagnole",
+        "description_i18n": {
+          "de": "Spanische Tapas und Küche",
+          "en": "Spanish tapas and cuisine",
+          "es": "Tapas y cocina española",
+          "fr": "Tapas et cuisine espagnole"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e6cd4d6-4870-4ed3-a4fa-89154cba455c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e6cd4d6-4870-4ed3-a4fa-89154cba455c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions d'Espagne, pouvant notamment proposer tapas, plats de riz ou autres spécialités régionales, sans imposer une liste de recettes.",
+        "description_i18n": {
+          "de": "Von spanischen Traditionen geprägte Küche, etwa mit Tapas, Reisgerichten oder anderen regionalen Spezialitäten, ohne eine feste Rezeptliste vorzugeben.",
+          "en": "Cuisine inspired by Spanish traditions, potentially including tapas, rice dishes or other regional specialities, without requiring a fixed recipe list.",
+          "es": "Cocina inspirada en las tradiciones de España, que puede ofrecer tapas, arroces u otras especialidades regionales, sin imponer una lista fija de recetas.",
+          "fr": "Cuisine inspirée des traditions d'Espagne, pouvant notamment proposer tapas, plats de riz ou autres spécialités régionales, sans imposer une liste de recettes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e6cd4d6-4870-4ed3-a4fa-89154cba455c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e6cd4d6-4870-4ed3-a4fa-89154cba455c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "573b4ac2-da0e-4e08-9e40-ab2b7cdcc7df",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "fast_food",
+      "base": {
+        "description": "Restauration rapide",
+        "description_i18n": {
+          "de": "Fast-Food-Angebote",
+          "en": "Fast food options",
+          "es": "Opciones de comida rápida",
+          "fr": "Restauration rapide"
+        },
+        "name": "Fast Food",
+        "name_i18n": {
+          "de": "Fast Food",
+          "en": "Fast food",
+          "es": "Comida rápida",
+          "fr": "Fast Food"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Schnellgastronomie"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Quick-service food"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Restauración rápida"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Restauration rapide"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/573b4ac2-da0e-4e08-9e40-ab2b7cdcc7df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/573b4ac2-da0e-4e08-9e40-ab2b7cdcc7df"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Restauration organisée pour une préparation et un service rapides, souvent avec une offre courte et une possibilité de vente à emporter.",
+        "description_i18n": {
+          "de": "Auf schnelle Zubereitung und Bedienung ausgerichtete Gastronomie, häufig mit begrenzter Karte und Mitnahmemöglichkeit.",
+          "en": "Food service organised for quick preparation and serving, often with a limited menu and takeaway options.",
+          "es": "Restauración organizada para una preparación y un servicio rápidos, a menudo con una oferta reducida y posibilidad de comida para llevar.",
+          "fr": "Restauration organisée pour une préparation et un service rapides, souvent avec une offre courte et une possibilité de vente à emporter."
+        },
+        "name": "Restauration rapide",
+        "name_i18n": {
+          "de": "Schnellgastronomie",
+          "en": "Fast food",
+          "es": "Comida rápida",
+          "fr": "Restauration rapide"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Quick-service food"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Restauración rápida"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Fast Food"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Fast Food"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/573b4ac2-da0e-4e08-9e40-ab2b7cdcc7df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/573b4ac2-da0e-4e08-9e40-ab2b7cdcc7df"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4cb7f93e-4890-4f6b-8db8-386ad044cef9",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "fusion",
+      "base": {
+        "description": "Cuisine fusion créole-moderne",
+        "description_i18n": {
+          "de": "Moderne kreolische Fusionsküche",
+          "en": "Modern Creole fusion cuisine",
+          "es": "Cocina de fusión criolla moderna",
+          "fr": "Cuisine fusion créole-moderne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4cb7f93e-4890-4f6b-8db8-386ad044cef9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4cb7f93e-4890-4f6b-8db8-386ad044cef9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine combinant des ingrédients, techniques ou inspirations de plusieurs traditions, notamment des influences créoles et contemporaines dans le contexte local.",
+        "description_i18n": {
+          "de": "Küche, die Zutaten, Techniken oder Anregungen mehrerer Traditionen verbindet, im örtlichen Kontext etwa kreolische und zeitgenössische Einflüsse.",
+          "en": "Cuisine combining ingredients, techniques or inspirations from several traditions, including Creole and contemporary influences in the local context.",
+          "es": "Cocina que combina ingredientes, técnicas o inspiraciones de varias tradiciones, incluidas influencias criollas y contemporáneas en el contexto local.",
+          "fr": "Cuisine combinant des ingrédients, techniques ou inspirations de plusieurs traditions, notamment des influences créoles et contemporaines dans le contexte local."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4cb7f93e-4890-4f6b-8db8-386ad044cef9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4cb7f93e-4890-4f6b-8db8-386ad044cef9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "98aece87-7bb2-4801-8b3d-f42a2039729c",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "glacier",
+      "base": {
+        "description": "Glaces artisanales",
+        "description_i18n": {
+          "de": "Handwerklich hergestellte Eiscreme",
+          "en": "Artisanal ice cream",
+          "es": "Helados artesanales",
+          "fr": "Glaces artisanales"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/98aece87-7bb2-4801-8b3d-f42a2039729c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/98aece87-7bb2-4801-8b3d-f42a2039729c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre centrée sur les glaces, sorbets et préparations glacées à consommer ; le caractère artisanal ou la fabrication sur place se précise séparément.",
+        "description_i18n": {
+          "de": "Angebot mit Schwerpunkt auf Speiseeis, Sorbets und gefrorenen Desserts; handwerkliche Herstellung oder Produktion vor Ort wird gesondert angegeben.",
+          "en": "Offer centred on ice cream, sorbets and frozen desserts; artisanal production or on-site manufacture is specified separately.",
+          "es": "Oferta centrada en helados, sorbetes y preparaciones heladas; el carácter artesanal o la elaboración en el establecimiento se precisa por separado.",
+          "fr": "Offre centrée sur les glaces, sorbets et préparations glacées à consommer ; le caractère artisanal ou la fabrication sur place se précise séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/98aece87-7bb2-4801-8b3d-f42a2039729c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/98aece87-7bb2-4801-8b3d-f42a2039729c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0e005992-46ae-4ca3-9fcb-0d0b99ced384",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "gourmet",
+      "base": {
+        "description": "Cuisine gastronomique de qualité",
+        "description_i18n": {
+          "de": "Gehobene gastronomische Küche",
+          "en": "Gastronomic fine dining",
+          "es": "Cocina gastronómica de alta gama",
+          "fr": "Cuisine gastronomique de qualité"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0e005992-46ae-4ca3-9fcb-0d0b99ced384. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0e005992-46ae-4ca3-9fcb-0d0b99ced384"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Positionnement culinaire mettant en avant l'élaboration des recettes, la présentation et l'expérience de dégustation ; cette catégorie ne constitue pas un classement ou un label gastronomique.",
+        "description_i18n": {
+          "de": "Kulinarische Positionierung mit Schwerpunkt auf Rezeptgestaltung, Präsentation und Genusserlebnis; diese Kategorie stellt keine gastronomische Einstufung oder Auszeichnung dar.",
+          "en": "Culinary positioning emphasising recipe development, presentation and the dining experience; this category is not a gastronomic rating or label.",
+          "es": "Posicionamiento culinario que destaca la elaboración de las recetas, la presentación y la experiencia de degustación; esta categoría no constituye una clasificación ni un sello gastronómico.",
+          "fr": "Positionnement culinaire mettant en avant l'élaboration des recettes, la présentation et l'expérience de dégustation ; cette catégorie ne constitue pas un classement ou un label gastronomique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0e005992-46ae-4ca3-9fcb-0d0b99ced384. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0e005992-46ae-4ca3-9fcb-0d0b99ced384"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2ad9027c-c129-4b18-82c2-d09e64d28462",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "grecque",
+      "base": {
+        "description": "Cuisine grecque",
+        "description_i18n": {
+          "de": "Griechische Küche",
+          "en": "Greek cuisine",
+          "es": "Cocina griega",
+          "fr": "Cuisine grecque"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2ad9027c-c129-4b18-82c2-d09e64d28462. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2ad9027c-c129-4b18-82c2-d09e64d28462"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions de Grèce, pouvant notamment proposer mezzés, légumes préparés et grillades ; la carte précise les spécialités disponibles.",
+        "description_i18n": {
+          "de": "Von griechischen Traditionen geprägte Küche, etwa mit Meze, zubereitetem Gemüse und Grillgerichten; die verfügbaren Spezialitäten stehen auf der Karte.",
+          "en": "Cuisine inspired by Greek traditions, potentially including meze, prepared vegetables and grilled dishes; the menu specifies the available specialities.",
+          "es": "Cocina inspirada en las tradiciones de Grecia, que puede ofrecer mezés, verduras preparadas y parrilladas; la carta precisa las especialidades disponibles.",
+          "fr": "Cuisine inspirée des traditions de Grèce, pouvant notamment proposer mezzés, légumes préparés et grillades ; la carte précise les spécialités disponibles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2ad9027c-c129-4b18-82c2-d09e64d28462. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2ad9027c-c129-4b18-82c2-d09e64d28462"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b559916f-204f-433a-9c0c-88370b6bdc26",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "healthy",
+      "base": {
+        "description": "Cuisine healthy, bowls et poké",
+        "description_i18n": {
+          "de": "Healthy-Küche, Bowls und Poké",
+          "en": "Healthy cuisine, bowls and poké",
+          "es": "Cocina healthy, bowls y poké",
+          "fr": "Cuisine healthy, bowls et poké"
+        },
+        "name": "Healthy / Poké",
+        "name_i18n": {
+          "de": "Healthy / Poké",
+          "en": "Healthy / Poké",
+          "es": "Healthy / Poké",
+          "fr": "Healthy / Poké"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Healthy-Küche und Poké"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Healthy cuisine and poké"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina healthy y poké"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine healthy et poké"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b559916f-204f-433a-9c0c-88370b6bdc26. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b559916f-204f-433a-9c0c-88370b6bdc26"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre mettant en avant une alimentation présentée comme équilibrée, notamment par des bols composés et des pokés ; le terme décrit un style d'offre, sans évaluation nutritionnelle par Bertel.",
+        "description_i18n": {
+          "de": "Angebot mit als ausgewogen dargestellten Speisen, insbesondere zusammengestellten Bowls und Poké; die Bezeichnung beschreibt einen Angebotsstil ohne Ernährungsbewertung durch Bertel.",
+          "en": "Offer highlighting food presented as balanced, notably composed bowls and poké; the term describes an offer style without nutritional assessment by Bertel.",
+          "es": "Oferta que destaca una alimentación presentada como equilibrada, especialmente mediante boles compuestos y pokés; describe un estilo de oferta sin evaluación nutricional de Bertel.",
+          "fr": "Offre mettant en avant une alimentation présentée comme équilibrée, notamment par des bols composés et des pokés ; le terme décrit un style d'offre, sans évaluation nutritionnelle par Bertel."
+        },
+        "name": "Cuisine équilibrée / pokés",
+        "name_i18n": {
+          "de": "Ausgewogene Küche / Poké",
+          "en": "Balanced food / poké",
+          "es": "Cocina equilibrada / poké",
+          "fr": "Cuisine équilibrée / pokés"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Healthy-Küche und Poké"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Healthy cuisine and poké"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina healthy y poké"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine healthy et poké"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Healthy / Poké"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Healthy / Poké"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Healthy / Poké"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Healthy / Poké"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b559916f-204f-433a-9c0c-88370b6bdc26. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b559916f-204f-433a-9c0c-88370b6bdc26"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ad9d9756-99c8-4b59-81a8-a118d63a6805",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "indian",
+      "base": {
+        "description": "Cuisine indienne et tamoule",
+        "description_i18n": {
+          "de": "Indische und tamilische Küche",
+          "en": "Indian and Tamil cuisine",
+          "es": "Cocina india y tamil",
+          "fr": "Cuisine indienne et tamoule"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ad9d9756-99c8-4b59-81a8-a118d63a6805. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ad9d9756-99c8-4b59-81a8-a118d63a6805"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions de l'Inde, dont les traditions tamoules, avec des plats et usages d'épices variés selon les régions représentées.",
+        "description_i18n": {
+          "de": "Von indischen einschließlich tamilischen Traditionen geprägte Küche mit je nach vertretener Region unterschiedlichen Gerichten und Gewürzverwendungen.",
+          "en": "Cuisine inspired by Indian traditions, including Tamil traditions, with dishes and spice uses varying according to the regions represented.",
+          "es": "Cocina inspirada en las tradiciones de la India, incluidas las tamiles, con platos y usos de especias variados según las regiones representadas.",
+          "fr": "Cuisine inspirée des traditions de l'Inde, dont les traditions tamoules, avec des plats et usages d'épices variés selon les régions représentées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ad9d9756-99c8-4b59-81a8-a118d63a6805. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ad9d9756-99c8-4b59-81a8-a118d63a6805"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c0310551-0153-47b1-bfec-2a8890952ae0",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "international",
+      "base": {
+        "description": "Cuisine internationale",
+        "description_i18n": {
+          "de": "Internationale Küche",
+          "en": "International cuisine",
+          "es": "Cocina internacional",
+          "fr": "Cuisine internationale"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c0310551-0153-47b1-bfec-2a8890952ae0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c0310551-0153-47b1-bfec-2a8890952ae0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Carte réunissant des plats issus de plusieurs traditions culinaires nationales ou régionales, sans orientation exclusive vers une seule cuisine.",
+        "description_i18n": {
+          "de": "Karte mit Gerichten aus mehreren nationalen oder regionalen Küchentraditionen, ohne ausschließliche Ausrichtung auf eine einzelne Küche.",
+          "en": "Menu bringing together dishes from several national or regional culinary traditions without exclusively focusing on one cuisine.",
+          "es": "Carta que reúne platos de varias tradiciones culinarias nacionales o regionales, sin orientación exclusiva hacia una sola cocina.",
+          "fr": "Carte réunissant des plats issus de plusieurs traditions culinaires nationales ou régionales, sans orientation exclusive vers une seule cuisine."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c0310551-0153-47b1-bfec-2a8890952ae0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c0310551-0153-47b1-bfec-2a8890952ae0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7f130dc8-16b8-46cb-a35e-47f863935f27",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "italienne",
+      "base": {
+        "description": "Cuisine italienne",
+        "description_i18n": {
+          "de": "Italienische Küche",
+          "en": "Italian cuisine",
+          "es": "Cocina italiana",
+          "fr": "Cuisine italienne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7f130dc8-16b8-46cb-a35e-47f863935f27. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7f130dc8-16b8-46cb-a35e-47f863935f27"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions d'Italie, avec des préparations pouvant notamment comprendre pâtes, risottos ou autres spécialités régionales ; elle ne se limite pas aux pizzas.",
+        "description_i18n": {
+          "de": "Von italienischen Traditionen geprägte Küche, etwa mit Pasta, Risotto oder anderen regionalen Spezialitäten; sie ist nicht auf Pizza beschränkt.",
+          "en": "Cuisine inspired by Italian traditions, potentially including pasta, risotto or other regional specialities; it is not limited to pizza.",
+          "es": "Cocina inspirada en las tradiciones de Italia, que puede incluir pastas, risottos u otras especialidades regionales; no se limita a las pizzas.",
+          "fr": "Cuisine inspirée des traditions d'Italie, avec des préparations pouvant notamment comprendre pâtes, risottos ou autres spécialités régionales ; elle ne se limite pas aux pizzas."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7f130dc8-16b8-46cb-a35e-47f863935f27. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7f130dc8-16b8-46cb-a35e-47f863935f27"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "594ae100-556c-45b0-9caf-a70d3ca14aa0",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "japonaise",
+      "base": {
+        "description": "Cuisine japonaise et sushi",
+        "description_i18n": {
+          "de": "Japanische Küche und Sushi",
+          "en": "Japanese cuisine and sushi",
+          "es": "Cocina japonesa y sushi",
+          "fr": "Cuisine japonaise et sushi"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/594ae100-556c-45b0-9caf-a70d3ca14aa0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/594ae100-556c-45b0-9caf-a70d3ca14aa0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions du Japon, pouvant proposer sushis, nouilles, bouillons ou autres préparations japonaises, selon la carte de l'établissement.",
+        "description_i18n": {
+          "de": "Von japanischen Traditionen geprägte Küche, etwa mit Sushi, Nudeln, Brühen oder anderen japanischen Zubereitungen entsprechend der Karte des Betriebs.",
+          "en": "Cuisine inspired by Japanese traditions, potentially offering sushi, noodles, broths or other Japanese preparations according to the establishment's menu.",
+          "es": "Cocina inspirada en las tradiciones de Japón, que puede ofrecer sushi, fideos, caldos u otras preparaciones japonesas según la carta del establecimiento.",
+          "fr": "Cuisine inspirée des traditions du Japon, pouvant proposer sushis, nouilles, bouillons ou autres préparations japonaises, selon la carte de l'établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/594ae100-556c-45b0-9caf-a70d3ca14aa0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/594ae100-556c-45b0-9caf-a70d3ca14aa0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "425913e1-cfa7-4ec4-b1f4-f16a9c66d2c0",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "libanaise",
+      "base": {
+        "description": "Cuisine libanaise et moyen-orientale",
+        "description_i18n": {
+          "de": "Libanesische und nahöstliche Küche",
+          "en": "Lebanese and Middle Eastern cuisine",
+          "es": "Cocina libanesa y de Oriente Medio",
+          "fr": "Cuisine libanaise et moyen-orientale"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/425913e1-cfa7-4ec4-b1f4-f16a9c66d2c0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/425913e1-cfa7-4ec4-b1f4-f16a9c66d2c0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine d'inspiration libanaise et de traditions voisines du Moyen-Orient, pouvant notamment associer mezzés, grillades et préparations de légumineuses.",
+        "description_i18n": {
+          "de": "Von libanesischen und benachbarten nahöstlichen Traditionen geprägte Küche, etwa mit Meze, Grillgerichten und Hülsenfruchtzubereitungen.",
+          "en": "Cuisine inspired by Lebanese and neighbouring Middle Eastern traditions, potentially combining meze, grilled dishes and pulse-based preparations.",
+          "es": "Cocina inspirada en las tradiciones libanesas y vecinas de Oriente Medio, que puede combinar mezés, parrilladas y preparaciones de legumbres.",
+          "fr": "Cuisine d'inspiration libanaise et de traditions voisines du Moyen-Orient, pouvant notamment associer mezzés, grillades et préparations de légumineuses."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/425913e1-cfa7-4ec4-b1f4-f16a9c66d2c0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/425913e1-cfa7-4ec4-b1f4-f16a9c66d2c0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "55ec5491-5efc-4aed-acb5-3ce5296887b1",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "malgache",
+      "base": {
+        "description": "Cuisine malgache (Madagascar)",
+        "description_i18n": {
+          "de": "Madagassische Küche (Madagaskar)",
+          "en": "Malagasy cuisine (Madagascar)",
+          "es": "Cocina malgache (Madagascar)",
+          "fr": "Cuisine malgache (Madagascar)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/55ec5491-5efc-4aed-acb5-3ce5296887b1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/55ec5491-5efc-4aed-acb5-3ce5296887b1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine issue des traditions de Madagascar, associant notamment riz et plats d'accompagnement ; elle indique une orientation culinaire et non l'origine obligatoire des ingrédients.",
+        "description_i18n": {
+          "de": "Küche aus den Traditionen Madagaskars, insbesondere mit Reis und begleitenden Gerichten; sie bezeichnet die kulinarische Ausrichtung und keine vorgeschriebene Zutatenherkunft.",
+          "en": "Cuisine rooted in Madagascar's traditions, notably combining rice and accompanying dishes; it describes a culinary orientation rather than a required ingredient origin.",
+          "es": "Cocina procedente de las tradiciones de Madagascar, que combina especialmente arroz y platos de acompañamiento; indica una orientación culinaria, no un origen obligatorio de los ingredientes.",
+          "fr": "Cuisine issue des traditions de Madagascar, associant notamment riz et plats d'accompagnement ; elle indique une orientation culinaire et non l'origine obligatoire des ingrédients."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/55ec5491-5efc-4aed-acb5-3ce5296887b1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/55ec5491-5efc-4aed-acb5-3ce5296887b1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1d07708c-eab0-4a42-a67e-2dc019b35263",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "marocaine",
+      "base": {
+        "description": "Cuisine marocaine, de tradition maghrébine",
+        "description_i18n": {
+          "de": "Marokkanische Küche in der maghrebinischen Tradition",
+          "en": "Moroccan cuisine within the Maghreb culinary tradition",
+          "es": "Cocina marroquí, dentro de la tradición culinaria del Magreb",
+          "fr": "Cuisine marocaine, de tradition maghrébine"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1d07708c-eab0-4a42-a67e-2dc019b35263. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1d07708c-eab0-4a42-a67e-2dc019b35263"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions marocaines du Maghreb, représentée notamment par des tajines, couscous ou autres spécialités de cette tradition.",
+        "description_i18n": {
+          "de": "Von marokkanischen Traditionen des Maghreb geprägte Küche, etwa mit Tajines, Couscous oder anderen Spezialitäten dieser Tradition.",
+          "en": "Cuisine inspired by Morocco's Maghrebi traditions, represented notably by tagines, couscous or other specialities of that tradition.",
+          "es": "Cocina inspirada en las tradiciones marroquíes del Magreb, representada especialmente por tajines, cuscús u otras especialidades de esa tradición.",
+          "fr": "Cuisine inspirée des traditions marocaines du Maghreb, représentée notamment par des tajines, couscous ou autres spécialités de cette tradition."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1d07708c-eab0-4a42-a67e-2dc019b35263. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1d07708c-eab0-4a42-a67e-2dc019b35263"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "981082cb-35f8-4a88-8115-63c2441810db",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "mauricienne",
+      "base": {
+        "description": "Cuisine mauricienne",
+        "description_i18n": {
+          "de": "Mauritische Küche",
+          "en": "Mauritian cuisine",
+          "es": "Cocina mauriciana",
+          "fr": "Cuisine mauricienne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/981082cb-35f8-4a88-8115-63c2441810db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/981082cb-35f8-4a88-8115-63c2441810db"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine de tradition mauricienne, issue notamment d'influences créoles, indiennes et chinoises propres à l'histoire culinaire de l'île Maurice.",
+        "description_i18n": {
+          "de": "Mauritische Küche, die insbesondere aus kreolischen, indischen und chinesischen Einflüssen der kulinarischen Geschichte von Mauritius hervorgegangen ist.",
+          "en": "Mauritian cuisine rooted notably in Creole, Indian and Chinese influences within Mauritius's culinary history.",
+          "es": "Cocina de tradición mauriciana, procedente especialmente de influencias criollas, indias y chinas de la historia culinaria de Mauricio.",
+          "fr": "Cuisine de tradition mauricienne, issue notamment d'influences créoles, indiennes et chinoises propres à l'histoire culinaire de l'île Maurice."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/981082cb-35f8-4a88-8115-63c2441810db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/981082cb-35f8-4a88-8115-63c2441810db"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "41d721e0-73ef-49bd-946d-7108aeb7ef26",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "mediterraneenne",
+      "base": {
+        "description": "Cuisine méditerranéenne",
+        "description_i18n": {
+          "de": "Mediterrane Küche",
+          "en": "Mediterranean cuisine",
+          "es": "Cocina mediterránea",
+          "fr": "Cuisine méditerranéenne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/41d721e0-73ef-49bd-946d-7108aeb7ef26. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/41d721e0-73ef-49bd-946d-7108aeb7ef26"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions du pourtour méditerranéen, pouvant mettre en avant légumes, huile d'olive, céréales, poissons ou grillades, sans désigner un régime nutritionnel certifié.",
+        "description_i18n": {
+          "de": "Von Mittelmeertraditionen geprägte Küche, etwa mit Gemüse, Olivenöl, Getreide, Fisch oder Grillgerichten, ohne eine zertifizierte Ernährungsform zu bezeichnen.",
+          "en": "Cuisine inspired by Mediterranean traditions, potentially emphasising vegetables, olive oil, grains, fish or grilled dishes, without designating a certified nutritional diet.",
+          "es": "Cocina inspirada en las tradiciones mediterráneas, que puede destacar verduras, aceite de oliva, cereales, pescados o parrilladas, sin designar una dieta nutricional certificada.",
+          "fr": "Cuisine inspirée des traditions du pourtour méditerranéen, pouvant mettre en avant légumes, huile d'olive, céréales, poissons ou grillades, sans désigner un régime nutritionnel certifié."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/41d721e0-73ef-49bd-946d-7108aeb7ef26. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/41d721e0-73ef-49bd-946d-7108aeb7ef26"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a070e22c-307d-4152-8b57-27c15d20fd9a",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "metropolitan",
+      "base": {
+        "description": "Cuisine française (hexagone)",
+        "description_i18n": {
+          "de": "Französische Küche des französischen Festlands",
+          "en": "French metropolitan cuisine",
+          "es": "Cocina francesa metropolitana",
+          "fr": "Cuisine française (hexagone)"
+        },
+        "name": "Française",
+        "name_i18n": {
+          "de": "Französisch (Festland)",
+          "en": "Metropolitan French",
+          "es": "Francesa metropolitana",
+          "fr": "Française"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Französische Festlandküche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Metropolitan French cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina de la Francia metropolitana"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine française métropolitaine"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a070e22c-307d-4152-8b57-27c15d20fd9a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a070e22c-307d-4152-8b57-27c15d20fd9a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions régionales de France métropolitaine, distinguée dans ce catalogue des cuisines créoles et des autres origines culinaires.",
+        "description_i18n": {
+          "de": "Von regionalen Traditionen des französischen Festlands geprägte Küche, die in diesem Katalog von kreolischen Küchen und anderen kulinarischen Ursprüngen unterschieden wird.",
+          "en": "Cuisine inspired by mainland France's regional traditions, distinguished in this catalogue from Creole cuisines and other culinary origins.",
+          "es": "Cocina inspirada en las tradiciones regionales de Francia metropolitana, distinguida en este catálogo de las cocinas criollas y otros orígenes culinarios.",
+          "fr": "Cuisine inspirée des traditions régionales de France métropolitaine, distinguée dans ce catalogue des cuisines créoles et des autres origines culinaires."
+        },
+        "name": "Française métropolitaine",
+        "name_i18n": {
+          "de": "Französisch (Festland)",
+          "en": "Mainland French",
+          "es": "Francesa metropolitana",
+          "fr": "Française métropolitaine"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Französische Festlandküche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Metropolitan French cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina de la Francia metropolitana"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine française métropolitaine"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Metropolitan French"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Française"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a070e22c-307d-4152-8b57-27c15d20fd9a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a070e22c-307d-4152-8b57-27c15d20fd9a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b808c45e-c68e-4534-8af3-3272a0f4048f",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "mexicaine",
+      "base": {
+        "description": "Cuisine mexicaine et Tex-Mex",
+        "description_i18n": {
+          "de": "Mexikanische und Tex-Mex-Küche",
+          "en": "Mexican and Tex-Mex cuisine",
+          "es": "Cocina mexicana y tex-mex",
+          "fr": "Cuisine mexicaine et Tex-Mex"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b808c45e-c68e-4534-8af3-3272a0f4048f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b808c45e-c68e-4534-8af3-3272a0f4048f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions du Mexique et, selon l'offre, d'influences Tex-Mex, avec des préparations telles que tacos, tortillas ou autres spécialités annoncées.",
+        "description_i18n": {
+          "de": "Von mexikanischen Traditionen und je nach Angebot Tex-Mex-Einflüssen geprägte Küche, etwa mit Tacos, Tortillas oder anderen angegebenen Spezialitäten.",
+          "en": "Cuisine inspired by Mexican traditions and, depending on the offer, Tex-Mex influences, with preparations such as tacos, tortillas or other stated specialities.",
+          "es": "Cocina inspirada en las tradiciones de México y, según la oferta, en influencias Tex-Mex, con preparaciones como tacos, tortillas u otras especialidades anunciadas.",
+          "fr": "Cuisine inspirée des traditions du Mexique et, selon l'offre, d'influences Tex-Mex, avec des préparations telles que tacos, tortillas ou autres spécialités annoncées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b808c45e-c68e-4534-8af3-3272a0f4048f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b808c45e-c68e-4534-8af3-3272a0f4048f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "27ef5534-155e-47eb-b85e-c414122eaf10",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "patisserie",
+      "base": {
+        "description": "Salon de thé et pâtisseries",
+        "description_i18n": {
+          "de": "Teesalon und Feingebäck",
+          "en": "Tea room and pastries",
+          "es": "Salón de té y pastelería",
+          "fr": "Salon de thé et pâtisseries"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/27ef5534-155e-47eb-b85e-c414122eaf10. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/27ef5534-155e-47eb-b85e-c414122eaf10"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre centrée sur des préparations sucrées de pâtisserie, éventuellement dans un salon de thé, plutôt que sur un repas de restauration complet.",
+        "description_i18n": {
+          "de": "Angebot mit Schwerpunkt auf süßen Backwaren und Konditoreierzeugnissen, gegebenenfalls in einem Teesalon, statt einer vollständigen Restaurantmahlzeit.",
+          "en": "Offer focused on sweet pastries and desserts, potentially in a tea room, rather than a full restaurant meal.",
+          "es": "Oferta centrada en preparaciones dulces de pastelería, eventualmente en un salón de té, en lugar de una comida completa de restaurante.",
+          "fr": "Offre centrée sur des préparations sucrées de pâtisserie, éventuellement dans un salon de thé, plutôt que sur un repas de restauration complet."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/27ef5534-155e-47eb-b85e-c414122eaf10. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/27ef5534-155e-47eb-b85e-c414122eaf10"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4643d401-c8df-46e2-bb4c-46fdd33d8808",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "pizzeria",
+      "base": {
+        "description": "Établissement servant principalement des pizzas",
+        "description_i18n": {
+          "de": "Restaurant mit Schwerpunkt Pizza",
+          "en": "Restaurant specialising in pizza",
+          "es": "Establecimiento especializado en pizzas",
+          "fr": "Établissement servant principalement des pizzas"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4643d401-c8df-46e2-bb4c-46fdd33d8808. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4643d401-c8df-46e2-bb4c-46fdd33d8808"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre de restauration principalement consacrée aux pizzas et à leurs différentes garnitures, distincte d'une carte italienne plus générale.",
+        "description_i18n": {
+          "de": "Gastronomisches Angebot mit Schwerpunkt auf Pizza und unterschiedlichen Belägen, getrennt von einer allgemeineren italienischen Karte.",
+          "en": "Food offer mainly devoted to pizzas and their various toppings, distinct from a more general Italian menu.",
+          "es": "Oferta de restauración dedicada principalmente a pizzas y sus diferentes ingredientes, distinta de una carta italiana más general.",
+          "fr": "Offre de restauration principalement consacrée aux pizzas et à leurs différentes garnitures, distincte d'une carte italienne plus générale."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4643d401-c8df-46e2-bb4c-46fdd33d8808. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4643d401-c8df-46e2-bb4c-46fdd33d8808"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5bcf4102-ba96-4f4f-9b5f-2eca9581f1a6",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "portugaise",
+      "base": {
+        "description": "Cuisine portugaise",
+        "description_i18n": {
+          "de": "Portugiesische Küche",
+          "en": "Portuguese cuisine",
+          "es": "Cocina portuguesa",
+          "fr": "Cuisine portugaise"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5bcf4102-ba96-4f4f-9b5f-2eca9581f1a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5bcf4102-ba96-4f4f-9b5f-2eca9581f1a6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions du Portugal, pouvant notamment proposer préparations de poisson, viandes grillées ou pâtisseries portugaises selon la carte.",
+        "description_i18n": {
+          "de": "Von portugiesischen Traditionen geprägte Küche, etwa mit Fischgerichten, gegrilltem Fleisch oder portugiesischem Gebäck nach der Karte.",
+          "en": "Cuisine inspired by Portuguese traditions, potentially offering fish dishes, grilled meats or Portuguese pastries according to the menu.",
+          "es": "Cocina inspirada en las tradiciones de Portugal, que puede ofrecer preparaciones de pescado, carnes a la parrilla o pastelería portuguesa según la carta.",
+          "fr": "Cuisine inspirée des traditions du Portugal, pouvant notamment proposer préparations de poisson, viandes grillées ou pâtisseries portugaises selon la carte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5bcf4102-ba96-4f4f-9b5f-2eca9581f1a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5bcf4102-ba96-4f4f-9b5f-2eca9581f1a6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "89c8f57c-0ce9-49bd-903e-fd3c4d2552db",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "savoyarde",
+      "base": {
+        "description": "Cuisine savoyarde et montagnarde",
+        "description_i18n": {
+          "de": "Savoyische und alpine Bergküche",
+          "en": "Savoyard and mountain cuisine",
+          "es": "Cocina saboyana y de montaña",
+          "fr": "Cuisine savoyarde et montagnarde"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/89c8f57c-0ce9-49bd-903e-fd3c4d2552db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/89c8f57c-0ce9-49bd-903e-fd3c4d2552db"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine d'inspiration savoyarde ou montagnarde, notamment associée à des préparations au fromage telles que fondue ou raclette, selon l'offre de l'établissement.",
+        "description_i18n": {
+          "de": "Savoyisch oder alpin geprägte Küche, insbesondere mit Käsezubereitungen wie Fondue oder Raclette, entsprechend dem Angebot des Betriebs.",
+          "en": "Savoyard or mountain-inspired cuisine, notably associated with cheese preparations such as fondue or raclette, according to the establishment's offer.",
+          "es": "Cocina de inspiración saboyana o de montaña, especialmente asociada a preparaciones con queso como fondue o raclette, según la oferta del establecimiento.",
+          "fr": "Cuisine d'inspiration savoyarde ou montagnarde, notamment associée à des préparations au fromage telles que fondue ou raclette, selon l'offre de l'établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/89c8f57c-0ce9-49bd-903e-fd3c4d2552db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/89c8f57c-0ce9-49bd-903e-fd3c4d2552db"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f4c29eec-2500-4428-8a2a-faba9d3bca86",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "seafood",
+      "base": {
+        "description": "Cuisine fruits de mer et poisson",
+        "description_i18n": {
+          "de": "Meeresfrüchte- und Fischküche",
+          "en": "Seafood and fish cuisine",
+          "es": "Cocina de mariscos y pescado",
+          "fr": "Cuisine fruits de mer et poisson"
+        },
+        "name": "Fruits de mer",
+        "name_i18n": {
+          "de": "Meeresfrüchte",
+          "en": "Seafood",
+          "es": "Mariscos",
+          "fr": "Fruits de mer"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Fisch- und Meeresfrüchteküche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Fish and seafood cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina de pescado y mariscos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine de poissons et fruits de mer"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f4c29eec-2500-4428-8a2a-faba9d3bca86. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f4c29eec-2500-4428-8a2a-faba9d3bca86"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Orientation culinaire centrée sur les poissons et fruits de mer, préparés selon les recettes annoncées ; elle est distincte de l'information sur leurs allergènes.",
+        "description_i18n": {
+          "de": "Kulinarische Ausrichtung mit Schwerpunkt auf Fisch und Meeresfrüchten nach den angegebenen Rezepten, getrennt von Allergeninformationen.",
+          "en": "Culinary orientation centred on fish and seafood prepared according to the stated recipes, distinct from information about their allergens.",
+          "es": "Orientación culinaria centrada en pescados y mariscos preparados según las recetas anunciadas, distinta de la información sobre sus alérgenos.",
+          "fr": "Orientation culinaire centrée sur les poissons et fruits de mer, préparés selon les recettes annoncées ; elle est distincte de l'information sur leurs allergènes."
+        },
+        "name": "Poissons et fruits de mer",
+        "name_i18n": {
+          "de": "Fisch und Meeresfrüchte",
+          "en": "Fish and seafood",
+          "es": "Pescados y mariscos",
+          "fr": "Poissons et fruits de mer"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Fisch- und Meeresfrüchteküche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Fish and seafood cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina de pescado y mariscos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine de poissons et fruits de mer"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Meeresfrüchte"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Seafood"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Mariscos"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Fruits de mer"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f4c29eec-2500-4428-8a2a-faba9d3bca86. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f4c29eec-2500-4428-8a2a-faba9d3bca86"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3f2a4b0e-1f36-45ea-9038-874d848f7cc6",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "seychelloise",
+      "base": {
+        "description": "Cuisine des Seychelles",
+        "description_i18n": {
+          "de": "Seychellische Küche",
+          "en": "Seychellois cuisine",
+          "es": "Cocina seychelense",
+          "fr": "Cuisine des Seychelles"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3f2a4b0e-1f36-45ea-9038-874d848f7cc6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3f2a4b0e-1f36-45ea-9038-874d848f7cc6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine de tradition seychelloise, notamment créole de l'océan Indien, pouvant associer poissons, épices et préparations au lait de coco.",
+        "description_i18n": {
+          "de": "Seychellische Küche, insbesondere kreolischer Tradition des Indischen Ozeans, etwa mit Fisch, Gewürzen und Kokosmilchzubereitungen.",
+          "en": "Seychellois cuisine, notably Indian Ocean Creole traditions, potentially combining fish, spices and coconut-milk preparations.",
+          "es": "Cocina de tradición seychelense, especialmente criolla del océano Índico, que puede combinar pescados, especias y preparaciones con leche de coco.",
+          "fr": "Cuisine de tradition seychelloise, notamment créole de l'océan Indien, pouvant associer poissons, épices et préparations au lait de coco."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3f2a4b0e-1f36-45ea-9038-874d848f7cc6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3f2a4b0e-1f36-45ea-9038-874d848f7cc6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dc681567-6651-4d75-a68e-5839cb7d199b",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "sino_reunionnaise",
+      "base": {
+        "description": "Cuisine chinoise réunionnaise (métisse)",
+        "description_i18n": {
+          "de": "Chinesisch geprägte Küche von La Réunion, verbunden mit lokalen Kochtraditionen.",
+          "en": "Chinese-influenced cuisine of Réunion, blending local culinary traditions.",
+          "es": "Cocina de La Reunión de influencia china, mezclada con las tradiciones culinarias locales.",
+          "fr": "Cuisine chinoise réunionnaise (métisse)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dc681567-6651-4d75-a68e-5839cb7d199b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dc681567-6651-4d75-a68e-5839cb7d199b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine issue de l'adaptation des traditions chinoises à La Réunion, représentée notamment par des plats sautés ou bouchons et distinguée d'une cuisine chinoise régionale sans ce contexte local.",
+        "description_i18n": {
+          "de": "Aus der Anpassung chinesischer Traditionen auf Réunion entstandene Küche, etwa mit Pfannengerichten oder Bouchons, getrennt von chinesischer Regionalküche ohne diesen örtlichen Bezug.",
+          "en": "Cuisine arising from the adaptation of Chinese traditions in Réunion, notably featuring stir-fried dishes or bouchons, distinct from a regional Chinese cuisine without that local context.",
+          "es": "Cocina nacida de la adaptación de tradiciones chinas en Reunión, representada especialmente por salteados o bouchons, distinta de una cocina regional china sin ese contexto local.",
+          "fr": "Cuisine issue de l'adaptation des traditions chinoises à La Réunion, représentée notamment par des plats sautés ou bouchons et distinguée d'une cuisine chinoise régionale sans ce contexte local."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dc681567-6651-4d75-a68e-5839cb7d199b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dc681567-6651-4d75-a68e-5839cb7d199b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e1be2f48-cf22-4267-a6a1-e27028a6d387",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "street_food",
+      "base": {
+        "description": "Cuisine de rue",
+        "description_i18n": {
+          "de": "Street-Food-Spezialitäten",
+          "en": "Street food specialties",
+          "es": "Especialidades de comida callejera",
+          "fr": "Cuisine de rue"
+        },
+        "name": "Street Food",
+        "name_i18n": {
+          "de": "Street Food",
+          "en": "Street food",
+          "es": "Comida callejera",
+          "fr": "Street Food"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Straßenküche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Street cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Gastronomía callejera"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine de rue"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e1be2f48-cf22-4267-a6a1-e27028a6d387. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e1be2f48-cf22-4267-a6a1-e27028a6d387"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Style de restauration inspiré des préparations vendues et consommées dans la rue ou sur des stands, souvent en portions faciles à emporter.",
+        "description_i18n": {
+          "de": "Gastronomiestil nach dem Vorbild von auf der Straße oder an Ständen verkauften und verzehrten Speisen, häufig in leicht mitzunehmenden Portionen.",
+          "en": "Food-service style inspired by dishes sold and eaten in the street or at stalls, often in portable portions.",
+          "es": "Estilo de restauración inspirado en preparaciones vendidas y consumidas en la calle o en puestos, a menudo en raciones fáciles de llevar.",
+          "fr": "Style de restauration inspiré des préparations vendues et consommées dans la rue ou sur des stands, souvent en portions faciles à emporter."
+        },
+        "name": "Cuisine de rue",
+        "name_i18n": {
+          "de": "Streetfood",
+          "en": "Street food",
+          "es": "Comida callejera",
+          "fr": "Cuisine de rue"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Straßenküche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Street cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Gastronomía callejera"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Street Food"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e1be2f48-cf22-4267-a6a1-e27028a6d387. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e1be2f48-cf22-4267-a6a1-e27028a6d387"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ca91f290-9e2a-4740-91c4-85c497b03e24",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "thai",
+      "base": {
+        "description": "Cuisine thaïlandaise",
+        "description_i18n": {
+          "de": "Thailändische Küche",
+          "en": "Thai cuisine",
+          "es": "Cocina tailandesa",
+          "fr": "Cuisine thaïlandaise"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ca91f290-9e2a-4740-91c4-85c497b03e24. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ca91f290-9e2a-4740-91c4-85c497b03e24"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions de Thaïlande, pouvant associer herbes aromatiques, currys, plats sautés et préparations de riz ou de nouilles.",
+        "description_i18n": {
+          "de": "Von thailändischen Traditionen geprägte Küche, etwa mit Kräutern, Currys, Pfannengerichten sowie Reis- oder Nudelzubereitungen.",
+          "en": "Cuisine inspired by Thai traditions, potentially combining aromatic herbs, curries, stir-fried dishes and rice or noodle preparations.",
+          "es": "Cocina inspirada en las tradiciones de Tailandia, que puede combinar hierbas aromáticas, curris, salteados y preparaciones de arroz o fideos.",
+          "fr": "Cuisine inspirée des traditions de Thaïlande, pouvant associer herbes aromatiques, currys, plats sautés et préparations de riz ou de nouilles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ca91f290-9e2a-4740-91c4-85c497b03e24. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ca91f290-9e2a-4740-91c4-85c497b03e24"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1552ca98-6706-4345-9d7f-8fd5e669389b",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "traditional",
+      "base": {
+        "description": "Cuisine terroir et traditionnelle",
+        "description_i18n": {
+          "de": "Regionale traditionelle Küche",
+          "en": "Local traditional cuisine",
+          "es": "Cocina tradicional de terroir",
+          "fr": "Cuisine terroir et traditionnelle"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1552ca98-6706-4345-9d7f-8fd5e669389b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1552ca98-6706-4345-9d7f-8fd5e669389b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine fondée sur des recettes et savoir-faire transmis dans un territoire ou une tradition ; la carte précise cette tradition, qui n'est pas nécessairement réunionnaise.",
+        "description_i18n": {
+          "de": "Küche auf Grundlage überlieferter Rezepte und Fertigkeiten eines Gebiets oder einer Tradition; die Karte benennt diese Tradition, die nicht zwingend aus Réunion stammt.",
+          "en": "Cuisine based on recipes and knowledge passed down within an area or tradition; the menu specifies that tradition, which is not necessarily from Réunion.",
+          "es": "Cocina basada en recetas y saberes transmitidos en un territorio o tradición; la carta precisa esa tradición, que no es necesariamente de Reunión.",
+          "fr": "Cuisine fondée sur des recettes et savoir-faire transmis dans un territoire ou une tradition ; la carte précise cette tradition, qui n'est pas nécessairement réunionnaise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1552ca98-6706-4345-9d7f-8fd5e669389b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1552ca98-6706-4345-9d7f-8fd5e669389b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c88f215d-45fa-4e12-a98c-d054978ed993",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "vegan",
+      "base": {
+        "description": "Cuisine végane",
+        "description_i18n": {
+          "de": "Vegane Küche",
+          "en": "Vegan cuisine",
+          "es": "Cocina vegana",
+          "fr": "Cuisine végane"
+        },
+        "name": "Végan",
+        "name_i18n": {
+          "de": "Vegan",
+          "en": "Vegan",
+          "es": "Vegana",
+          "fr": "Végan"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Vegane Küche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Vegan cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina vegana"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine végane"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine végétalienne"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c88f215d-45fa-4e12-a98c-d054978ed993. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c88f215d-45fa-4e12-a98c-d054978ed993"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Orientation de cuisine proposant des préparations sans ingrédients d'origine animale ; elle décrit le style culinaire annoncé, à distinguer des caractéristiques de chaque plat.",
+        "description_i18n": {
+          "de": "Kulinarische Ausrichtung mit Zubereitungen ohne tierische Zutaten; sie beschreibt den angegebenen Küchenstil, getrennt von den Eigenschaften jedes einzelnen Gerichts.",
+          "en": "Culinary orientation offering preparations without animal-derived ingredients; it describes the stated cooking style, distinct from each dish's characteristics.",
+          "es": "Orientación culinaria que ofrece preparaciones sin ingredientes de origen animal; describe el estilo anunciado, distinto de las características de cada plato.",
+          "fr": "Orientation de cuisine proposant des préparations sans ingrédients d'origine animale ; elle décrit le style culinaire annoncé, à distinguer des caractéristiques de chaque plat."
+        },
+        "name": "Végane",
+        "name_i18n": {
+          "de": "Vegan",
+          "en": "Vegan",
+          "es": "Vegana",
+          "fr": "Végane"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Vegane Küche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Vegan cuisine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cocina vegana"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine végane"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Cuisine végétalienne"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Végan"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c88f215d-45fa-4e12-a98c-d054978ed993. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c88f215d-45fa-4e12-a98c-d054978ed993"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a1df6029-7d6b-4bdf-8956-54ff8a6b404c",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "vegetarienne",
+      "base": {
+        "description": "Cuisine végétarienne",
+        "description_i18n": {
+          "de": "Vegetarische Küche",
+          "en": "Vegetarian cuisine",
+          "es": "Cocina vegetariana",
+          "fr": "Cuisine végétarienne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a1df6029-7d6b-4bdf-8956-54ff8a6b404c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a1df6029-7d6b-4bdf-8956-54ff8a6b404c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Orientation de cuisine proposant des préparations sans viande ni poisson, pouvant inclure œufs et produits laitiers ; les ingrédients de chaque plat restent précisés séparément.",
+        "description_i18n": {
+          "de": "Kulinarische Ausrichtung mit Zubereitungen ohne Fleisch und Fisch, gegebenenfalls mit Eiern und Milchprodukten; die Zutaten jedes Gerichts werden gesondert angegeben.",
+          "en": "Culinary orientation offering preparations without meat or fish, potentially including eggs and dairy products; each dish's ingredients are specified separately.",
+          "es": "Orientación culinaria con preparaciones sin carne ni pescado que pueden incluir huevos y lácteos; los ingredientes de cada plato se precisan por separado.",
+          "fr": "Orientation de cuisine proposant des préparations sans viande ni poisson, pouvant inclure œufs et produits laitiers ; les ingrédients de chaque plat restent précisés séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a1df6029-7d6b-4bdf-8956-54ff8a6b404c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a1df6029-7d6b-4bdf-8956-54ff8a6b404c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9285e1a5-7e41-451a-beff-2bd7627bb620",
+      "domain": "cuisine_type",
+      "context_key": "",
+      "code": "vietnamienne",
+      "base": {
+        "description": "Cuisine vietnamienne",
+        "description_i18n": {
+          "de": "Vietnamesische Küche",
+          "en": "Vietnamese cuisine",
+          "es": "Cocina vietnamita",
+          "fr": "Cuisine vietnamienne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9285e1a5-7e41-451a-beff-2bd7627bb620. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9285e1a5-7e41-451a-beff-2bd7627bb620"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cuisine inspirée des traditions du Vietnam, pouvant notamment associer bouillons, nouilles, herbes fraîches et préparations roulées, selon les spécialités proposées.",
+        "description_i18n": {
+          "de": "Von vietnamesischen Traditionen geprägte Küche, etwa mit Brühen, Nudeln, frischen Kräutern und gerollten Zubereitungen je nach angebotenen Spezialitäten.",
+          "en": "Cuisine inspired by Vietnamese traditions, potentially combining broths, noodles, fresh herbs and rolled preparations according to the specialities offered.",
+          "es": "Cocina inspirada en las tradiciones de Vietnam, que puede combinar caldos, fideos, hierbas frescas y preparaciones enrolladas según las especialidades ofrecidas.",
+          "fr": "Cuisine inspirée des traditions du Vietnam, pouvant notamment associer bouillons, nouilles, herbes fraîches et préparations roulées, selon les spécialités proposées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9285e1a5-7e41-451a-beff-2bd7627bb620. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9285e1a5-7e41-451a-beff-2bd7627bb620"
+          }
+        ]
+      }
+    }
+  ]
+}

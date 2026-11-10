@@ -63,6 +63,41 @@ Tests sans réseau ni secret :
 node --test tools/thesaurus-content/propose-content.test.mjs
 ```
 
+## Revue intégrale et assemblage hors connexion
+
+`assemble-reviewed-content.mjs` rapproche un export complet des décisions de revue,
+une par concept. L'export doit inclure les domaines internes et les concepts
+historiques ; un instantané public seul ne suffit pas. Chaque domaine fournit les
+décisions `kept`, `rewritten` ou `needs_business_decision`, leur justification et les
+champs relus : libellés, définitions, traductions, synonymes et recherches cachées,
+notes, relations, parents/contexte, correspondances et cycle de vie. Les termes de
+recherche hérités sont relus séparément et préservés.
+
+```powershell
+node tools/thesaurus-content/assemble-reviewed-content.mjs --workspace export-complet.json --reviews revue-par-domaine --output lots-relus
+node --test tools/thesaurus-content/assemble-reviewed-content.test.mjs
+```
+
+L'assembleur refuse les omissions, les identités ambiguës, la perte d'une langue,
+les définitions absentes ou identiques au nom, les cibles inexistantes et les cycles
+hiérarchiques. Il conserve les valeurs précédentes exactes dans `base`. Les quatre
+langues FR/EN/ES/DE sont contrôlées, ainsi que les langues supplémentaires présentes.
+Une décision métier non résolue bloque la génération des lots. Les homonymes sont
+signalés pour examen dans leur contexte : ce n'est pas une autorisation de fusion.
+
+Ces contrôles prouvent la complétude des décisions et la cohérence structurelle.
+Ils ne prouvent pas à eux seuls la justesse du sens, une relecture indépendante ou
+une validation par un locuteur natif. Aucune relation ou correspondance externe
+n'est créée pour atteindre un quota.
+
+Les lots par domaine sont compatibles avec le CLI ci-dessus (1 000 propositions
+maximum). Le lot combiné peut être collé dans **Publications → Importer des
+corrections**, qui accepte jusqu'à 2 000 propositions et relit les sources fraîches
+avant d'enregistrer des groupes atomiques de 100 brouillons. L'identifiant optionnel
+`concept_id` accélère la lecture sans remplacer la comparaison de l'identité qualifiée.
+Création, validation et publication restent des actions séparées. La session
+utilisateur de l'administration suffit ; aucun jeton ne doit être copié dans le lot.
+
 ## Notification de génération après publication
 
 Le serveur dispose de `POST /api/admin/thesaurus/notify-drain`, avec le jeton de session
@@ -86,3 +121,15 @@ La cohérence des lectures repose sur les snapshots et les clés de génération
 détection périodique dans l'interface ; elle ne dépend pas de la réception du signal.
 Le script de proposition de contenu crée seulement des brouillons et n'a donc pas
 d'événement de publication à drainer.
+
+Les `legacy_search_terms` sont des recherches héritées privées, distinctes des
+synonymes éditoriaux. L'espace admin retourne leur tableau exact pour les comparaisons
+de base et les conflits. Un champ omis conserve les termes ; `[]` propose leur effacement.
+Enregistrer ou valider un brouillon ne les modifie pas en source : seule la publication
+ordinaire les persiste et recalcule les alias natifs des catalogues `ref_code` avec
+les libellés éditoriaux français.
+Les snapshots et réponses publics du thésaurus excluent ce champ. La migration
+`20261110072416_thesaurus_legacy_search_term_roundtrip.sql` conserve le noyau
+`activate` et ses contrôles d'authentification ; elle vérifie l'ancien contrat de préparation
+puis actualise uniquement l'empreinte du writer `apply_source`, sans réinitialiser les
+autres empreintes ni élargir les droits.

@@ -1,0 +1,806 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-price_unit-1",
+  "proposals": [
+    {
+      "concept_id": "285229a0-1bd1-4157-b965-3047e048b746",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_an",
+      "base": {
+        "description": "Tarif annuel (abonnement, pass)",
+        "description_i18n": {
+          "de": "Jahrestarif (Abo, Pass)",
+          "en": "Annual rate (subscription, pass)",
+          "es": "Tarifa anual (abono, pase)",
+          "fr": "Tarif annuel (abonnement, pass)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/285229a0-1bd1-4157-b965-3047e048b746. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/285229a0-1bd1-4157-b965-3047e048b746"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Base de facturation correspondant à une année de prestation ou d'abonnement ; les dates de validité sont précisées dans l'offre.",
+        "description_i18n": {
+          "de": "Abrechnungsgrundlage für ein Jahr einer Leistung oder eines Abonnements; die Gültigkeitsdaten stehen im Angebot.",
+          "en": "Billing basis corresponding to one year of service or subscription; the validity dates are specified in the offer.",
+          "es": "Base de facturación correspondiente a un año de prestación o abono; la oferta precisa las fechas de validez.",
+          "fr": "Base de facturation correspondant à une année de prestation ou d'abonnement ; les dates de validité sont précisées dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/285229a0-1bd1-4157-b965-3047e048b746. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/285229a0-1bd1-4157-b965-3047e048b746"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1f782670-3712-4458-922f-4c8ffc588536",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_chambre",
+      "base": {
+        "description": "Tarif par chambre",
+        "description_i18n": {
+          "de": "Tarif pro Zimmer",
+          "en": "Rate per room",
+          "es": "Tarifa por habitación",
+          "fr": "Tarif par chambre"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1f782670-3712-4458-922f-4c8ffc588536. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1f782670-3712-4458-922f-4c8ffc588536"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour une chambre prise comme unité de vente, et non pour chaque occupant ; le nombre de personnes compris relève de l'offre.",
+        "description_i18n": {
+          "de": "Preis je Zimmer als Verkaufseinheit und nicht je Gast; die Zahl der eingeschlossenen Personen ergibt sich aus dem Angebot.",
+          "en": "Price expressed per room as the sale unit rather than per occupant; the number of people included is specified in the offer.",
+          "es": "Precio expresado por habitación como unidad de venta, no por cada ocupante; la oferta precisa el número de personas incluido.",
+          "fr": "Prix exprimé pour une chambre prise comme unité de vente, et non pour chaque occupant ; le nombre de personnes compris relève de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1f782670-3712-4458-922f-4c8ffc588536. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1f782670-3712-4458-922f-4c8ffc588536"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "11618b60-0493-41af-9c0d-566c56a31c1e",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_couvert",
+      "base": {
+        "description": "Tarif par couvert (restauration)",
+        "description_i18n": {
+          "de": "Tarif pro Gedeck (Gastronomie)",
+          "en": "Rate per cover (restaurant)",
+          "es": "Tarifa por cubierto (restauración)",
+          "fr": "Tarif par couvert (restauration)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/11618b60-0493-41af-9c0d-566c56a31c1e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/11618b60-0493-41af-9c0d-566c56a31c1e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour un convive servi en restauration ; le contenu du repas ou du service correspondant est décrit dans l'offre.",
+        "description_i18n": {
+          "de": "Preis je bewirteter Person in der Gastronomie; das zugehörige Essen oder die Leistung wird im Angebot beschrieben.",
+          "en": "Price expressed per diner served in a restaurant; the corresponding meal or service is described in the offer.",
+          "es": "Precio expresado por comensal atendido en restauración; la oferta describe la comida o el servicio correspondiente.",
+          "fr": "Prix exprimé pour un convive servi en restauration ; le contenu du repas ou du service correspondant est décrit dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/11618b60-0493-41af-9c0d-566c56a31c1e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/11618b60-0493-41af-9c0d-566c56a31c1e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b7be868a-ecd8-417d-9f7a-4d36de330dc6",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_entree",
+      "base": {
+        "description": "Tarif par entrée ou billet",
+        "description_i18n": {
+          "de": "Tarif pro Eintritt oder Ticket",
+          "en": "Rate per entry or ticket",
+          "es": "Tarifa por entrada o billete",
+          "fr": "Tarif par entrée ou billet"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7be868a-ecd8-417d-9f7a-4d36de330dc6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7be868a-ecd8-417d-9f7a-4d36de330dc6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour un accès ou un billet donnant droit à l'entrée dans un lieu ou une activité, selon les conditions de l'offre.",
+        "description_i18n": {
+          "de": "Preis je Zutritt oder Eintrittskarte für einen Ort oder eine Aktivität nach den Angebotsbedingungen.",
+          "en": "Price expressed per admission or ticket granting entry to a place or activity, according to the offer's conditions.",
+          "es": "Precio expresado por acceso o entrada a un lugar o actividad, según las condiciones de la oferta.",
+          "fr": "Prix exprimé pour un accès ou un billet donnant droit à l'entrée dans un lieu ou une activité, selon les conditions de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7be868a-ecd8-417d-9f7a-4d36de330dc6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7be868a-ecd8-417d-9f7a-4d36de330dc6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e23f0ad7-ce25-4b5c-81a8-ddeed429c2ff",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_forfait",
+      "base": {
+        "description": "Forfait global",
+        "description_i18n": {
+          "de": "Pauschaltarif pro Paket",
+          "en": "Flat package rate",
+          "es": "Tarifa forfait",
+          "fr": "Forfait global"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e23f0ad7-ce25-4b5c-81a8-ddeed429c2ff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e23f0ad7-ce25-4b5c-81a8-ddeed429c2ff"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour une offre forfaitaire considérée dans son ensemble, qu'elle réunisse plusieurs prestations ou repose sur un prix global.",
+        "description_i18n": {
+          "de": "Preis für ein als Ganzes betrachtetes Pauschalangebot, das mehrere Leistungen bündeln oder auf einem Gesamtpreis beruhen kann.",
+          "en": "Price expressed for a package offer taken as a whole, whether it combines several services or is based on an overall price.",
+          "es": "Precio expresado por una oferta de paquete considerada en su conjunto, tanto si reúne varias prestaciones como si se basa en un precio global.",
+          "fr": "Prix exprimé pour une offre forfaitaire considérée dans son ensemble, qu'elle réunisse plusieurs prestations ou repose sur un prix global."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e23f0ad7-ce25-4b5c-81a8-ddeed429c2ff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e23f0ad7-ce25-4b5c-81a8-ddeed429c2ff"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4a725637-2bbe-4529-8634-862e90d9009c",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_groupe",
+      "base": {
+        "description": "Tarif pour un groupe défini",
+        "description_i18n": {
+          "de": "Tarif für eine festgelegte Gruppe",
+          "en": "Rate for a defined group",
+          "es": "Tarifa para un grupo definido",
+          "fr": "Tarif pour un groupe défini"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a725637-2bbe-4529-8634-862e90d9009c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a725637-2bbe-4529-8634-862e90d9009c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour l'ensemble d'un groupe défini dans l'offre ; il ne correspond pas à un montant à multiplier par chaque participant.",
+        "description_i18n": {
+          "de": "Preis für die gesamte im Angebot definierte Gruppe und nicht als Betrag, der mit jeder teilnehmenden Person zu multiplizieren ist.",
+          "en": "Price expressed for the whole group defined in the offer, rather than an amount to multiply by every participant.",
+          "es": "Precio expresado para todo el grupo definido en la oferta, no como importe que deba multiplicarse por cada participante.",
+          "fr": "Prix exprimé pour l'ensemble d'un groupe défini dans l'offre ; il ne correspond pas à un montant à multiplier par chaque participant."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a725637-2bbe-4529-8634-862e90d9009c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a725637-2bbe-4529-8634-862e90d9009c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "da639f97-4b78-4a79-97b0-e7e2c2b43bcc",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_heure",
+      "base": {
+        "description": "Tarif horaire",
+        "description_i18n": {
+          "de": "Stundentarif",
+          "en": "Hourly rate",
+          "es": "Tarifa por hora",
+          "fr": "Tarif horaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da639f97-4b78-4a79-97b0-e7e2c2b43bcc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da639f97-4b78-4a79-97b0-e7e2c2b43bcc"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Montant facturé pour une heure d'utilisation ou de prestation ; la durée commandée sert de quantité pour cette ligne tarifaire.",
+        "description_i18n": {
+          "de": "Betrag für eine Stunde Nutzung oder Leistung; die bestellte Dauer bildet die Mengenbasis dieser Preisposition.",
+          "en": "Amount charged for one hour of use or service; the requested duration provides the quantity for this price line.",
+          "es": "Importe facturado por una hora de uso o prestación; la duración solicitada constituye la cantidad de esta línea de precio.",
+          "fr": "Montant facturé pour une heure d'utilisation ou de prestation ; la durée commandée sert de quantité pour cette ligne tarifaire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da639f97-4b78-4a79-97b0-e7e2c2b43bcc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da639f97-4b78-4a79-97b0-e7e2c2b43bcc"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2f2f21b5-eadd-4dc8-b484-6a730b097e66",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_jour",
+      "base": {
+        "description": "Tarif journalier",
+        "description_i18n": {
+          "de": "Tagestarif",
+          "en": "Daily rate",
+          "es": "Tarifa diaria",
+          "fr": "Tarif journalier"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2f2f21b5-eadd-4dc8-b484-6a730b097e66. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2f2f21b5-eadd-4dc8-b484-6a730b097e66"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Montant exprimé pour une journée d'utilisation ou de prestation ; les horaires ou la durée exacte d'une journée restent ceux de l'offre.",
+        "description_i18n": {
+          "de": "Betrag je Nutzungstag oder Leistungstag; die Zeiten oder die genaue Tagesdauer ergeben sich aus dem Angebot.",
+          "en": "Amount expressed per day of use or service; the hours or exact duration of a day are those specified in the offer.",
+          "es": "Importe expresado por una jornada de uso o prestación; los horarios o la duración exacta de la jornada son los indicados en la oferta.",
+          "fr": "Montant exprimé pour une journée d'utilisation ou de prestation ; les horaires ou la durée exacte d'une journée restent ceux de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2f2f21b5-eadd-4dc8-b484-6a730b097e66. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2f2f21b5-eadd-4dc8-b484-6a730b097e66"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e6aab656-5381-4e0a-a192-feabe345eb35",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_logement",
+      "base": {
+        "description": "Tarif pour le logement entier (location)",
+        "description_i18n": {
+          "de": "Tarif für die gesamte Unterkunft (Miete)",
+          "en": "Rate for the whole rental accommodation",
+          "es": "Tarifa por el alojamiento completo (alquiler)",
+          "fr": "Tarif pour le logement entier (location)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e6aab656-5381-4e0a-a192-feabe345eb35. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e6aab656-5381-4e0a-a192-feabe345eb35"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour la location d'un logement entier pris comme unité de vente, plutôt que par chambre ou par occupant.",
+        "description_i18n": {
+          "de": "Preis für die Anmietung einer vollständigen Unterkunft als Verkaufseinheit und nicht je Zimmer oder Gast.",
+          "en": "Price expressed for renting a whole accommodation unit rather than per room or occupant.",
+          "es": "Precio expresado por el alquiler de un alojamiento completo como unidad de venta, no por habitación ni por ocupante.",
+          "fr": "Prix exprimé pour la location d'un logement entier pris comme unité de vente, plutôt que par chambre ou par occupant."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e6aab656-5381-4e0a-a192-feabe345eb35. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e6aab656-5381-4e0a-a192-feabe345eb35"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "93171516-a132-4994-a83c-5fef169171e7",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_mois",
+      "base": {
+        "description": "Forfait mensuel",
+        "description_i18n": {
+          "de": "Monatspaket",
+          "en": "Monthly package",
+          "es": "Paquete mensual",
+          "fr": "Forfait mensuel"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/93171516-a132-4994-a83c-5fef169171e7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/93171516-a132-4994-a83c-5fef169171e7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Base de facturation correspondant à un mois de prestation, de location ou d'abonnement, selon la période définie dans l'offre.",
+        "description_i18n": {
+          "de": "Abrechnungsgrundlage für einen Monat einer Leistung, Miete oder eines Abonnements nach dem im Angebot bestimmten Zeitraum.",
+          "en": "Billing basis corresponding to one month of service, rental or subscription, according to the period defined in the offer.",
+          "es": "Base de facturación correspondiente a un mes de prestación, alquiler o abono, según el periodo definido en la oferta.",
+          "fr": "Base de facturation correspondant à un mois de prestation, de location ou d'abonnement, selon la période définie dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/93171516-a132-4994-a83c-5fef169171e7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/93171516-a132-4994-a83c-5fef169171e7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9bf13453-a5e2-421d-b31a-7447765d45e9",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_nuit",
+      "base": {
+        "description": "Tarif par nuitée",
+        "description_i18n": {
+          "de": "Tarif pro Nacht",
+          "en": "Nightly rate",
+          "es": "Tarifa por noche",
+          "fr": "Tarif par nuitée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bf13453-a5e2-421d-b31a-7447765d45e9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bf13453-a5e2-421d-b31a-7447765d45e9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour une nuit d'hébergement ; cette unité ne précise pas à elle seule si le prix s'applique à une chambre, un logement ou un occupant.",
+        "description_i18n": {
+          "de": "Preis je Übernachtung; diese Einheit allein legt nicht fest, ob sich der Preis auf ein Zimmer, eine Unterkunft oder eine Person bezieht.",
+          "en": "Price expressed per accommodation night; this unit alone does not determine whether the price applies to a room, a dwelling or an occupant.",
+          "es": "Precio expresado por noche de alojamiento; esta unidad por sí sola no determina si el precio se aplica a una habitación, un alojamiento o una persona.",
+          "fr": "Prix exprimé pour une nuit d'hébergement ; cette unité ne précise pas à elle seule si le prix s'applique à une chambre, un logement ou un occupant."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bf13453-a5e2-421d-b31a-7447765d45e9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bf13453-a5e2-421d-b31a-7447765d45e9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3792f35d-4dfa-49a5-997c-1423bc9fc1b9",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_personne",
+      "base": {
+        "description": "Tarif exprimé par personne",
+        "description_i18n": {
+          "de": "Preis pro Person angegeben",
+          "en": "Price expressed per person",
+          "es": "Precio expresado por persona",
+          "fr": "Tarif exprimé par personne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3792f35d-4dfa-49a5-997c-1423bc9fc1b9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3792f35d-4dfa-49a5-997c-1423bc9fc1b9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Montant exprimé pour une personne bénéficiaire de la prestation ; le nombre de personnes facturées constitue la quantité de référence.",
+        "description_i18n": {
+          "de": "Betrag je Person, die die Leistung erhält; die Zahl der berechneten Personen bildet die Bezugsmenge.",
+          "en": "Amount expressed per person receiving the service; the number of people charged is the reference quantity.",
+          "es": "Importe expresado por persona beneficiaria de la prestación; el número de personas facturadas constituye la cantidad de referencia.",
+          "fr": "Montant exprimé pour une personne bénéficiaire de la prestation ; le nombre de personnes facturées constitue la quantité de référence."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3792f35d-4dfa-49a5-997c-1423bc9fc1b9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3792f35d-4dfa-49a5-997c-1423bc9fc1b9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e39c27f7-3013-48b5-9449-82c8a1335e9b",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_personne_jour",
+      "base": {
+        "description": "Tarif combiné personne/jour",
+        "description_i18n": {
+          "de": "Kombinierter Tarif Person/Tag",
+          "en": "Combined person/day rate",
+          "es": "Tarifa combinada persona/día",
+          "fr": "Tarif combiné personne/jour"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e39c27f7-3013-48b5-9449-82c8a1335e9b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e39c27f7-3013-48b5-9449-82c8a1335e9b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix unitaire pour une personne et une journée de prestation ; la quantité dépend conjointement du nombre de personnes et du nombre de jours.",
+        "description_i18n": {
+          "de": "Einheitspreis je Person und Leistungstag; die Menge ergibt sich gemeinsam aus der Zahl der Personen und Tage.",
+          "en": "Unit price for one person and one day of service; the quantity depends jointly on the number of people and days.",
+          "es": "Precio unitario por una persona y una jornada de prestación; la cantidad depende conjuntamente del número de personas y de días.",
+          "fr": "Prix unitaire pour une personne et une journée de prestation ; la quantité dépend conjointement du nombre de personnes et du nombre de jours."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e39c27f7-3013-48b5-9449-82c8a1335e9b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e39c27f7-3013-48b5-9449-82c8a1335e9b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0a5c4baf-feed-4962-99ae-f6544888c343",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_personne_nuit",
+      "base": {
+        "description": "Tarif combiné personne/nuit",
+        "description_i18n": {
+          "de": "Kombinierter Tarif Person/Nacht",
+          "en": "Combined person/night rate",
+          "es": "Tarifa combinada persona/noche",
+          "fr": "Tarif combiné personne/nuit"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0a5c4baf-feed-4962-99ae-f6544888c343. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0a5c4baf-feed-4962-99ae-f6544888c343"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix unitaire pour une personne et une nuit d'hébergement ; la quantité dépend du nombre de personnes et de nuitées concernées.",
+        "description_i18n": {
+          "de": "Einheitspreis je Person und Übernachtung; die Menge richtet sich nach der Zahl der betreffenden Personen und Nächte.",
+          "en": "Unit price for one person and one accommodation night; the quantity depends on the number of people and nights involved.",
+          "es": "Precio unitario por persona y noche de alojamiento; la cantidad depende del número de personas y de noches correspondientes.",
+          "fr": "Prix unitaire pour une personne et une nuit d'hébergement ; la quantité dépend du nombre de personnes et de nuitées concernées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0a5c4baf-feed-4962-99ae-f6544888c343. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0a5c4baf-feed-4962-99ae-f6544888c343"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d6e53499-8b89-4e6d-907d-fba5b86102db",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_seance",
+      "base": {
+        "description": "Tarif par séance ou créneau",
+        "description_i18n": {
+          "de": "Tarif pro Sitzung oder Zeitfenster",
+          "en": "Rate per session or time slot",
+          "es": "Tarifa por sesión o franja horaria",
+          "fr": "Tarif par séance ou créneau"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d6e53499-8b89-4e6d-907d-fba5b86102db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d6e53499-8b89-4e6d-907d-fba5b86102db"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Montant exprimé pour une séance ou un créneau d'activité pris comme une occurrence ; sa durée et son contenu sont précisés dans l'offre.",
+        "description_i18n": {
+          "de": "Betrag je Aktivitätseinheit oder Termin als einzelne Durchführung; Dauer und Inhalt werden im Angebot angegeben.",
+          "en": "Amount expressed for one activity session or time slot; its duration and content are specified in the offer.",
+          "es": "Importe expresado por una sesión o franja de actividad considerada como una ocasión; la oferta precisa su duración y contenido.",
+          "fr": "Montant exprimé pour une séance ou un créneau d'activité pris comme une occurrence ; sa durée et son contenu sont précisés dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d6e53499-8b89-4e6d-907d-fba5b86102db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d6e53499-8b89-4e6d-907d-fba5b86102db"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4b7719cc-7b69-4ce3-8873-ab19c87cd0d1",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_sejour",
+      "base": {
+        "description": "Montant pour l'ensemble du séjour",
+        "description_i18n": {
+          "de": "Betrag für den gesamten Aufenthalt",
+          "en": "Rate for the entire stay",
+          "es": "Tarifa para toda la estancia",
+          "fr": "Montant pour l'ensemble du séjour"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4b7719cc-7b69-4ce3-8873-ab19c87cd0d1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4b7719cc-7b69-4ce3-8873-ab19c87cd0d1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Montant exprimé pour l'ensemble du séjour décrit dans l'offre, plutôt que pour chaque nuit prise séparément.",
+        "description_i18n": {
+          "de": "Betrag für den gesamten im Angebot beschriebenen Aufenthalt und nicht für jede Nacht einzeln.",
+          "en": "Amount expressed for the whole stay described in the offer rather than for each night separately.",
+          "es": "Importe expresado para toda la estancia descrita en la oferta, no para cada noche por separado.",
+          "fr": "Montant exprimé pour l'ensemble du séjour décrit dans l'offre, plutôt que pour chaque nuit prise séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4b7719cc-7b69-4ce3-8873-ab19c87cd0d1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4b7719cc-7b69-4ce3-8873-ab19c87cd0d1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0004ef26-b93a-4ccf-a1af-c9a52f84d479",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_semaine",
+      "base": {
+        "description": "Forfait hebdomadaire",
+        "description_i18n": {
+          "de": "Wochenpaket",
+          "en": "Weekly package",
+          "es": "Paquete semanal",
+          "fr": "Forfait hebdomadaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0004ef26-b93a-4ccf-a1af-c9a52f84d479. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0004ef26-b93a-4ccf-a1af-c9a52f84d479"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Base de facturation pour une semaine de prestation ou de location ; les dates et modalités de la période sont celles de l'offre.",
+        "description_i18n": {
+          "de": "Abrechnungsgrundlage für eine Woche einer Leistung oder Miete; Daten und Ausgestaltung des Zeitraums ergeben sich aus dem Angebot.",
+          "en": "Billing basis for one week of service or rental; the period's dates and arrangements are those specified in the offer.",
+          "es": "Base de facturación por una semana de prestación o alquiler; las fechas y modalidades del periodo son las indicadas en la oferta.",
+          "fr": "Base de facturation pour une semaine de prestation ou de location ; les dates et modalités de la période sont celles de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0004ef26-b93a-4ccf-a1af-c9a52f84d479. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0004ef26-b93a-4ccf-a1af-c9a52f84d479"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "939b0300-e77f-452e-9aaa-fcb6c22e82c1",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_trajet",
+      "base": {
+        "description": "Tarif par trajet (transport)",
+        "description_i18n": {
+          "de": "Tarif pro Fahrt (Verkehr)",
+          "en": "Rate per journey (transport)",
+          "es": "Tarifa por trayecto (transporte)",
+          "fr": "Tarif par trajet (transport)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/939b0300-e77f-452e-9aaa-fcb6c22e82c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/939b0300-e77f-452e-9aaa-fcb6c22e82c1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour un déplacement entre des points de départ et d'arrivée ; le périmètre du trajet est décrit par le prestataire.",
+        "description_i18n": {
+          "de": "Preis je Fahrt zwischen Abfahrts- und Ankunftspunkten; der Anbieter beschreibt den Umfang der Strecke.",
+          "en": "Price expressed for a journey between departure and arrival points; the provider describes the journey's scope.",
+          "es": "Precio expresado por un desplazamiento entre puntos de salida y llegada; el prestador describe el alcance del trayecto.",
+          "fr": "Prix exprimé pour un déplacement entre des points de départ et d'arrivée ; le périmètre du trajet est décrit par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/939b0300-e77f-452e-9aaa-fcb6c22e82c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/939b0300-e77f-452e-9aaa-fcb6c22e82c1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "13a31ffb-d98a-44b7-954a-880a974161e4",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_unite",
+      "base": {
+        "description": "Tarif par unité / article",
+        "description_i18n": {
+          "de": "Tarif pro Einheit oder Artikel",
+          "en": "Rate per unit or item",
+          "es": "Tarifa por unidad o artículo",
+          "fr": "Tarif par unité / article"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/13a31ffb-d98a-44b7-954a-880a974161e4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/13a31ffb-d98a-44b7-954a-880a974161e4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prix exprimé pour un article ou une unité de produit ou de service dénombrable, dont la nature est précisée sur la ligne tarifaire.",
+        "description_i18n": {
+          "de": "Preis je zählbarem Artikel oder Produkt- beziehungsweise Leistungseinheit, deren Art in der Preisposition angegeben wird.",
+          "en": "Price expressed per countable item or unit of product or service, whose nature is specified on the price line.",
+          "es": "Precio expresado por artículo o unidad contable de producto o servicio, cuya naturaleza se indica en la línea de precio.",
+          "fr": "Prix exprimé pour un article ou une unité de produit ou de service dénombrable, dont la nature est précisée sur la ligne tarifaire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/13a31ffb-d98a-44b7-954a-880a974161e4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/13a31ffb-d98a-44b7-954a-880a974161e4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "473a6205-cf89-4c97-9652-ff713bbaaecb",
+      "domain": "price_unit",
+      "context_key": "",
+      "code": "par_vehicule",
+      "base": {
+        "description": "Tarif par véhicule",
+        "description_i18n": {
+          "de": "Tarif pro Fahrzeug",
+          "en": "Rate per vehicle",
+          "es": "Tarifa por vehículo",
+          "fr": "Tarif par véhicule"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/473a6205-cf89-4c97-9652-ff713bbaaecb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/473a6205-cf89-4c97-9652-ff713bbaaecb"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Montant exprimé pour un véhicule pris comme unité de facturation, distinct du nombre de passagers qu'il transporte.",
+        "description_i18n": {
+          "de": "Betrag je Fahrzeug als Abrechnungseinheit, unabhängig von der Zahl der darin beförderten Personen.",
+          "en": "Amount expressed per vehicle as the billing unit, distinct from the number of passengers it carries.",
+          "es": "Importe expresado por vehículo como unidad de facturación, distinto del número de pasajeros que transporta.",
+          "fr": "Montant exprimé pour un véhicule pris comme unité de facturation, distinct du nombre de passagers qu'il transporte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/473a6205-cf89-4c97-9652-ff713bbaaecb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/473a6205-cf89-4c97-9652-ff713bbaaecb"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,286 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-language_level-1",
+  "proposals": [
+    {
+      "concept_id": "e28b9d7f-ac4b-4b44-b4da-22ca705b99da",
+      "domain": "language_level",
+      "context_key": "",
+      "code": "a1",
+      "base": {
+        "description": "Notions élémentaires",
+        "description_i18n": {
+          "de": "Grundkenntnisse",
+          "en": "Basic notions",
+          "es": "Nociones básicas",
+          "fr": "Notions élémentaires"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e28b9d7f-ac4b-4b44-b4da-22ca705b99da. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e28b9d7f-ac4b-4b44-b4da-22ca705b99da"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau débutant permettant un accueil avec des mots et échanges très simples. Il décrit une maîtrise déclarée de la langue et ne vaut pas attestation de compétence.",
+        "description_i18n": {
+          "de": "Anfängerniveau, das einen Empfang mit sehr einfachen Wörtern und Gesprächen ermöglicht. Es beschreibt erklärte Sprachkenntnisse und keinen Qualifikationsnachweis.",
+          "en": "Beginner level allowing welcome interactions using very simple words and exchanges. It describes declared language proficiency, not a certified qualification.",
+          "es": "Nivel principiante que permite una acogida con palabras e intercambios muy sencillos. Describe un dominio declarado del idioma, no una acreditación.",
+          "fr": "Niveau débutant permettant un accueil avec des mots et échanges très simples. Il décrit une maîtrise déclarée de la langue et ne vaut pas attestation de compétence."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e28b9d7f-ac4b-4b44-b4da-22ca705b99da. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e28b9d7f-ac4b-4b44-b4da-22ca705b99da"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3dc1f52c-72b4-44e3-a2a1-6b6c85c43979",
+      "domain": "language_level",
+      "context_key": "",
+      "code": "a2",
+      "base": {
+        "description": "Communication simple",
+        "description_i18n": {
+          "de": "Einfache Verständigung",
+          "en": "Simple communication",
+          "es": "Comunicación sencilla",
+          "fr": "Communication simple"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3dc1f52c-72b4-44e3-a2a1-6b6c85c43979. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3dc1f52c-72b4-44e3-a2a1-6b6c85c43979"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau élémentaire permettant une communication simple sur des besoins courants. Dans la fiche, il précise la maîtrise déclarée de la langue d’accueil.",
+        "description_i18n": {
+          "de": "Grundlegendes Niveau für einfache Verständigung über alltägliche Bedürfnisse. Im Eintrag bezeichnet es die angegebenen Kenntnisse der Empfangssprache.",
+          "en": "Elementary level allowing simple communication about routine needs. In a listing, it specifies declared proficiency in the welcome language.",
+          "es": "Nivel elemental que permite una comunicación sencilla sobre necesidades habituales. En la ficha precisa el dominio declarado del idioma de acogida.",
+          "fr": "Niveau élémentaire permettant une communication simple sur des besoins courants. Dans la fiche, il précise la maîtrise déclarée de la langue d’accueil."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3dc1f52c-72b4-44e3-a2a1-6b6c85c43979. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3dc1f52c-72b4-44e3-a2a1-6b6c85c43979"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cef6f8e4-cbb4-41b0-98b7-8fbab220d796",
+      "domain": "language_level",
+      "context_key": "",
+      "code": "b1",
+      "base": {
+        "description": "Interaction quotidienne",
+        "description_i18n": {
+          "de": "Verständigung im Alltag",
+          "en": "Everyday interaction",
+          "es": "Interacción cotidiana",
+          "fr": "Interaction quotidienne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cef6f8e4-cbb4-41b0-98b7-8fbab220d796. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cef6f8e4-cbb4-41b0-98b7-8fbab220d796"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau intermédiaire permettant des échanges sur les situations habituelles de l’accueil et du séjour. Il se distingue des niveaux débutants sans attester une certification.",
+        "description_i18n": {
+          "de": "Mittleres Niveau für Gespräche über übliche Situationen beim Empfang und Aufenthalt. Es unterscheidet sich vom Anfängerniveau, ohne ein Zertifikat nachzuweisen.",
+          "en": "Intermediate level allowing exchanges about usual welcome and stay situations. It differs from beginner levels without certifying a qualification.",
+          "es": "Nivel intermedio que permite intercambios sobre situaciones habituales de la acogida y la estancia. Se distingue de los niveles principiantes sin acreditar una certificación.",
+          "fr": "Niveau intermédiaire permettant des échanges sur les situations habituelles de l’accueil et du séjour. Il se distingue des niveaux débutants sans attester une certification."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cef6f8e4-cbb4-41b0-98b7-8fbab220d796. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cef6f8e4-cbb4-41b0-98b7-8fbab220d796"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "68e53264-a5e5-4f53-b924-dbb9afb002a0",
+      "domain": "language_level",
+      "context_key": "",
+      "code": "b2",
+      "base": {
+        "description": "Communication professionnelle courante",
+        "description_i18n": {
+          "de": "Kommunikation im beruflichen Alltag",
+          "en": "Everyday professional communication",
+          "es": "Comunicación profesional habitual",
+          "fr": "Communication professionnelle courante"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/68e53264-a5e5-4f53-b924-dbb9afb002a0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/68e53264-a5e5-4f53-b924-dbb9afb002a0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau intermédiaire avancé permettant une communication courante dans les échanges professionnels. Il sert à préciser l’aisance déclarée pour accueillir et informer dans cette langue.",
+        "description_i18n": {
+          "de": "Gehobenes mittleres Niveau für die übliche berufliche Kommunikation. Es beschreibt die angegebene Sicherheit beim Empfang und der Information in dieser Sprache.",
+          "en": "Upper-intermediate level allowing routine professional communication. It specifies declared ease in welcoming and informing guests in that language.",
+          "es": "Nivel intermedio avanzado que permite la comunicación habitual en intercambios profesionales. Precisa la soltura declarada para acoger e informar en ese idioma.",
+          "fr": "Niveau intermédiaire avancé permettant une communication courante dans les échanges professionnels. Il sert à préciser l’aisance déclarée pour accueillir et informer dans cette langue."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/68e53264-a5e5-4f53-b924-dbb9afb002a0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/68e53264-a5e5-4f53-b924-dbb9afb002a0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8d1c82a9-52f3-4558-916c-e55c43729791",
+      "domain": "language_level",
+      "context_key": "",
+      "code": "c1",
+      "base": {
+        "description": "Maîtrise opérationnelle complète",
+        "description_i18n": {
+          "de": "Umfassende sprachliche Handlungsfähigkeit",
+          "en": "Full operational proficiency",
+          "es": "Dominio operativo completo",
+          "fr": "Maîtrise opérationnelle complète"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8d1c82a9-52f3-4558-916c-e55c43729791. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8d1c82a9-52f3-4558-916c-e55c43729791"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau avancé correspondant à une maîtrise opérationnelle étendue de la langue. Il décrit la capacité déclarée à traiter des échanges professionnels variés avec aisance.",
+        "description_i18n": {
+          "de": "Fortgeschrittenes Niveau mit umfassender sprachlicher Handlungsfähigkeit. Es beschreibt die angegebene Fähigkeit, vielfältige berufliche Gespräche sicher zu führen.",
+          "en": "Advanced level indicating extensive operational language proficiency. It describes declared ability to handle varied professional exchanges with ease.",
+          "es": "Nivel avanzado correspondiente a un dominio operativo amplio del idioma. Describe la capacidad declarada para desenvolverse con soltura en intercambios profesionales variados.",
+          "fr": "Niveau avancé correspondant à une maîtrise opérationnelle étendue de la langue. Il décrit la capacité déclarée à traiter des échanges professionnels variés avec aisance."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8d1c82a9-52f3-4558-916c-e55c43729791. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8d1c82a9-52f3-4558-916c-e55c43729791"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "82823d3a-3b98-4524-9f00-5ca6780a1a50",
+      "domain": "language_level",
+      "context_key": "",
+      "code": "c2",
+      "base": {
+        "description": "Maîtrise experte de la langue",
+        "description_i18n": {
+          "de": "Beherrschung der Sprache auf Expertenniveau",
+          "en": "Expert mastery of the language",
+          "es": "Dominio experto de la lengua",
+          "fr": "Maîtrise experte de la langue"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/82823d3a-3b98-4524-9f00-5ca6780a1a50. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/82823d3a-3b98-4524-9f00-5ca6780a1a50"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau de maîtrise experte permettant des échanges très aisés et précis. Cette appréciation de compétence ne signifie pas nécessairement que la langue est maternelle.",
+        "description_i18n": {
+          "de": "Expertenniveau für sehr flüssige und präzise Verständigung. Diese Kompetenzangabe bedeutet nicht zwingend, dass die Sprache eine Muttersprache ist.",
+          "en": "Expert proficiency allowing highly fluent and precise exchanges. This proficiency assessment does not necessarily mean the language is a mother tongue.",
+          "es": "Nivel de dominio experto que permite intercambios de gran soltura y precisión. Esta valoración no significa necesariamente que sea una lengua materna.",
+          "fr": "Niveau de maîtrise experte permettant des échanges très aisés et précis. Cette appréciation de compétence ne signifie pas nécessairement que la langue est maternelle."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/82823d3a-3b98-4524-9f00-5ca6780a1a50. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/82823d3a-3b98-4524-9f00-5ca6780a1a50"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6c2333a9-3df7-41d8-9a5c-ec60bade4959",
+      "domain": "language_level",
+      "context_key": "",
+      "code": "native",
+      "base": {
+        "description": "Langue acquise dans l’enfance dans l’environnement familial ; ne pas confondre avec une langue seulement parlée couramment.",
+        "description_i18n": {
+          "de": "In der Kindheit im familiären Umfeld erworbene Sprache; fließendes Sprechen allein macht eine Sprache nicht zur Muttersprache.",
+          "en": "Language acquired in childhood in the home environment; fluency alone does not make a language a mother tongue.",
+          "es": "Lengua adquirida en la infancia en el entorno familiar; no equivale simplemente a una lengua que se habla con fluidez.",
+          "fr": "Langue acquise dans l’enfance dans l’environnement familial ; ne pas confondre avec une langue seulement parlée couramment."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c2333a9-3df7-41d8-9a5c-ec60bade4959. Sources externes réellement consultées : https://databrowser.uis.unesco.org/resources/glossary/3113 ; https://www.coe.int/en/web/common-european-framework-reference-languages/level-descriptions.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c2333a9-3df7-41d8-9a5c-ec60bade4959 ; https://databrowser.uis.unesco.org/resources/glossary/3113 ; https://www.coe.int/en/web/common-european-framework-reference-languages/level-descriptions"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Langue acquise dans l’enfance dans l’environnement familial, déclarée comme langue maternelle pour l’accueil. Elle ne désigne pas simplement une langue très bien parlée et n’identifie pas une personne particulière.",
+        "description_i18n": {
+          "de": "In der Kindheit im familiären Umfeld erworbene und für den Empfang als Muttersprache angegebene Sprache. Sie bezeichnet nicht nur fließende Sprachkenntnisse und identifiziert keine bestimmte Person.",
+          "en": "Language acquired in childhood in the home environment and declared as a mother tongue for guest welcome. It is not merely a fluently spoken language and does not identify a particular person.",
+          "es": "Lengua adquirida en la infancia en el entorno familiar y declarada como materna para la acogida. No es simplemente un idioma que se habla con fluidez ni identifica a una persona concreta.",
+          "fr": "Langue acquise dans l’enfance dans l’environnement familial, déclarée comme langue maternelle pour l’accueil. Elle ne désigne pas simplement une langue très bien parlée et n’identifie pas une personne particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c2333a9-3df7-41d8-9a5c-ec60bade4959. Sources externes réellement consultées : https://databrowser.uis.unesco.org/resources/glossary/3113 ; https://www.coe.int/en/web/common-european-framework-reference-languages/level-descriptions.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c2333a9-3df7-41d8-9a5c-ec60bade4959 ; https://databrowser.uis.unesco.org/resources/glossary/3113 ; https://www.coe.int/en/web/common-european-framework-reference-languages/level-descriptions"
+          }
+        ]
+      }
+    }
+  ]
+}

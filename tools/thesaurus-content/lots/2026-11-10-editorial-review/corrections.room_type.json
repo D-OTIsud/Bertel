@@ -1,0 +1,294 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-room_type-1",
+  "proposals": [
+    {
+      "concept_id": "c7d51c1c-5b42-41a1-8d3d-3be973dbe056",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "accessible",
+      "base": {
+        "description": "Chambre accessible PMR",
+        "description_i18n": {
+          "de": "Zimmer, das für Gäste mit eingeschränkter Mobilität zugänglich ist.",
+          "en": "Room accessible to guests with reduced mobility",
+          "es": "Habitación accesible para personas con movilidad reducida",
+          "fr": "Chambre accessible PMR"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c7d51c1c-5b42-41a1-8d3d-3be973dbe056. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c7d51c1c-5b42-41a1-8d3d-3be973dbe056"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Chambre dont l'accès est adapté aux personnes à mobilité réduite ; les équipements d'accessibilité et les autres besoins liés au handicap sont décrits séparément.",
+        "description_i18n": {
+          "de": "Zimmer mit für Menschen mit eingeschränkter Mobilität angepasstem Zugang; barrierefreie Ausstattung und weitere behinderungsbezogene Bedürfnisse werden getrennt beschrieben.",
+          "en": "Room with access adapted for guests with reduced mobility; accessibility equipment and other disability-related needs are described separately.",
+          "es": "Habitación cuyo acceso está adaptado a personas con movilidad reducida; los equipos de accesibilidad y otras necesidades relacionadas con la discapacidad se describen por separado.",
+          "fr": "Chambre dont l'accès est adapté aux personnes à mobilité réduite ; les équipements d'accessibilité et les autres besoins liés au handicap sont décrits séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c7d51c1c-5b42-41a1-8d3d-3be973dbe056. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c7d51c1c-5b42-41a1-8d3d-3be973dbe056"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f2d20b55-eb79-4e04-b3c0-81a254c31866",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "connecting",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f2d20b55-eb79-4e04-b3c0-81a254c31866. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f2d20b55-eb79-4e04-b3c0-81a254c31866"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f2d20b55-eb79-4e04-b3c0-81a254c31866. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f2d20b55-eb79-4e04-b3c0-81a254c31866"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "139c9304-75e5-4b90-9230-7b6be8ed6f6f",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "double",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/139c9304-75e5-4b90-9230-7b6be8ed6f6f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/139c9304-75e5-4b90-9230-7b6be8ed6f6f"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/139c9304-75e5-4b90-9230-7b6be8ed6f6f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/139c9304-75e5-4b90-9230-7b6be8ed6f6f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b38a49f0-0937-4275-95e7-9a9a607e12a7",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "family",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b38a49f0-0937-4275-95e7-9a9a607e12a7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b38a49f0-0937-4275-95e7-9a9a607e12a7"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b38a49f0-0937-4275-95e7-9a9a607e12a7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b38a49f0-0937-4275-95e7-9a9a607e12a7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8bfdd5ba-aec2-4ed6-8f80-47391995319f",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "junior_suite",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8bfdd5ba-aec2-4ed6-8f80-47391995319f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8bfdd5ba-aec2-4ed6-8f80-47391995319f"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8bfdd5ba-aec2-4ed6-8f80-47391995319f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8bfdd5ba-aec2-4ed6-8f80-47391995319f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9bdbe65a-ba6a-4679-b0a1-2e60f5b38777",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "presidential",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bdbe65a-ba6a-4679-b0a1-2e60f5b38777. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bdbe65a-ba6a-4679-b0a1-2e60f5b38777"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bdbe65a-ba6a-4679-b0a1-2e60f5b38777. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bdbe65a-ba6a-4679-b0a1-2e60f5b38777"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6e138e13-e842-4ca0-a7da-42cc65d06bf0",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "single",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6e138e13-e842-4ca0-a7da-42cc65d06bf0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6e138e13-e842-4ca0-a7da-42cc65d06bf0"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6e138e13-e842-4ca0-a7da-42cc65d06bf0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6e138e13-e842-4ca0-a7da-42cc65d06bf0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "530a45d6-ec39-437d-9c67-048b5c97f9c8",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "suite",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/530a45d6-ec39-437d-9c67-048b5c97f9c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/530a45d6-ec39-437d-9c67-048b5c97f9c8"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/530a45d6-ec39-437d-9c67-048b5c97f9c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/530a45d6-ec39-437d-9c67-048b5c97f9c8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9bcb84f9-06f6-47e7-8c8a-f26ae66b270b",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "triple",
+      "base": {
+        "description": "Chambre prévue pour trois personnes",
+        "description_i18n": {
+          "de": "Zimmer für drei Personen",
+          "en": "Room designed for three guests",
+          "es": "Habitación pensada para tres personas",
+          "fr": "Chambre prévue pour trois personnes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bcb84f9-06f6-47e7-8c8a-f26ae66b270b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bcb84f9-06f6-47e7-8c8a-f26ae66b270b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Chambre destinée au couchage de trois personnes ; la quantité et les types de lits sont décrits séparément.",
+        "description_i18n": {
+          "de": "Für die Übernachtung von drei Gästen ausgelegtes Zimmer; Anzahl und Arten der Betten werden getrennt beschrieben.",
+          "en": "Guest room intended to sleep three people; the number and types of beds are described separately.",
+          "es": "Habitación destinada al descanso de tres personas; la cantidad y los tipos de camas se describen por separado.",
+          "fr": "Chambre destinée au couchage de trois personnes ; la quantité et les types de lits sont décrits séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bcb84f9-06f6-47e7-8c8a-f26ae66b270b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bcb84f9-06f6-47e7-8c8a-f26ae66b270b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "98c381ff-75a9-4a2e-b219-06a4a1421965",
+      "domain": "room_type",
+      "context_key": "",
+      "code": "twin",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/98c381ff-75a9-4a2e-b219-06a4a1421965. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/98c381ff-75a9-4a2e-b219-06a4a1421965"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/98c381ff-75a9-4a2e-b219-06a4a1421965. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/98c381ff-75a9-4a2e-b219-06a4a1421965"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,2163 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-classification_scheme-1",
+  "proposals": [
+    {
+      "concept_id": "459df815-4fcb-4e4a-b5da-54113a3e2353",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "accueil_paysan",
+      "base": {
+        "description": "Label réseau Accueil Paysan — formes d'accueil paysan",
+        "description_i18n": {
+          "de": "Netzwerk-Label Accueil Paysan für die verschiedenen Formen der Gastfreundschaft auf Bauernhöfen.",
+          "en": "Accueil Paysan network label covering the forms of farm hospitality.",
+          "es": "Sello de la red Accueil Paysan que agrupa las formas de acogida en explotaciones agrícolas.",
+          "fr": "Label réseau Accueil Paysan — formes d'accueil paysan"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/459df815-4fcb-4e4a-b5da-54113a3e2353. Sources externes réellement consultées : https://www.accueil-paysan.com/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/459df815-4fcb-4e4a-b5da-54113a3e2353 ; https://www.accueil-paysan.com/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Réseau d'accueil rural et paysan auquel se rattachent des offres d'hébergement, de repas, d'activités ou de produits de la ferme ; la mention identifie l'appartenance déclarée à ce réseau.",
+        "description_i18n": {
+          "de": "Netzwerk für ländliche und bäuerliche Gastlichkeit mit Unterkünften, Mahlzeiten, Aktivitäten oder Hoferzeugnissen; der Eintrag bezeichnet die angegebene Zugehörigkeit zu diesem Netzwerk.",
+          "en": "Rural and farm hospitality network covering accommodation, meals, activities or farm products; the entry identifies declared membership of that network.",
+          "es": "Red de acogida rural y campesina que agrupa alojamiento, comidas, actividades o productos de la granja; la mención identifica la pertenencia declarada a esa red.",
+          "fr": "Réseau d'accueil rural et paysan auquel se rattachent des offres d'hébergement, de repas, d'activités ou de produits de la ferme ; la mention identifie l'appartenance déclarée à ce réseau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/459df815-4fcb-4e4a-b5da-54113a3e2353. Sources externes réellement consultées : https://www.accueil-paysan.com/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/459df815-4fcb-4e4a-b5da-54113a3e2353 ; https://www.accueil-paysan.com/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b1b72470-4c71-4658-8349-6776bbcffdf6",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "accueil_velo",
+      "base": {
+        "description": "Marque nationale « Accueil Vélo » (services aux cyclotouristes)",
+        "description_i18n": {
+          "de": "Nationale Marke „Accueil Vélo“ für Dienstleistungen für Radtourist:innen.",
+          "en": "Accueil Vélo national brand recognising services for cycle tourists.",
+          "es": "Marca nacional «Accueil Vélo» que reconoce los servicios para cicloturistas.",
+          "fr": "Marque nationale « Accueil Vélo » (services aux cyclotouristes)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b1b72470-4c71-4658-8349-6776bbcffdf6. Sources externes réellement consultées : https://www.culture.gouv.fr/thematiques/transition-ecologique/centre-de-ressources/Labels-normes/label-accueil-velo.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b1b72470-4c71-4658-8349-6776bbcffdf6 ; https://www.culture.gouv.fr/thematiques/transition-ecologique/centre-de-ressources/Labels-normes/label-accueil-velo"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Marque nationale identifiant des établissements et services adaptés à l'accueil des cyclotouristes ; la fiche renseigne son obtention déclarée, distincte de la simple présence d'un équipement vélo.",
+        "description_i18n": {
+          "de": "Nationale Marke für Betriebe und Dienstleistungen mit Angeboten für Radtouristen; der Eintrag erfasst den angegebenen Markenerhalt und nicht lediglich vorhandene Fahrradausstattung.",
+          "en": "National brand identifying establishments and services suitable for welcoming cycle tourists; the listing records declared attainment, distinct from simply providing bicycle equipment.",
+          "es": "Marca nacional que identifica establecimientos y servicios adaptados a la acogida de cicloturistas; la ficha registra su obtención declarada, distinta de disponer de un equipamiento para bicicletas.",
+          "fr": "Marque nationale identifiant des établissements et services adaptés à l'accueil des cyclotouristes ; la fiche renseigne son obtention déclarée, distincte de la simple présence d'un équipement vélo."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b1b72470-4c71-4658-8349-6776bbcffdf6. Sources externes réellement consultées : https://www.culture.gouv.fr/thematiques/transition-ecologique/centre-de-ressources/Labels-normes/label-accueil-velo.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b1b72470-4c71-4658-8349-6776bbcffdf6 ; https://www.culture.gouv.fr/thematiques/transition-ecologique/centre-de-ressources/Labels-normes/label-accueil-velo"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "08e4e443-4569-4e7f-b7f8-4905e66f1366",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "bienvenue_ferme",
+      "base": {
+        "description": "Label Chambres d'Agriculture — prestations à la ferme",
+        "description_i18n": {
+          "de": "Label der Landwirtschaftskammern für Angebote auf landwirtschaftlichen Betrieben.",
+          "en": "Label of the Chambers of Agriculture for services offered on farms.",
+          "es": "Sello de las Cámaras de Agricultura para servicios prestados en explotaciones agrícolas.",
+          "fr": "Label Chambres d'Agriculture — prestations à la ferme"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/08e4e443-4569-4e7f-b7f8-4905e66f1366. Sources externes réellement consultées : https://www.bienvenue-a-la-ferme.com/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/08e4e443-4569-4e7f-b7f8-4905e66f1366 ; https://www.bienvenue-a-la-ferme.com/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Réseau Bienvenue à la Ferme des Chambres d'agriculture, regroupant des offres de produits et d'accueil sur des exploitations agricoles ; les catégories précisent l'activité proposée.",
+        "description_i18n": {
+          "de": "Netzwerk Bienvenue à la Ferme der Landwirtschaftskammern für Erzeugnisse und Gastangebote auf landwirtschaftlichen Betrieben; die Kategorien benennen die angebotene Tätigkeit.",
+          "en": "Chambers of Agriculture's Bienvenue à la Ferme network, covering produce and hospitality on working farms; the categories identify the activity offered.",
+          "es": "Red Bienvenue à la Ferme de las Cámaras de Agricultura, que agrupa productos y acogida en explotaciones agrícolas; las categorías precisan la actividad ofrecida.",
+          "fr": "Réseau Bienvenue à la Ferme des Chambres d'agriculture, regroupant des offres de produits et d'accueil sur des exploitations agricoles ; les catégories précisent l'activité proposée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/08e4e443-4569-4e7f-b7f8-4905e66f1366. Sources externes réellement consultées : https://www.bienvenue-a-la-ferme.com/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/08e4e443-4569-4e7f-b7f8-4905e66f1366 ; https://www.bienvenue-a-la-ferme.com/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "031e3327-340f-4e5d-945a-9b5c2eb512c1",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "camp_stars",
+      "base": {
+        "description": "Classement officiel campings (étoiles)",
+        "description_i18n": {
+          "de": "Offizielle Sternklassifizierung von Campingplätzen nach einer akkreditierten Prüfung.",
+          "en": "Official star rating of campsites, granted after an accredited inspection.",
+          "es": "Clasificación oficial por estrellas de los campings, otorgada tras una inspección acreditada.",
+          "fr": "Classement officiel campings (étoiles)"
+        },
+        "name": "Classement camping",
+        "name_i18n": {
+          "de": "Campingplatz-Sternklassifizierung",
+          "en": "Campsite star rating",
+          "es": "Clasificación de campings por estrellas",
+          "fr": "Classement camping"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sternebewertung für Campingplätze"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Camping star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de campamentos turísticos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des campings en étoiles"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/031e3327-340f-4e5d-945a-9b5c2eb512c1. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/031e3327-340f-4e5d-945a-9b5c2eb512c1 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Classement officiel en étoiles des campings, utilisé pour enregistrer le niveau attribué au camping et distinct des labels privés de qualité.",
+        "description_i18n": {
+          "de": "Offizielle Sterneklassifizierung von Campingplätzen zur Erfassung der vergebenen Stufe, getrennt von privaten Qualitätszeichen.",
+          "en": "Official star classification for campsites, used to record the awarded campsite level and distinct from private quality labels.",
+          "es": "Clasificación oficial por estrellas de los campings, utilizada para registrar el nivel otorgado y distinta de los sellos privados de calidad.",
+          "fr": "Classement officiel en étoiles des campings, utilisé pour enregistrer le niveau attribué au camping et distinct des labels privés de qualité."
+        },
+        "name": "Classement des campings",
+        "name_i18n": {
+          "de": "Sterneklassifizierung von Campingplätzen",
+          "en": "Campsite star classification",
+          "es": "Clasificación de campings por estrellas",
+          "fr": "Classement des campings"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sternebewertung für Campingplätze"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Camping star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de campamentos turísticos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des campings en étoiles"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Campingplatz-Sternklassifizierung"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Campsite star rating"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Classement camping"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/031e3327-340f-4e5d-945a-9b5c2eb512c1. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/031e3327-340f-4e5d-945a-9b5c2eb512c1 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3bfdba2a-1148-438d-b4eb-7fb06d042987",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "clevacances_keys",
+      "base": {
+        "description": "Niveau du label privé Clévacances, exprimé en clés ; ce n'est pas un classement d'État.",
+        "description_i18n": {
+          "de": "Stufe des privaten Labels Clévacances, angegeben in Schlüsseln; keine staatliche Klassifizierung.",
+          "en": "Level of the private Clévacances label, expressed in keys; this is not a state classification.",
+          "es": "Nivel de la marca privada Clévacances, expresado en llaves; no es una clasificación oficial del Estado.",
+          "fr": "Niveau du label privé Clévacances, exprimé en clés ; ce n'est pas un classement d'État."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3bfdba2a-1148-438d-b4eb-7fb06d042987. Sources externes réellement consultées : https://www.clevacances.com/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3bfdba2a-1148-438d-b4eb-7fb06d042987 ; https://www.clevacances.com/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label privé de qualification des hébergements Clévacances, dont les niveaux de confort sont exprimés en clés et se distinguent du classement officiel en étoiles.",
+        "description_i18n": {
+          "de": "Privates Clévacances-Qualitätszeichen für Unterkünfte mit in Schlüsseln ausgedrückten Komfortstufen, getrennt von der offiziellen Sterneklassifizierung.",
+          "en": "Private Clévacances accommodation quality label, whose comfort levels are expressed in keys and are distinct from official star classifications.",
+          "es": "Sello privado Clévacances de calidad del alojamiento, cuyos niveles de confort se expresan en llaves y se distinguen de la clasificación oficial por estrellas.",
+          "fr": "Label privé de qualification des hébergements Clévacances, dont les niveaux de confort sont exprimés en clés et se distinguent du classement officiel en étoiles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3bfdba2a-1148-438d-b4eb-7fb06d042987. Sources externes réellement consultées : https://www.clevacances.com/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3bfdba2a-1148-438d-b4eb-7fb06d042987 ; https://www.clevacances.com/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b78004ec-4c4f-42ec-87aa-43c1e4e7e02f",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "cte",
+      "base": {
+        "description": "Label FFE pour les centres de tourisme équestre",
+        "description_i18n": {
+          "de": "Label des französischen Reitsportverbands FFE für Reittourismus-Zentren.",
+          "en": "French Equestrian Federation (FFE) label for equestrian tourism centres.",
+          "es": "Sello de la Federación Ecuestre Francesa (FFE) para centros de turismo ecuestre.",
+          "fr": "Label FFE pour les centres de tourisme équestre"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b78004ec-4c4f-42ec-87aa-43c1e4e7e02f. Sources externes réellement consultées : https://www.ffe.com/tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b78004ec-4c4f-42ec-87aa-43c1e4e7e02f ; https://www.ffe.com/tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label de la Fédération française d'équitation identifiant les centres spécialisés dans les promenades, randonnées et autres activités de tourisme équestre.",
+        "description_i18n": {
+          "de": "Gütesiegel des französischen Reitsportverbands für Zentren, die auf Ausritte, Wanderritte und andere reittouristische Aktivitäten spezialisiert sind.",
+          "en": "French Equestrian Federation label identifying centres specialising in rides, treks and other equestrian tourism activities.",
+          "es": "Sello de la Federación Ecuestre Francesa que identifica centros especializados en paseos, rutas y otras actividades de turismo ecuestre.",
+          "fr": "Label de la Fédération française d'équitation identifiant les centres spécialisés dans les promenades, randonnées et autres activités de tourisme équestre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b78004ec-4c4f-42ec-87aa-43c1e4e7e02f. Sources externes réellement consultées : https://www.ffe.com/tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b78004ec-4c4f-42ec-87aa-43c1e4e7e02f ; https://www.ffe.com/tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "27481fdf-d647-4331-aaea-a103c838a33d",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "esprit_parc",
+      "base": {
+        "description": "Marque du réseau des Parcs Nationaux de France (non réglementaire)",
+        "description_i18n": {
+          "de": "Marke des Netzwerks der französischen Nationalparks (nicht gesetzlich geregelt).",
+          "en": "Brand of the French national parks network (non-regulatory).",
+          "es": "Marca de la red de parques nacionales de Francia (no reglamentaria).",
+          "fr": "Marque du réseau des Parcs Nationaux de France (non réglementaire)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/27481fdf-d647-4331-aaea-a103c838a33d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/27481fdf-d647-4331-aaea-a103c838a33d"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Marque Esprit parc national pour des produits et services liés aux parcs nationaux français ; son attribution se renseigne pour l'offre concernée et ne remplace pas une protection réglementaire du lieu.",
+        "description_i18n": {
+          "de": "Marke Esprit parc national für Produkte und Dienstleistungen mit Bezug zu französischen Nationalparks; ihre Vergabe wird für das betreffende Angebot erfasst und ersetzt keinen gesetzlichen Gebietsschutz.",
+          "en": "Esprit parc national brand for products and services associated with French national parks; its award is recorded for the relevant offer and does not replace statutory site protection.",
+          "es": "Marca Esprit parc national para productos y servicios vinculados a los parques nacionales franceses; su atribución se registra para la oferta correspondiente y no sustituye una protección legal del lugar.",
+          "fr": "Marque Esprit parc national pour des produits et services liés aux parcs nationaux français ; son attribution se renseigne pour l'offre concernée et ne remplace pas une protection réglementaire du lieu."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/27481fdf-d647-4331-aaea-a103c838a33d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/27481fdf-d647-4331-aaea-a103c838a33d"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4291c28f-aac9-450c-ac09-333df1c8d57b",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "gites_epics",
+      "base": {
+        "description": "Niveau de qualité Gîtes de France exprimé en épis, distinct du classement officiel en étoiles.",
+        "description_i18n": {
+          "de": "Qualitätsstufe der Gîtes de France in Ähren (épis), getrennt von der offiziellen Sternklassifizierung.",
+          "en": "Gîtes de France quality level expressed in ears of wheat (épis), distinct from the official star rating.",
+          "es": "Nivel de calidad de Gîtes de France expresado en espigas (épis), distinto de la clasificación oficial por estrellas.",
+          "fr": "Niveau de qualité Gîtes de France exprimé en épis, distinct du classement officiel en étoiles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4291c28f-aac9-450c-ac09-333df1c8d57b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4291c28f-aac9-450c-ac09-333df1c8d57b"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Qualification des hébergements du réseau Gîtes de France, exprimée en épis pour décrire leur niveau de confort ; elle est distincte du classement officiel en étoiles.",
+        "description_i18n": {
+          "de": "Unterkunftseinstufung des Netzwerks Gîtes de France in Ähren zur Beschreibung des Komfortniveaus, getrennt von der offiziellen Sterneklassifizierung.",
+          "en": "Gîtes de France network accommodation grading expressed in ears of wheat to describe comfort level, distinct from official star classification.",
+          "es": "Calificación de los alojamientos de la red Gîtes de France expresada en espigas para describir su confort, distinta de la clasificación oficial por estrellas.",
+          "fr": "Qualification des hébergements du réseau Gîtes de France, exprimée en épis pour décrire leur niveau de confort ; elle est distincte du classement officiel en étoiles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4291c28f-aac9-450c-ac09-333df1c8d57b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4291c28f-aac9-450c-ac09-333df1c8d57b"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "89d60306-0f63-4cea-b89f-afde57537629",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "hot_stars",
+      "base": {
+        "description": "Classement officiel hôtels (étoiles)",
+        "description_i18n": {
+          "de": "Offizielle Sternklassifizierung von Hotels, ein bis fünf Sterne.",
+          "en": "Official star rating of hotels, from one to five stars.",
+          "es": "Clasificación oficial de hoteles por estrellas, de una a cinco.",
+          "fr": "Classement officiel hôtels (étoiles)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/89d60306-0f63-4cea-b89f-afde57537629. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/89d60306-0f63-4cea-b89f-afde57537629 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Classement officiel des hôtels en étoiles, dont la valeur enregistrée indique le niveau attribué à l'établissement hôtelier.",
+        "description_i18n": {
+          "de": "Offizielle Sterneklassifizierung von Hotels, deren erfasster Wert die dem Hotelbetrieb verliehene Stufe angibt.",
+          "en": "Official hotel star classification, whose recorded value identifies the level awarded to the hotel establishment.",
+          "es": "Clasificación oficial de hoteles por estrellas, cuyo valor registrado indica el nivel otorgado al establecimiento hotelero.",
+          "fr": "Classement officiel des hôtels en étoiles, dont la valeur enregistrée indique le niveau attribué à l'établissement hôtelier."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/89d60306-0f63-4cea-b89f-afde57537629. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/89d60306-0f63-4cea-b89f-afde57537629 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c1ddcddd-e5cd-4b2a-b698-0d34b228b719",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "jardin_remarquable",
+      "base": {
+        "description": "Label « Jardin Remarquable » (Ministère de la Culture)",
+        "description_i18n": {
+          "de": "Label des Kulturministeriums für bemerkenswerte, öffentlich zugängliche Parks und Gärten.",
+          "en": "Label of the Ministry of Culture recognising remarkable parks and gardens open to the public.",
+          "es": "Etiqueta del Ministerio de Cultura que reconoce parques y jardines notables abiertos al público.",
+          "fr": "Label « Jardin Remarquable » (Ministère de la Culture)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c1ddcddd-e5cd-4b2a-b698-0d34b228b719. Sources externes réellement consultées : https://www.culture.gouv.fr/Aides-demarches/protections-labels-et-appellations/label-jardin-remarquable.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c1ddcddd-e5cd-4b2a-b698-0d34b228b719 ; https://www.culture.gouv.fr/Aides-demarches/protections-labels-et-appellations/label-jardin-remarquable"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label du ministère de la Culture distinguant des parcs et jardins présentant un intérêt culturel, esthétique, historique ou botanique, indépendamment d'une protection comme monument historique.",
+        "description_i18n": {
+          "de": "Gütesiegel des Kulturministeriums für Parks und Gärten von kulturellem, ästhetischem, historischem oder botanischem Interesse, unabhängig vom Denkmalschutz.",
+          "en": "Ministry of Culture label recognising parks and gardens of cultural, aesthetic, historical or botanical interest, independently of historic-monument protection.",
+          "es": "Sello del Ministerio de Cultura que distingue parques y jardines de interés cultural, estético, histórico o botánico, con independencia de su protección como monumento histórico.",
+          "fr": "Label du ministère de la Culture distinguant des parcs et jardins présentant un intérêt culturel, esthétique, historique ou botanique, indépendamment d'une protection comme monument historique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c1ddcddd-e5cd-4b2a-b698-0d34b228b719. Sources externes réellement consultées : https://www.culture.gouv.fr/Aides-demarches/protections-labels-et-appellations/label-jardin-remarquable.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c1ddcddd-e5cd-4b2a-b698-0d34b228b719 ; https://www.culture.gouv.fr/Aides-demarches/protections-labels-et-appellations/label-jardin-remarquable"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "12ecc8c8-f73c-442f-9828-339cd95fc39b",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_ATR",
+      "base": {
+        "description": "Référentiel structuré en 3 axes, 16 critères et 42 indicateurs.",
+        "description_i18n": {
+          "de": "Referenzrahmen für verantwortungsvollen Tourismus mit 3 Achsen, 16 Kriterien und 42 Indikatoren.",
+          "en": "Responsible tourism standard structured around three axes, 16 criteria and 42 indicators.",
+          "es": "Referencial estructurado en 3 ejes, 16 criterios y 42 indicadores de turismo responsable.",
+          "fr": "Référentiel structuré en 3 axes, 16 critères et 42 indicateurs."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/12ecc8c8-f73c-442f-9828-339cd95fc39b. Sources externes réellement consultées : https://www.tourisme-responsable.org/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/12ecc8c8-f73c-442f-9828-339cd95fc39b ; https://www.tourisme-responsable.org/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label Agir pour un Tourisme Responsable destiné aux opérateurs de voyage qui font reconnaître leurs engagements en matière de tourisme responsable, au-delà de la seule adhésion à l'association ATR.",
+        "description_i18n": {
+          "de": "Gütesiegel Agir pour un Tourisme Responsable für Reiseveranstalter zur Anerkennung verantwortungsvoller Tourismuspraktiken, über eine bloße Mitgliedschaft im Verband ATR hinaus.",
+          "en": "Agir pour un Tourisme Responsable label for travel operators seeking recognition of responsible-tourism commitments, beyond membership of the ATR association alone.",
+          "es": "Sello Agir pour un Tourisme Responsable para operadores de viajes que buscan el reconocimiento de sus compromisos de turismo responsable, más allá de la mera adhesión a la asociación ATR.",
+          "fr": "Label Agir pour un Tourisme Responsable destiné aux opérateurs de voyage qui font reconnaître leurs engagements en matière de tourisme responsable, au-delà de la seule adhésion à l'association ATR."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/12ecc8c8-f73c-442f-9828-339cd95fc39b. Sources externes réellement consultées : https://www.tourisme-responsable.org/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/12ecc8c8-f73c-442f-9828-339cd95fc39b ; https://www.tourisme-responsable.org/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4ac36a1b-11ed-4d41-bc46-60551bc52a90",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_CLEF_VERTE",
+      "base": {
+        "description": "Référentiel du label Clef Verte adapté au type d’établissement, organisé en sept thématiques avec des critères impératifs et conseillés.",
+        "description_i18n": {
+          "de": "Nach Betriebsart gegliederter Standard des Labels Clef Verte mit sieben Themen sowie Pflicht- und Empfehlungskriterien.",
+          "en": "Clef Verte label standard tailored to the establishment type, with seven themes and mandatory and recommended criteria.",
+          "es": "Referencial del sello Clef Verte adaptado al tipo de establecimiento, con siete temas y criterios obligatorios y recomendados.",
+          "fr": "Référentiel du label Clef Verte adapté au type d’établissement, organisé en sept thématiques avec des critères impératifs et conseillés."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4ac36a1b-11ed-4d41-bc46-60551bc52a90. Sources externes réellement consultées : https://www.laclefverte.org/ ; https://www.laclefverte.org/rejoindre-le-label.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4ac36a1b-11ed-4d41-bc46-60551bc52a90 ; https://www.laclefverte.org/ ; https://www.laclefverte.org/rejoindre-le-label"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label de tourisme durable destiné aux hébergements touristiques et aux restaurants, fondé sur la gestion environnementale et sociale de l'établissement selon son activité.",
+        "description_i18n": {
+          "de": "Nachhaltigkeitssiegel für touristische Unterkünfte und Restaurants auf Grundlage des zur jeweiligen Tätigkeit passenden Umwelt- und Sozialmanagements.",
+          "en": "Sustainable-tourism label for tourist accommodation and restaurants, based on the establishment's environmental and social management according to its activity.",
+          "es": "Sello de turismo sostenible para alojamientos turísticos y restaurantes, basado en la gestión ambiental y social del establecimiento según su actividad.",
+          "fr": "Label de tourisme durable destiné aux hébergements touristiques et aux restaurants, fondé sur la gestion environnementale et sociale de l'établissement selon son activité."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4ac36a1b-11ed-4d41-bc46-60551bc52a90. Sources externes réellement consultées : https://www.laclefverte.org/ ; https://www.laclefverte.org/rejoindre-le-label.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4ac36a1b-11ed-4d41-bc46-60551bc52a90 ; https://www.laclefverte.org/ ; https://www.laclefverte.org/rejoindre-le-label"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "50c2f708-0312-4299-bd2d-c010034ee32d",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_DESTINATION_EXCELLENCE",
+      "base": {
+        "description": "Label d'État remplaçant Qualité Tourisme, avec pilier Qualité et pilier Écoresponsable.",
+        "description_i18n": {
+          "de": "Staatliches Label als Nachfolger von Qualité Tourisme, mit einer Säule Qualität und einer Säule Ökoverantwortung.",
+          "en": "State label replacing Qualité Tourisme, with a Quality pillar and an Eco-responsible pillar.",
+          "es": "Sello estatal que sustituye a Qualité Tourisme, con un pilar de Calidad y otro de Ecorresponsabilidad.",
+          "fr": "Label d'État remplaçant Qualité Tourisme, avec pilier Qualité et pilier Écoresponsable."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/50c2f708-0312-4299-bd2d-c010034ee32d. Sources externes réellement consultées : https://atout-france.fr/fr/qualite-tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/50c2f708-0312-4299-bd2d-c010034ee32d ; https://atout-france.fr/fr/qualite-tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label d'État valorisant la qualité de l'accueil et des services touristiques ainsi que l'écoresponsabilité ; il succède au dispositif Qualité Tourisme.",
+        "description_i18n": {
+          "de": "Staatliches Gütesiegel für die Qualität des touristischen Empfangs und der Dienstleistungen sowie für Umweltverantwortung; es folgt auf Qualité Tourisme.",
+          "en": "State label recognising tourism reception and service quality together with environmental responsibility; it succeeds the Qualité Tourisme scheme.",
+          "es": "Sello estatal que reconoce la calidad de la acogida y de los servicios turísticos junto con la responsabilidad ambiental; sucede al programa Qualité Tourisme.",
+          "fr": "Label d'État valorisant la qualité de l'accueil et des services touristiques ainsi que l'écoresponsabilité ; il succède au dispositif Qualité Tourisme."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/50c2f708-0312-4299-bd2d-c010034ee32d. Sources externes réellement consultées : https://atout-france.fr/fr/qualite-tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/50c2f708-0312-4299-bd2d-c010034ee32d ; https://atout-france.fr/fr/qualite-tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "735aee37-ae44-42ee-8f1d-b2743f03559e",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_ECO_LABEL_UE",
+      "base": {
+        "description": "Critères obligatoires et optionnels à points, avec un minimum de base de 20 points à majorer selon les services proposés.",
+        "description_i18n": {
+          "de": "Pflichtkriterien und optionale Punktkriterien mit einem Grundminimum von 20 Punkten, das je nach angebotenen Leistungen erhöht wird.",
+          "en": "Mandatory and optional scored criteria, with a base minimum of 20 points increased according to the services offered.",
+          "es": "Criterios obligatorios y opcionales con puntuación, con un mínimo de base de 20 puntos que aumenta según los servicios ofrecidos.",
+          "fr": "Critères obligatoires et optionnels à points, avec un minimum de base de 20 points à majorer selon les services proposés."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/735aee37-ae44-42ee-8f1d-b2743f03559e. Sources externes réellement consultées : https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX%3A32017D0175.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/735aee37-ae44-42ee-8f1d-b2743f03559e ; https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX%3A32017D0175"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Écolabel de l'Union européenne appliqué aux services d'hébergement touristique, attestant le respect du référentiel environnemental propre à ces services.",
+        "description_i18n": {
+          "de": "EU-Umweltzeichen für touristische Beherbergungsleistungen, das die Einhaltung der dafür geltenden Umweltanforderungen bestätigt.",
+          "en": "European Union Ecolabel applied to tourist accommodation services, attesting compliance with the environmental standard specific to those services.",
+          "es": "Etiqueta ecológica de la Unión Europea aplicada a los servicios de alojamiento turístico, que acredita el cumplimiento del referencial ambiental específico de esos servicios.",
+          "fr": "Écolabel de l'Union européenne appliqué aux services d'hébergement touristique, attestant le respect du référentiel environnemental propre à ces services."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/735aee37-ae44-42ee-8f1d-b2743f03559e. Sources externes réellement consultées : https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX%3A32017D0175.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/735aee37-ae44-42ee-8f1d-b2743f03559e ; https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX%3A32017D0175"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "67839547-c141-466c-a129-a2f4808d4921",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_FLOCON_VERT",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/67839547-c141-466c-a129-a2f4808d4921. Sources externes réellement consultées : https://www.flocon-vert.org/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/67839547-c141-466c-a129-a2f4808d4921 ; https://www.flocon-vert.org/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/67839547-c141-466c-a129-a2f4808d4921. Sources externes réellement consultées : https://www.flocon-vert.org/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/67839547-c141-466c-a129-a2f4808d4921 ; https://www.flocon-vert.org/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d0a17ad4-6bbe-4a49-a8be-b9f402a6b104",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_GREEN_DESTINATIONS",
+      "base": {
+        "description": "Programme international de certification et d'awards pour les destinations touristiques durables.",
+        "description_i18n": {
+          "de": "Internationales Zertifizierungs- und Auszeichnungsprogramm für nachhaltige Reiseziele.",
+          "en": "International certification and awards programme for sustainable tourism destinations.",
+          "es": "Programa internacional de certificación y premios para destinos turísticos sostenibles.",
+          "fr": "Programme international de certification et d'awards pour les destinations touristiques durables."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d0a17ad4-6bbe-4a49-a8be-b9f402a6b104. Sources externes réellement consultées : https://greendestinations.org/awards-certification/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d0a17ad4-6bbe-4a49-a8be-b9f402a6b104 ; https://greendestinations.org/awards-certification/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Programme international de certification et de distinctions pour les destinations engagées dans le tourisme durable ; la mention doit être rattachée à la distinction effectivement déclarée.",
+        "description_i18n": {
+          "de": "Internationales Zertifizierungs- und Auszeichnungsprogramm für nachhaltige Reiseziele; der Eintrag muss sich auf die tatsächlich angegebene Auszeichnung beziehen.",
+          "en": "International certification and awards programme for destinations engaged in sustainable tourism; the entry must relate to the distinction actually declared.",
+          "es": "Programa internacional de certificación y distinciones para destinos comprometidos con el turismo sostenible; la mención debe corresponder a la distinción realmente declarada.",
+          "fr": "Programme international de certification et de distinctions pour les destinations engagées dans le tourisme durable ; la mention doit être rattachée à la distinction effectivement déclarée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d0a17ad4-6bbe-4a49-a8be-b9f402a6b104. Sources externes réellement consultées : https://greendestinations.org/awards-certification/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d0a17ad4-6bbe-4a49-a8be-b9f402a6b104 ; https://greendestinations.org/awards-certification/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e8fdfc18-d04c-4d9f-9239-9efd549979cd",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_LABEL_BAS_CARBONE",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e8fdfc18-d04c-4d9f-9239-9efd549979cd. Sources externes réellement consultées : https://www.ecologie.gouv.fr/label-bas-carbone.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e8fdfc18-d04c-4d9f-9239-9efd549979cd ; https://www.ecologie.gouv.fr/label-bas-carbone"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e8fdfc18-d04c-4d9f-9239-9efd549979cd. Sources externes réellement consultées : https://www.ecologie.gouv.fr/label-bas-carbone.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e8fdfc18-d04c-4d9f-9239-9efd549979cd ; https://www.ecologie.gouv.fr/label-bas-carbone"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9c47db60-e23b-4f15-88d0-e3e56bdd25ed",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_PAVILLON_BLEU",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9c47db60-e23b-4f15-88d0-e3e56bdd25ed. Sources externes réellement consultées : https://pavillonbleu.org/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9c47db60-e23b-4f15-88d0-e3e56bdd25ed ; https://pavillonbleu.org/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9c47db60-e23b-4f15-88d0-e3e56bdd25ed. Sources externes réellement consultées : https://pavillonbleu.org/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9c47db60-e23b-4f15-88d0-e3e56bdd25ed ; https://pavillonbleu.org/"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fa3f4927-5d45-4de1-b973-85909373ce9f",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_QUALITE_TOURISME",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fa3f4927-5d45-4de1-b973-85909373ce9f. Sources externes réellement consultées : https://atout-france.fr/fr/qualite-tourisme ; https://www.atout-france.fr/fr/qualite-tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fa3f4927-5d45-4de1-b973-85909373ce9f ; https://atout-france.fr/fr/qualite-tourisme ; https://www.atout-france.fr/fr/qualite-tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fa3f4927-5d45-4de1-b973-85909373ce9f. Sources externes réellement consultées : https://atout-france.fr/fr/qualite-tourisme ; https://www.atout-france.fr/fr/qualite-tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fa3f4927-5d45-4de1-b973-85909373ce9f ; https://atout-france.fr/fr/qualite-tourisme ; https://www.atout-france.fr/fr/qualite-tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f6aa21ee-399b-4f62-b118-5f5c055b25c8",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "LBL_TOURISME_HANDICAP",
+      "base": {
+        "description": "Label d'État dédié à l'accessibilité touristique, référentiels par filière.",
+        "description_i18n": {
+          "de": "Staatliches Label für touristische Barrierefreiheit mit Kriterien je Branche (filière).",
+          "en": "State label for tourist accessibility, with criteria set per sector (filière).",
+          "es": "Sello estatal de accesibilidad turística, con referenciales por sector (filière).",
+          "fr": "Label d'État dédié à l'accessibilité touristique, référentiels par filière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f6aa21ee-399b-4f62-b118-5f5c055b25c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f6aa21ee-399b-4f62-b118-5f5c055b25c8"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label d'État relatif à l'accessibilité de l'offre touristique ; la fiche précise les familles de handicap couvertes par la décision de labellisation, au-delà d'une simple déclaration d'équipement.",
+        "description_i18n": {
+          "de": "Staatliches Gütesiegel zur Zugänglichkeit touristischer Angebote; der Eintrag nennt die von der Auszeichnungsentscheidung erfassten Behinderungsarten und geht über eine reine Ausstattungsangabe hinaus.",
+          "en": "State label relating to tourism accessibility; the listing specifies the disability categories covered by the labelling decision, beyond simply declaring equipment.",
+          "es": "Sello estatal relativo a la accesibilidad de la oferta turística; la ficha precisa las familias de discapacidad contempladas en la decisión de concesión, más allá de una simple declaración de equipamiento.",
+          "fr": "Label d'État relatif à l'accessibilité de l'offre touristique ; la fiche précise les familles de handicap couvertes par la décision de labellisation, au-delà d'une simple déclaration d'équipement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f6aa21ee-399b-4f62-b118-5f5c055b25c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f6aa21ee-399b-4f62-b118-5f5c055b25c8"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5e77f1c6-9296-4ae8-a96e-4dba8bbd1aa1",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "logis",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5e77f1c6-9296-4ae8-a96e-4dba8bbd1aa1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5e77f1c6-9296-4ae8-a96e-4dba8bbd1aa1"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          },
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Échelle historique Logis en cheminées/cocottes documentée dans la brochure officielle d’octobre 2012. Identité conservée pour interpréter les données existantes ; cette entrée ne prouve pas une attribution actuelle.",
+            "source": "https://www.logishotels.com/images/files/plaquette_prospectionFR.pdf"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5e77f1c6-9296-4ae8-a96e-4dba8bbd1aa1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5e77f1c6-9296-4ae8-a96e-4dba8bbd1aa1"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          },
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Échelle historique Logis en cheminées/cocottes documentée dans la brochure officielle d’octobre 2012. Identité conservée pour interpréter les données existantes ; cette entrée ne prouve pas une attribution actuelle.",
+            "source": "https://www.logishotels.com/images/files/plaquette_prospectionFR.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5542b736-723e-47c5-952f-fb53bae51285",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "maison_des_illustres",
+      "base": {
+        "description": "Label « Maison des Illustres » (Ministère de la Culture)",
+        "description_i18n": {
+          "de": "Label des Kulturministeriums für Orte, die mit Persönlichkeiten der französischen Geschichte verbunden sind.",
+          "en": "Ministry of Culture label for places linked to figures who shaped France's history.",
+          "es": "Etiqueta del Ministerio de Cultura para lugares vinculados a figuras que marcaron la historia de Francia.",
+          "fr": "Label « Maison des Illustres » (Ministère de la Culture)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5542b736-723e-47c5-952f-fb53bae51285. Sources externes réellement consultées : https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/label-maisons-des-illustres.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5542b736-723e-47c5-952f-fb53bae51285 ; https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/label-maisons-des-illustres"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Label du ministère de la Culture identifiant des lieux qui conservent et transmettent la mémoire de personnalités de l'histoire politique, sociale ou culturelle de la France.",
+        "description_i18n": {
+          "de": "Gütesiegel des Kulturministeriums für Orte, die das Andenken an Persönlichkeiten der politischen, sozialen oder kulturellen Geschichte Frankreichs bewahren und vermitteln.",
+          "en": "Ministry of Culture label identifying places preserving and transmitting the memory of figures from France's political, social or cultural history.",
+          "es": "Sello del Ministerio de Cultura que identifica lugares que conservan y transmiten la memoria de figuras de la historia política, social o cultural de Francia.",
+          "fr": "Label du ministère de la Culture identifiant des lieux qui conservent et transmettent la mémoire de personnalités de l'histoire politique, sociale ou culturelle de la France."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5542b736-723e-47c5-952f-fb53bae51285. Sources externes réellement consultées : https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/label-maisons-des-illustres.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5542b736-723e-47c5-952f-fb53bae51285 ; https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/label-maisons-des-illustres"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1bafaa8a-27b9-4613-a7c4-dc9947b23607",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "maitre_restaurateur",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1bafaa8a-27b9-4613-a7c4-dc9947b23607. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/commerce-et-artisanat/dispositifs-et-labels/titre-de-maitre-restaurateur ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/le-titre-de-maitre-restaurateur.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1bafaa8a-27b9-4613-a7c4-dc9947b23607 ; https://www.entreprises.gouv.fr/fr/commerce-et-artisanat/dispositifs-et-labels/titre-de-maitre-restaurateur ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/le-titre-de-maitre-restaurateur"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1bafaa8a-27b9-4613-a7c4-dc9947b23607. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/commerce-et-artisanat/dispositifs-et-labels/titre-de-maitre-restaurateur ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/le-titre-de-maitre-restaurateur.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1bafaa8a-27b9-4613-a7c4-dc9947b23607 ; https://www.entreprises.gouv.fr/fr/commerce-et-artisanat/dispositifs-et-labels/titre-de-maitre-restaurateur ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/le-titre-de-maitre-restaurateur"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fb80f200-e828-4ef6-af91-95a3d876d755",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "meuble_stars",
+      "base": {
+        "description": "Classement officiel meublés de tourisme",
+        "description_i18n": {
+          "de": "Offizielle Klassifizierung möblierter Ferienunterkünfte (meublés de tourisme).",
+          "en": "Official classification of furnished holiday rentals (meublés de tourisme).",
+          "es": "Clasificación oficial de los alquileres vacacionales amueblados (meublés de tourisme).",
+          "fr": "Classement officiel meublés de tourisme"
+        },
+        "name": "Classement meublés",
+        "name_i18n": {
+          "de": "Klassifizierung möblierter Ferienunterkünfte",
+          "en": "Furnished holiday rental rating",
+          "es": "Clasificación de alquileres vacacionales amueblados",
+          "fr": "Classement meublés"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Klassifizierung möblierter Touristenunterkünfte"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Furnished tourist accommodation classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación de viviendas turísticas amuebladas"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des meublés de tourisme"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fb80f200-e828-4ef6-af91-95a3d876d755. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fb80f200-e828-4ef6-af91-95a3d876d755 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Classement officiel en étoiles d'un meublé de tourisme, appliqué au logement concerné et distinct de son appartenance à un réseau privé d'hébergement.",
+        "description_i18n": {
+          "de": "Offizielle Sterneklassifizierung einer möblierten Ferienunterkunft, bezogen auf die jeweilige Unterkunft und getrennt von der Zugehörigkeit zu einem privaten Unterkunftsnetzwerk.",
+          "en": "Official star classification of a furnished holiday rental, applied to the accommodation concerned and distinct from membership of a private accommodation network.",
+          "es": "Clasificación oficial por estrellas de un alojamiento turístico amueblado, aplicada al alojamiento correspondiente y distinta de la pertenencia a una red privada.",
+          "fr": "Classement officiel en étoiles d'un meublé de tourisme, appliqué au logement concerné et distinct de son appartenance à un réseau privé d'hébergement."
+        },
+        "name": "Classement des meublés de tourisme",
+        "name_i18n": {
+          "de": "Klassifizierung möblierter Ferienunterkünfte",
+          "en": "Furnished holiday rental classification",
+          "es": "Clasificación de alojamientos turísticos amueblados",
+          "fr": "Classement des meublés de tourisme"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Klassifizierung möblierter Touristenunterkünfte"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Furnished tourist accommodation classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación de viviendas turísticas amuebladas"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Furnished holiday rental rating"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Clasificación de alquileres vacacionales amueblados"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Classement meublés"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fb80f200-e828-4ef6-af91-95a3d876d755. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fb80f200-e828-4ef6-af91-95a3d876d755 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5a13795d-92f6-4550-b189-20806478ad22",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "monument_historique",
+      "base": {
+        "description": "Protection au titre des monuments historiques (classé ou inscrit) — Ministère de la Culture",
+        "description_i18n": {
+          "de": "Denkmalschutz nach dem französischen Denkmalrecht, als „classé“ (klassifiziert) oder „inscrit“ (eingetragen), vom Kulturministerium verwaltet.",
+          "en": "Heritage protection under the French historic monuments regime, either listed (classé) or registered (inscrit), managed by the Ministry of Culture.",
+          "es": "Protección patrimonial en el régimen francés de monumentos históricos, en grado de clasificado (classé) o inscrito (inscrit), gestionada por el Ministerio de Cultura.",
+          "fr": "Protection au titre des monuments historiques (classé ou inscrit) — Ministère de la Culture"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5a13795d-92f6-4550-b189-20806478ad22. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5a13795d-92f6-4550-b189-20806478ad22"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Protection patrimoniale française attribuée à un immeuble ou à un objet mobilier présentant un intérêt historique ou artistique ; les valeurs distinguent le classement et l'inscription.",
+        "description_i18n": {
+          "de": "Französischer Denkmalschutz für Gebäude oder bewegliche Gegenstände von historischem oder künstlerischem Interesse; die Werte unterscheiden Klassifizierung und Eintragung.",
+          "en": "French heritage protection granted to buildings or movable objects of historical or artistic interest; the values distinguish classification and registration.",
+          "es": "Protección patrimonial francesa otorgada a inmuebles u objetos muebles de interés histórico o artístico; los valores distinguen la clasificación y la inscripción.",
+          "fr": "Protection patrimoniale française attribuée à un immeuble ou à un objet mobilier présentant un intérêt historique ou artistique ; les valeurs distinguent le classement et l'inscription."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5a13795d-92f6-4550-b189-20806478ad22. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5a13795d-92f6-4550-b189-20806478ad22"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f3f47b79-5e4d-4681-9027-9707d95eb278",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "musee_de_france",
+      "base": {
+        "description": "Appellation « Musée de France » (Ministère de la Culture)",
+        "description_i18n": {
+          "de": "Amtliche Bezeichnung, die der Kulturminister Museen verleiht, die die Pflichten des öffentlichen Dienstes nach dem Museumsgesetz von 2002 erfüllen.",
+          "en": "Official appellation granted by the Minister of Culture to museums that meet public-service obligations under the 2002 museums law.",
+          "es": "Denominación oficial que concede el ministro de Cultura a los museos que cumplen obligaciones de servicio público, según la ley de museos de 2002.",
+          "fr": "Appellation « Musée de France » (Ministère de la Culture)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f3f47b79-5e4d-4681-9027-9707d95eb278. Sources externes réellement consultées : https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/appellation-musee-de-france.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f3f47b79-5e4d-4681-9027-9707d95eb278 ; https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/appellation-musee-de-france"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Appellation officielle attribuée à des musées dans le cadre du code du patrimoine français, distincte d'un simple nom commercial comportant le mot musée.",
+        "description_i18n": {
+          "de": "Offizielle Bezeichnung für Museen im Rahmen des französischen Kulturerbegesetzbuchs, getrennt von einem Handelsnamen, der lediglich das Wort Museum enthält.",
+          "en": "Official designation awarded to museums under the French Heritage Code, distinct from a trading name merely containing the word museum.",
+          "es": "Denominación oficial otorgada a museos en el marco del Código del Patrimonio francés, distinta de un nombre comercial que simplemente incluya la palabra museo.",
+          "fr": "Appellation officielle attribuée à des musées dans le cadre du code du patrimoine français, distincte d'un simple nom commercial comportant le mot musée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f3f47b79-5e4d-4681-9027-9707d95eb278. Sources externes réellement consultées : https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/appellation-musee-de-france.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f3f47b79-5e4d-4681-9027-9707d95eb278 ; https://www.culture.gouv.fr/aides-demarches/protections-labels-et-appellations/appellation-musee-de-france"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dbf17d31-4ac5-4d42-93df-cb224a742689",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "ot_category",
+      "base": {
+        "description": "Classement préfectoral des offices de tourisme (catégories)",
+        "description_i18n": {
+          "de": "Präfekturale Einstufung der Tourismusbüros nach Kategorien; aktuell gelten Kategorie I und II.",
+          "en": "Prefectoral classification of tourist offices into categories; current categories are I and II.",
+          "es": "Clasificación prefectoral de las oficinas de turismo por categorías; las categorías vigentes son la I y la II.",
+          "fr": "Classement préfectoral des offices de tourisme (catégories)"
+        },
+        "name": "Classement office de tourisme",
+        "name_i18n": {
+          "de": "Klassifizierung der Tourismusbüros",
+          "en": "Tourist office rating",
+          "es": "Clasificación de oficinas de turismo",
+          "fr": "Classement office de tourisme"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Tourismusbüro-Klassifizierung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Tourist information office classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación de oficinas de información turística"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des offices de tourisme"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dbf17d31-4ac5-4d42-93df-cb224a742689. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/developpement-et-competitivite-du-secteur/offices-de-tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dbf17d31-4ac5-4d42-93df-cb224a742689 ; https://www.entreprises.gouv.fr/fr/tourisme/developpement-et-competitivite-du-secteur/offices-de-tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Classement officiel d'un office de tourisme en catégorie, renseigné pour qualifier son organisation et ses services ; les anciennes catégories restent distinguées dans les données historiques.",
+        "description_i18n": {
+          "de": "Offizielle Kategorieeinstufung eines Tourismusbüros zur Beschreibung seiner Organisation und Dienstleistungen; frühere Kategorien bleiben in historischen Daten erkennbar.",
+          "en": "Official category classification for a tourist office, recorded to describe its organisation and services; former categories remain distinct in historical data.",
+          "es": "Clasificación oficial por categoría de una oficina de turismo, registrada para caracterizar su organización y servicios; las categorías antiguas se distinguen en los datos históricos.",
+          "fr": "Classement officiel d'un office de tourisme en catégorie, renseigné pour qualifier son organisation et ses services ; les anciennes catégories restent distinguées dans les données historiques."
+        },
+        "name": "Classement des offices de tourisme",
+        "name_i18n": {
+          "de": "Klassifizierung der Tourismusbüros",
+          "en": "Tourist office classification",
+          "es": "Clasificación de oficinas de turismo",
+          "fr": "Classement des offices de tourisme"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Tourismusbüro-Klassifizierung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Tourist information office classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación de oficinas de información turística"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Tourist office rating"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Classement office de tourisme"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dbf17d31-4ac5-4d42-93df-cb224a742689. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/developpement-et-competitivite-du-secteur/offices-de-tourisme.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dbf17d31-4ac5-4d42-93df-cb224a742689 ; https://www.entreprises.gouv.fr/fr/tourisme/developpement-et-competitivite-du-secteur/offices-de-tourisme"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a529c24a-0be5-46a8-9380-3100e1300ef0",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "prl_stars",
+      "base": {
+        "description": "Classement officiel Atout France des PRL (étoiles)",
+        "description_i18n": {
+          "de": "Offizielle Sternklassifizierung von Atout France für Freizeit-Wohnparks (PRL), nur für Parks im Hotelbetrieb.",
+          "en": "Official Atout France star rating for leisure residential parks (PRL), available only for parks run under the hotel regime.",
+          "es": "Clasificación oficial por estrellas de Atout France para los parques residenciales de ocio (PRL), solo para los explotados en régimen hotelero.",
+          "fr": "Classement officiel Atout France des PRL (étoiles)"
+        },
+        "name": "Classement parc résidentiel de loisirs",
+        "name_i18n": {
+          "de": "Klassifizierung von Freizeit-Wohnparks (PRL)",
+          "en": "Leisure residential park rating",
+          "es": "Clasificación de parques residenciales de ocio",
+          "fr": "Classement parc résidentiel de loisirs"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sterneklassifizierung von Freizeit-Wohnparks"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Residential leisure park star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de parques residenciales de ocio"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement PRL en étoiles"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a529c24a-0be5-46a8-9380-3100e1300ef0. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a529c24a-0be5-46a8-9380-3100e1300ef0 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Classement officiel en étoiles d'un parc résidentiel de loisirs ; le niveau enregistré concerne ce type d'hébergement et ne doit pas être lu comme celui d'un camping.",
+        "description_i18n": {
+          "de": "Offizielle Sterneklassifizierung eines Freizeitwohnparks; die erfasste Stufe bezieht sich auf diese Unterkunftsart und nicht auf einen Campingplatz.",
+          "en": "Official star classification for a leisure residential park; the recorded level concerns that accommodation type rather than a campsite.",
+          "es": "Clasificación oficial por estrellas de un parque residencial de ocio; el nivel registrado corresponde a ese tipo de alojamiento y no al de un camping.",
+          "fr": "Classement officiel en étoiles d'un parc résidentiel de loisirs ; le niveau enregistré concerne ce type d'hébergement et ne doit pas être lu comme celui d'un camping."
+        },
+        "name": "Classement des parcs résidentiels de loisirs",
+        "name_i18n": {
+          "de": "Klassifizierung von Freizeitwohnparks",
+          "en": "Leisure residential park classification",
+          "es": "Clasificación de parques residenciales de ocio",
+          "fr": "Classement des parcs résidentiels de loisirs"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sterneklassifizierung von Freizeit-Wohnparks"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Residential leisure park star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de parques residenciales de ocio"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement PRL en étoiles"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Klassifizierung von Freizeit-Wohnparks (PRL)"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Leisure residential park rating"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Classement parc résidentiel de loisirs"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a529c24a-0be5-46a8-9380-3100e1300ef0. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a529c24a-0be5-46a8-9380-3100e1300ef0 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/terrains-de-camping-amenages-aires-naturelles-et-parcs-residentiels-de-loisir"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a51f19ce-accf-4cba-abf7-10718b920a6f",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "qualite_tourisme_reunion",
+      "base": {
+        "description": "Marque régionale Qualité Tourisme portée par le CRT Réunion",
+        "description_i18n": {
+          "de": "Regionale Qualitätsmarke im Tourismus, getragen vom CRT Réunion.",
+          "en": "Regional Qualité Tourisme brand run by the CRT Réunion.",
+          "es": "Marca regional de calidad turística gestionada por el CRT Reunión.",
+          "fr": "Marque régionale Qualité Tourisme portée par le CRT Réunion"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a51f19ce-accf-4cba-abf7-10718b920a6f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a51f19ce-accf-4cba-abf7-10718b920a6f"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Marque régionale Qualité Tourisme Île de La Réunion destinée à identifier les établissements relevant de cette démarche de qualité ; elle est distincte du seul classement en étoiles.",
+        "description_i18n": {
+          "de": "Regionale Marke Qualité Tourisme Île de La Réunion für Betriebe innerhalb dieses Qualitätsprogramms, getrennt von einer bloßen Sterneklassifizierung.",
+          "en": "Regional Qualité Tourisme Île de La Réunion brand identifying establishments participating in that quality scheme, distinct from star classification alone.",
+          "es": "Marca regional Qualité Tourisme Île de La Réunion que identifica establecimientos de ese programa de calidad, distinta de la mera clasificación por estrellas.",
+          "fr": "Marque régionale Qualité Tourisme Île de La Réunion destinée à identifier les établissements relevant de cette démarche de qualité ; elle est distincte du seul classement en étoiles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a51f19ce-accf-4cba-abf7-10718b920a6f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a51f19ce-accf-4cba-abf7-10718b920a6f"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e47fb9bb-e9f6-4882-9cc7-a63d29323dd9",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "residence_tourisme_stars",
+      "base": {
+        "description": "Classement officiel Atout France des résidences de tourisme (étoiles)",
+        "description_i18n": {
+          "de": "Offizielle Sternklassifizierung von Atout France für Tourismusresidenzen.",
+          "en": "Official Atout France star rating for tourism residences.",
+          "es": "Clasificación oficial por estrellas de Atout France para las residencias de turismo.",
+          "fr": "Classement officiel Atout France des résidences de tourisme (étoiles)"
+        },
+        "name": "Classement résidence de tourisme",
+        "name_i18n": {
+          "de": "Klassifizierung von Tourismusresidenzen",
+          "en": "Tourism residence rating",
+          "es": "Clasificación de residencias de turismo",
+          "fr": "Classement résidence de tourisme"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sterneklassifizierung für Tourismusresidenzen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Tourism residence star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de residencias turísticas"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des résidences de tourisme en étoiles"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e47fb9bb-e9f6-4882-9cc7-a63d29323dd9. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e47fb9bb-e9f6-4882-9cc7-a63d29323dd9 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Classement officiel en étoiles des résidences de tourisme ; la valeur associée renseigne le niveau de la résidence concernée.",
+        "description_i18n": {
+          "de": "Offizielle Sterneklassifizierung von Tourismusresidenzen; der zugehörige Wert bezeichnet die Stufe der betreffenden Residenz.",
+          "en": "Official star classification for tourism residences; the associated value identifies the level of the residence concerned.",
+          "es": "Clasificación oficial por estrellas de las residencias de turismo; el valor asociado indica el nivel de la residencia correspondiente.",
+          "fr": "Classement officiel en étoiles des résidences de tourisme ; la valeur associée renseigne le niveau de la résidence concernée."
+        },
+        "name": "Classement des résidences de tourisme",
+        "name_i18n": {
+          "de": "Klassifizierung von Tourismusresidenzen",
+          "en": "Tourism residence classification",
+          "es": "Clasificación de residencias de turismo",
+          "fr": "Classement des résidences de tourisme"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sterneklassifizierung für Tourismusresidenzen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Tourism residence star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de residencias turísticas"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des résidences de tourisme en étoiles"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Tourism residence rating"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Classement résidence de tourisme"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e47fb9bb-e9f6-4882-9cc7-a63d29323dd9. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e47fb9bb-e9f6-4882-9cc7-a63d29323dd9 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3831b240-3151-4b88-8eac-be5dc62e1666",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "retail_category",
+      "base": {
+        "description": "Catégorisation des commerces de détail",
+        "description_i18n": {
+          "de": "Einteilung von Einzelhandelsgeschäften nach Geschäftstyp.",
+          "en": "Classification of retail shops by type of business.",
+          "es": "Clasificación de los comercios minoristas por tipo de actividad.",
+          "fr": "Catégorisation des commerces de détail"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3831b240-3151-4b88-8eac-be5dc62e1666. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3831b240-3151-4b88-8eac-be5dc62e1666"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Typologie descriptive des commerces selon leur activité principale, telle que boulangerie, pharmacie ou boutique de souvenirs ; elle ne constitue pas un label de qualité.",
+        "description_i18n": {
+          "de": "Beschreibende Einordnung von Geschäften nach ihrer Haupttätigkeit, etwa Bäckerei, Apotheke oder Souvenirladen; sie stellt kein Qualitätszeichen dar.",
+          "en": "Descriptive classification of shops by their main activity, such as bakery, pharmacy or souvenir shop; it is not a quality label.",
+          "es": "Tipología descriptiva de los comercios según su actividad principal, como panadería, farmacia o tienda de recuerdos; no constituye un sello de calidad.",
+          "fr": "Typologie descriptive des commerces selon leur activité principale, telle que boulangerie, pharmacie ou boutique de souvenirs ; elle ne constitue pas un label de qualité."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3831b240-3151-4b88-8eac-be5dc62e1666. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3831b240-3151-4b88-8eac-be5dc62e1666"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dd2660eb-d2a2-4506-a5d6-bbeeee4b420a",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "tables_auberges",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dd2660eb-d2a2-4506-a5d6-bbeeee4b420a. Sources externes réellement consultées : https://tables-auberges.com/en/the-tables-auberges-label ; https://www.tables-auberges.com/qui-sommes-nous/label-tables-et-auberges-france-international.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dd2660eb-d2a2-4506-a5d6-bbeeee4b420a ; https://tables-auberges.com/en/the-tables-auberges-label ; https://www.tables-auberges.com/qui-sommes-nous/label-tables-et-auberges-france-international"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dd2660eb-d2a2-4506-a5d6-bbeeee4b420a. Sources externes réellement consultées : https://tables-auberges.com/en/the-tables-auberges-label ; https://www.tables-auberges.com/qui-sommes-nous/label-tables-et-auberges-france-international.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dd2660eb-d2a2-4506-a5d6-bbeeee4b420a ; https://tables-auberges.com/en/the-tables-auberges-label ; https://www.tables-auberges.com/qui-sommes-nous/label-tables-et-auberges-france-international"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7b3812bb-a9db-4996-b06f-36c08f83c8ac",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "type_act",
+      "base": {
+        "description": "Sous-type métier pour les prestations ACT — canyoning, plongée, parapente, etc.",
+        "description_i18n": {
+          "de": "Berufliche Untergliederung für angeleitete Aktivitäten, z. B. Canyoning, Tauchen oder Gleitschirmfliegen.",
+          "en": "Business sub-type for guided activity services, such as canyoning, diving or paragliding.",
+          "es": "Subtipo de actividad para los servicios de actividades guiadas, como barranquismo, buceo o parapente.",
+          "fr": "Sous-type métier pour les prestations ACT — canyoning, plongée, parapente, etc."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7b3812bb-a9db-4996-b06f-36c08f83c8ac. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7b3812bb-a9db-4996-b06f-36c08f83c8ac"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Typologie des prestations pratiquées avec un encadrement, permettant de préciser l'activité proposée, par exemple canyoning, plongée ou randonnée guidée ; elle ne certifie pas les qualifications de l'encadrant.",
+        "description_i18n": {
+          "de": "Einordnung betreuter Aktivitäten nach der angebotenen Tätigkeit, etwa Canyoning, Tauchen oder geführtem Wandern; sie bestätigt keine Qualifikation der Betreuungsperson.",
+          "en": "Classification of supervised activity services used to identify the activity offered, such as canyoning, diving or guided hiking; it does not certify the supervisor's qualifications.",
+          "es": "Tipología de prestaciones con supervisión que permite precisar la actividad ofrecida, como barranquismo, buceo o senderismo guiado; no certifica las cualificaciones del responsable.",
+          "fr": "Typologie des prestations pratiquées avec un encadrement, permettant de préciser l'activité proposée, par exemple canyoning, plongée ou randonnée guidée ; elle ne certifie pas les qualifications de l'encadrant."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7b3812bb-a9db-4996-b06f-36c08f83c8ac. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7b3812bb-a9db-4996-b06f-36c08f83c8ac"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "15c16e76-b862-494a-9c23-7445e528a65e",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "type_hot",
+      "base": {
+        "description": "Typologie descriptive d'un hôtel selon son concept ou son positionnement (par exemple boutique, familial ou historique).",
+        "description_i18n": {
+          "de": "Beschreibende Hoteltypologie nach Konzept oder Positionierung, z. B. Boutique-, Familien- oder Traditionshotel.",
+          "en": "Descriptive hotel typology based on concept or positioning, for example boutique, family or heritage.",
+          "es": "Tipología descriptiva del hotel según su concepto o posicionamiento, por ejemplo boutique, familiar o histórico.",
+          "fr": "Typologie descriptive d'un hôtel selon son concept ou son positionnement (par exemple boutique, familial ou historique)."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/15c16e76-b862-494a-9c23-7445e528a65e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/15c16e76-b862-494a-9c23-7445e528a65e"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Typologie décrivant le concept ou le positionnement d'un hôtel, comme hôtel boutique, hôtel familial indépendant ou hôtel historique, distincte de son classement en étoiles.",
+        "description_i18n": {
+          "de": "Einordnung nach Hotelkonzept oder Positionierung, etwa Boutiquehotel, unabhängiges familiengeführtes Hotel oder historisches Hotel, getrennt von der Sterneklassifizierung.",
+          "en": "Classification describing a hotel's concept or positioning, such as boutique hotel, independent family-run hotel or heritage hotel, distinct from its star rating.",
+          "es": "Tipología que describe el concepto o posicionamiento de un hotel, como hotel boutique, hotel familiar independiente u hotel histórico, distinta de su clasificación por estrellas.",
+          "fr": "Typologie décrivant le concept ou le positionnement d'un hôtel, comme hôtel boutique, hôtel familial indépendant ou hôtel historique, distincte de son classement en étoiles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/15c16e76-b862-494a-9c23-7445e528a65e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/15c16e76-b862-494a-9c23-7445e528a65e"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aa3e7e23-c3f7-4529-8340-100ebe7e13a8",
+      "domain": "classification_scheme",
+      "context_key": "",
+      "code": "village_vacances_stars",
+      "base": {
+        "description": "Classement officiel Atout France des villages de vacances (étoiles)",
+        "description_i18n": {
+          "de": "Offizielle Sternklassifizierung von Atout France für Feriendörfer (Villages de vacances).",
+          "en": "Official Atout France star rating for holiday villages.",
+          "es": "Clasificación oficial por estrellas de Atout France para los villages de vacances (aldeas vacacionales).",
+          "fr": "Classement officiel Atout France des villages de vacances (étoiles)"
+        },
+        "name": "Classement village de vacances",
+        "name_i18n": {
+          "de": "Klassifizierung von Feriendörfern (Villages de vacances)",
+          "en": "Holiday village rating",
+          "es": "Clasificación de villages de vacances",
+          "fr": "Classement village de vacances"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sterneklassifizierung von Feriendörfern"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Holiday village star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de complejos de vacaciones"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des villages de vacances en étoiles"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa3e7e23-c3f7-4529-8340-100ebe7e13a8. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa3e7e23-c3f7-4529-8340-100ebe7e13a8 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Classement officiel en étoiles des villages de vacances ; le niveau décrit le village de vacances concerné et non une commune touristique.",
+        "description_i18n": {
+          "de": "Offizielle Sterneklassifizierung von Feriendörfern; die Stufe beschreibt den Ferienbetrieb und nicht eine touristische Gemeinde.",
+          "en": "Official star classification of holiday villages; the level describes the holiday-village establishment rather than a tourism municipality.",
+          "es": "Clasificación oficial por estrellas de complejos vacacionales; el nivel describe el establecimiento vacacional y no un municipio turístico.",
+          "fr": "Classement officiel en étoiles des villages de vacances ; le niveau décrit le village de vacances concerné et non une commune touristique."
+        },
+        "name": "Classement des villages de vacances",
+        "name_i18n": {
+          "de": "Klassifizierung von Feriendörfern",
+          "en": "Holiday village classification",
+          "es": "Clasificación de complejos vacacionales",
+          "fr": "Classement des villages de vacances"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sterneklassifizierung von Feriendörfern"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Holiday village star classification"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Clasificación por estrellas de complejos de vacaciones"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Classement des villages de vacances en étoiles"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Klassifizierung von Feriendörfern (Villages de vacances)"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Holiday village rating"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Clasificación de villages de vacances"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Classement village de vacances"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa3e7e23-c3f7-4529-8340-100ebe7e13a8. Sources externes réellement consultées : https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa3e7e23-c3f7-4529-8340-100ebe7e13a8 ; https://www.entreprises.gouv.fr/fr/tourisme/conseils-strategie/principes-communs-au-classement-des-hebergements-touristiques-marchands"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    }
+  ]
+}

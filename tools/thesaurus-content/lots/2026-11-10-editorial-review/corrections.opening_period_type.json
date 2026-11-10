@@ -1,0 +1,126 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-opening_period_type-1",
+  "proposals": [
+    {
+      "concept_id": "1ae0fad7-2528-4b45-8dc8-20df3a850cfc",
+      "domain": "opening_period_type",
+      "context_key": "",
+      "code": "high_season",
+      "base": {
+        "description": "Période de plus forte demande saisonnière",
+        "description_i18n": {
+          "de": "Zeitraum mit der höchsten saisonalen Nachfrage",
+          "en": "Period of highest seasonal demand",
+          "es": "Período de mayor demanda estacional",
+          "fr": "Période de plus forte demande saisonnière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1ae0fad7-2528-4b45-8dc8-20df3a850cfc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1ae0fad7-2528-4b45-8dc8-20df3a850cfc"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période d’ouverture correspondant à la saison de forte demande définie pour l’offre. Ses dates sont renseignées dans la fiche, sans calendrier universel déduit de ce libellé.",
+        "description_i18n": {
+          "de": "Öffnungszeitraum entsprechend der für das Angebot festgelegten nachfragestarken Saison. Die Daten werden im Eintrag erfasst und nicht aus einem allgemeingültigen Kalender abgeleitet.",
+          "en": "Opening period corresponding to the offer’s designated high-demand season. Its dates are recorded in the listing rather than inferred from a universal calendar.",
+          "es": "Período de apertura correspondiente a la temporada de alta demanda definida para la oferta. Sus fechas se indican en la ficha, sin deducir un calendario universal del nombre.",
+          "fr": "Période d’ouverture correspondant à la saison de forte demande définie pour l’offre. Ses dates sont renseignées dans la fiche, sans calendrier universel déduit de ce libellé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1ae0fad7-2528-4b45-8dc8-20df3a850cfc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1ae0fad7-2528-4b45-8dc8-20df3a850cfc"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0c8de691-629d-4792-b713-1f7ac6940d66",
+      "domain": "opening_period_type",
+      "context_key": "",
+      "code": "mid_season",
+      "base": {
+        "description": "Période intermédiaire entre haute et basse saison",
+        "description_i18n": {
+          "de": "Übergangszeitraum zwischen Hoch- und Nebensaison",
+          "en": "Intermediate period between high and off season",
+          "es": "Período intermedio entre temporada alta y baja",
+          "fr": "Période intermédiaire entre haute et basse saison"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0c8de691-629d-4792-b713-1f7ac6940d66. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0c8de691-629d-4792-b713-1f7ac6940d66"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période d’ouverture située entre les saisons de forte et de faible demande de l’offre. Elle permet de distinguer les horaires de cette période intermédiaire, dont les dates sont propres à la fiche.",
+        "description_i18n": {
+          "de": "Öffnungszeitraum zwischen der nachfragestarken und nachfrageschwachen Saison des Angebots. Er unterscheidet die Zeiten der Zwischensaison mit eintragsspezifischen Daten.",
+          "en": "Opening period between the offer’s high- and low-demand seasons. It distinguishes intermediate-season hours, with dates specific to the listing.",
+          "es": "Período de apertura situado entre las temporadas de alta y baja demanda de la oferta. Distingue sus horarios intermedios, con fechas propias de la ficha.",
+          "fr": "Période d’ouverture située entre les saisons de forte et de faible demande de l’offre. Elle permet de distinguer les horaires de cette période intermédiaire, dont les dates sont propres à la fiche."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0c8de691-629d-4792-b713-1f7ac6940d66. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0c8de691-629d-4792-b713-1f7ac6940d66"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b69b6fca-1542-417d-93b1-00a1a963654d",
+      "domain": "opening_period_type",
+      "context_key": "",
+      "code": "off_season",
+      "base": {
+        "description": "Période de plus faible demande saisonnière",
+        "description_i18n": {
+          "de": "Zeitraum mit der geringsten saisonalen Nachfrage",
+          "en": "Period of lowest seasonal demand",
+          "es": "Período de menor demanda estacional",
+          "fr": "Période de plus faible demande saisonnière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b69b6fca-1542-417d-93b1-00a1a963654d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b69b6fca-1542-417d-93b1-00a1a963654d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période d’ouverture correspondant à la saison de plus faible demande de l’offre. Ce type n’implique pas une fermeture : les jours et horaires restent renseignés séparément.",
+        "description_i18n": {
+          "de": "Öffnungszeitraum entsprechend der nachfrageschwachen Saison des Angebots. Der Typ bedeutet keine Schließung; Tage und Uhrzeiten werden getrennt angegeben.",
+          "en": "Opening period corresponding to the offer’s low-demand season. This type does not imply closure; days and hours remain separately specified.",
+          "es": "Período de apertura correspondiente a la temporada de menor demanda de la oferta. Este tipo no implica cierre: los días y horarios se indican por separado.",
+          "fr": "Période d’ouverture correspondant à la saison de plus faible demande de l’offre. Ce type n’implique pas une fermeture : les jours et horaires restent renseignés séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b69b6fca-1542-417d-93b1-00a1a963654d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b69b6fca-1542-417d-93b1-00a1a963654d"
+          }
+        ]
+      }
+    }
+  ]
+}

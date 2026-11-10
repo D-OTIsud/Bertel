@@ -1,0 +1,286 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_pcu-1",
+  "proposals": [
+    {
+      "concept_id": "1f314ab0-53d8-4e3c-a146-6e5392ca530a",
+      "domain": "taxonomy_pcu",
+      "context_key": "",
+      "code": "creole_architecture",
+      "base": {
+        "description": "Cases et demeures créoles, patrimoine vernaculaire",
+        "description_i18n": {
+          "de": "Kreolische Häuser und Herrenhäuser als Zeugnisse orts- und regionaltypischer Baukultur.",
+          "en": "Creole houses and mansions, traditional vernacular heritage.",
+          "es": "Casas y residencias criollas, patrimonio vernáculo tradicional.",
+          "fr": "Cases et demeures créoles, patrimoine vernaculaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1f314ab0-53d8-4e3c-a146-6e5392ca530a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1f314ab0-53d8-4e3c-a146-6e5392ca530a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Bâtiment ou ensemble bâti représentatif de l’architecture créole, notamment cases et demeures. La catégorie décrit son intérêt architectural et culturel sans impliquer automatiquement une protection officielle.",
+        "description_i18n": {
+          "de": "Gebäude oder Bauensemble als Beispiel kreolischer Architektur, insbesondere Häuser und Wohnsitze. Die Kategorie beschreibt bau- und kulturgeschichtliches Interesse, ohne automatisch amtlichen Schutz vorauszusetzen.",
+          "en": "Building or built ensemble representative of Creole architecture, particularly houses and residences. The category describes architectural and cultural interest without automatically implying official protection.",
+          "es": "Edificio o conjunto construido representativo de la arquitectura criolla, especialmente casas y residencias. Describe su interés arquitectónico y cultural sin implicar automáticamente protección oficial.",
+          "fr": "Bâtiment ou ensemble bâti représentatif de l’architecture créole, notamment cases et demeures. La catégorie décrit son intérêt architectural et culturel sans impliquer automatiquement une protection officielle."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1f314ab0-53d8-4e3c-a146-6e5392ca530a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1f314ab0-53d8-4e3c-a146-6e5392ca530a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "08546881-e08c-4971-a98c-f03d190405ef",
+      "domain": "taxonomy_pcu",
+      "context_key": "",
+      "code": "historic_monument",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/08546881-e08c-4971-a98c-f03d190405ef. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/08546881-e08c-4971-a98c-f03d190405ef"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/08546881-e08c-4971-a98c-f03d190405ef. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/08546881-e08c-4971-a98c-f03d190405ef"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2469381a-e442-460a-b479-8dd843ea4a18",
+      "domain": "taxonomy_pcu",
+      "context_key": "",
+      "code": "historic_site",
+      "base": {
+        "description": "Lieu de mémoire, vestige, ouvrage historique",
+        "description_i18n": {
+          "de": "Gedenkort, Überrest oder historisches Bauwerk.",
+          "en": "Place of memory, ruin or historic structure.",
+          "es": "Lugar de memoria, vestigio u obra histórica.",
+          "fr": "Lieu de mémoire, vestige, ouvrage historique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2469381a-e442-460a-b479-8dd843ea4a18. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2469381a-e442-460a-b479-8dd843ea4a18"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lieu, vestige ou ouvrage associé à l’histoire et présenté pour sa valeur de mémoire ou de découverte. Il peut relever de cette catégorie sans être limité au patrimoine inscrit à l’UNESCO.",
+        "description_i18n": {
+          "de": "Historisch verbundener Ort, Überrest oder Bauwerk zur Erinnerung oder Erkundung. Die Kategorie ist nicht auf UNESCO-eingetragenes Erbe beschränkt.",
+          "en": "Place, remains or structure associated with history and presented for remembrance or discovery. This category is not limited to UNESCO-listed heritage.",
+          "es": "Lugar, vestigio u obra vinculado a la historia y presentado por su valor de memoria o descubrimiento. Esta categoría no se limita al patrimonio inscrito en la UNESCO.",
+          "fr": "Lieu, vestige ou ouvrage associé à l’histoire et présenté pour sa valeur de mémoire ou de découverte. Il peut relever de cette catégorie sans être limité au patrimoine inscrit à l’UNESCO."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2469381a-e442-460a-b479-8dd843ea4a18. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2469381a-e442-460a-b479-8dd843ea4a18"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4e12f3a7-6dbf-4f91-9faa-7b785bfd8fe8",
+      "domain": "taxonomy_pcu",
+      "context_key": "",
+      "code": "industrial_heritage",
+      "base": {
+        "description": "Usines, sucreries, cheminées, ouvrages techniques",
+        "description_i18n": {
+          "de": "Fabriken, Zuckerfabriken, Schornsteine und technische Anlagen.",
+          "en": "Factories, sugar mills, chimneys and technical structures.",
+          "es": "Fábricas, ingenios azucareros, chimeneas y obras técnicas.",
+          "fr": "Usines, sucreries, cheminées, ouvrages techniques"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4e12f3a7-6dbf-4f91-9faa-7b785bfd8fe8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4e12f3a7-6dbf-4f91-9faa-7b785bfd8fe8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site ou ouvrage témoignant d’une activité industrielle ou technique, par exemple une usine, une sucrerie ou une cheminée. Il décrit un patrimoine à découvrir, distinct d’une entreprise simplement en activité.",
+        "description_i18n": {
+          "de": "Ort oder Bauwerk als Zeugnis industrieller oder technischer Tätigkeit, etwa Fabrik, Zuckerfabrik oder Schornstein. Die Angabe bezeichnet erkundbares Erbe und nicht lediglich einen laufenden Betrieb.",
+          "en": "Site or structure bearing witness to industrial or technical activity, such as a factory, sugar mill or chimney. It describes heritage to discover rather than merely an operating business.",
+          "es": "Sitio u obra que testimonia una actividad industrial o técnica, como fábrica, ingenio azucarero o chimenea. Describe patrimonio por descubrir, no solo una empresa en funcionamiento.",
+          "fr": "Site ou ouvrage témoignant d’une activité industrielle ou technique, par exemple une usine, une sucrerie ou une cheminée. Il décrit un patrimoine à découvrir, distinct d’une entreprise simplement en activité."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4e12f3a7-6dbf-4f91-9faa-7b785bfd8fe8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4e12f3a7-6dbf-4f91-9faa-7b785bfd8fe8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f26e2a25-f635-4967-a2ea-a7cff35b7ca1",
+      "domain": "taxonomy_pcu",
+      "context_key": "",
+      "code": "museum",
+      "base": {
+        "description": "Musée, écomusée, centre d'interprétation",
+        "description_i18n": {
+          "de": "Museum, Ökomuseum oder Interpretationszentrum.",
+          "en": "Museum, eco-museum or interpretation centre.",
+          "es": "Museo, ecomuseo o centro de interpretación.",
+          "fr": "Musée, écomusée, centre d'interprétation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f26e2a25-f635-4967-a2ea-a7cff35b7ca1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f26e2a25-f635-4967-a2ea-a7cff35b7ca1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lieu permanent de présentation de collections ou d’explication d’un patrimoine, incluant musées, écomusées et centres d’interprétation. Il se distingue d’une exposition temporaire décrite comme événement.",
+        "description_i18n": {
+          "de": "Dauerhafter Ort zur Präsentation von Sammlungen oder Vermittlung von Erbe, einschließlich Museen, Ökomuseen und Vermittlungszentren. Er unterscheidet sich von einer temporären Ausstellung als Veranstaltung.",
+          "en": "Permanent place presenting collections or explaining heritage, including museums, eco-museums and interpretation centres. It differs from a temporary exhibition described as an event.",
+          "es": "Lugar permanente de presentación de colecciones o explicación del patrimonio, incluidos museos, ecomuseos y centros de interpretación. Se distingue de una exposición temporal descrita como evento.",
+          "fr": "Lieu permanent de présentation de collections ou d’explication d’un patrimoine, incluant musées, écomusées et centres d’interprétation. Il se distingue d’une exposition temporaire décrite comme événement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f26e2a25-f635-4967-a2ea-a7cff35b7ca1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f26e2a25-f635-4967-a2ea-a7cff35b7ca1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "511cd0fe-9f8b-4cd7-8207-6c19d84f2374",
+      "domain": "taxonomy_pcu",
+      "context_key": "",
+      "code": "religious_building",
+      "base": {
+        "description": "Église, chapelle, temple, mosquée",
+        "description_i18n": {
+          "de": "Kirche, Kapelle, Tempel oder Moschee.",
+          "en": "Church, chapel, temple or mosque.",
+          "es": "Iglesia, capilla, templo o mezquita.",
+          "fr": "Église, chapelle, temple, mosquée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/511cd0fe-9f8b-4cd7-8207-6c19d84f2374. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/511cd0fe-9f8b-4cd7-8207-6c19d84f2374"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Bâtiment lié à une pratique religieuse et présenté pour son intérêt culturel ou architectural, par exemple une église, une chapelle, un temple ou une mosquée. La catégorie décrit le lieu plutôt qu’une cérémonie datée.",
+        "description_i18n": {
+          "de": "Mit religiöser Praxis verbundenes Gebäude von kulturellem oder architektonischem Interesse, etwa Kirche, Kapelle, Tempel oder Moschee. Die Kategorie bezeichnet den Ort und keine terminierte Zeremonie.",
+          "en": "Building associated with religious practice and presented for cultural or architectural interest, such as a church, chapel, temple or mosque. It describes the place rather than a dated ceremony.",
+          "es": "Edificio vinculado a una práctica religiosa y presentado por su interés cultural o arquitectónico, como iglesia, capilla, templo o mezquita. Describe el lugar, no una ceremonia con fecha.",
+          "fr": "Bâtiment lié à une pratique religieuse et présenté pour son intérêt culturel ou architectural, par exemple une église, une chapelle, un temple ou une mosquée. La catégorie décrit le lieu plutôt qu’une cérémonie datée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/511cd0fe-9f8b-4cd7-8207-6c19d84f2374. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/511cd0fe-9f8b-4cd7-8207-6c19d84f2374"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f4f9be86-fd28-4bcc-820c-48d83c2a83eb",
+      "domain": "taxonomy_pcu",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Patrimoine",
+        "description_i18n": {
+          "de": "Technische Wurzel für Kulturerbe-Kategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for heritage categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de patrimonio; no asignable directamente.",
+          "fr": "Racine technique — Patrimoine"
+        },
+        "name_i18n": {
+          "de": "Kulturerbe",
+          "en": "Heritage",
+          "es": "Patrimonio",
+          "fr": "Patrimoine"
+        },
+        "name": "Patrimoine",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f4f9be86-fd28-4bcc-820c-48d83c2a83eb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f4f9be86-fd28-4bcc-820c-48d83c2a83eb"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des lieux et biens témoignant de l’histoire, de l’architecture ou de la culture. Elle regroupe le patrimoine culturel, sans imposer une inscription à l’UNESCO ou un autre label à toutes ses sous-catégories.",
+        "description_i18n": {
+          "de": "Oberkategorie für Orte und Güter mit Bezug zu Geschichte, Architektur oder Kultur. Sie umfasst Kulturerbe, ohne für jede Unterkategorie eine UNESCO-Eintragung oder ein anderes Label vorauszusetzen.",
+          "en": "General category for places and assets reflecting history, architecture or culture. It groups cultural heritage without requiring UNESCO inscription or another label for every subcategory.",
+          "es": "Categoría general de lugares y bienes que testimonian la historia, arquitectura o cultura. Reúne patrimonio cultural sin exigir inscripción en la UNESCO u otro sello a todas las subcategorías.",
+          "fr": "Catégorie générale des lieux et biens témoignant de l’histoire, de l’architecture ou de la culture. Elle regroupe le patrimoine culturel, sans imposer une inscription à l’UNESCO ou un autre label à toutes ses sous-catégories."
+        },
+        "name_i18n": {
+          "de": "Kulturerbe",
+          "en": "Cultural heritage",
+          "es": "Patrimonio cultural",
+          "fr": "Patrimoine culturel"
+        },
+        "name": "Patrimoine culturel",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f4f9be86-fd28-4bcc-820c-48d83c2a83eb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f4f9be86-fd28-4bcc-820c-48d83c2a83eb"
+          }
+        ]
+      }
+    }
+  ]
+}

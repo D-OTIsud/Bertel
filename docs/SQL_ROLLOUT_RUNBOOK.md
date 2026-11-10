@@ -2765,3 +2765,50 @@ par le circuit existant est nécessaire pour présenter les nouveaux noms dans l
 manifeste courant ; la migration ne réécrit aucune version publiée. Le test frais
 contrôle les noms métier, l’accès effectif de tous les catalogues, la conservation
 des données éditoriales et l’absence de toute écriture au deuxième passage.
+
+### Définitions complètes et corrections par lots du thésaurus
+
+Sur une installation existante, l'ordre de livraison est explicite :
+
+1. Appliquer `20261110075054_thesaurus_required_definitions.sql` : définition
+   obligatoire pour tous les domaines. Les concepts et les publications existants
+   restent inchangés ; chaque nouvelle publication contrôle tout son instantané.
+2. Appliquer `20261110075103_thesaurus_complete_admin_batches.sql`, puis
+   `20261110075111_thesaurus_simple_business_names.sql` et
+   `20261110072416_thesaurus_legacy_search_term_roundtrip.sql`. Livrer le client associé.
+   Les noms courts couvrent les 78 domaines, sans « taxonomie » dans les intitulés.
+   L'administration peut relire les listes internes ; les lecteurs publics
+   conservent leur filtre de visibilité. Les opérations par lots réutilisent les
+   contrôles d'autorité et de concurrence des opérations unitaires.
+3. Créer, relire, valider et publier l'enrichissement complet par le circuit normal.
+   Inclure les concepts privés et historiques dans la revue sans les rendre publics
+   ni réactiver les valeurs historiques. Les empreintes fraîches sont lues après
+   les changements de politique et de noms, avant de créer les brouillons.
+4. Seulement lorsque tout le corpus est prêt, appliquer
+   `20261110062210_thesaurus_complete_editorial_definitions.sql`. Son contrôle
+   préalable refuse une base existante encore incomplète. FR/EN/ES/DE deviennent
+   obligatoires ; une définition vide, provisoire ou identique au nom est refusée.
+   Une langue supplémentaire présente exige également nom et définition.
+5. Publier les métadonnées par le circuit authentifié, puis contrôler le manifeste,
+   le corpus entier, les lecteurs publics et l'absence de brouillons oubliés.
+
+Les miroirs frais sont, dans cet ordre après `thesaurus_business_domain_names.sql` :
+`thesaurus_required_definitions.sql`, `thesaurus_complete_editorial_definitions.sql`,
+`thesaurus_complete_admin_batches.sql`, `thesaurus_simple_business_names.sql`,
+`thesaurus_legacy_search_term_roundtrip.sql`.
+Le driver `ci_fresh_apply.sql` les charge chacun avec son test homonyme sous
+`tests/`. Sur base vierge sans publication active, la politique complète peut
+être installée avant l'enrichissement ; le premier contenu publié doit la respecter.
+
+Les tests SQL de cette livraison créent des comptes et claims synthétiques :
+ils sont réservés à la pile jetable de CI, jamais à la production. Les aides
+ajoutées ne sont pas des points d'entrée privilégiés ; le noyau d'activation et
+les contrôles d'autorité de publication restent en place. Le succès de la CI
+ne constitue pas une preuve d'application ou de publication sur la cible.
+
+Le correctif des recherches héritées expose leur tableau dans l'espace privé et
+persiste la proposition uniquement pendant la publication ordinaire : omission
+conserve, tableau vide efface. Le recalcul des alias utilise la valeur publiée.
+Le champ reste exclu des documents publics. Le registre de préparation vérifie
+l'ancienne empreinte du writer avant d'actualiser uniquement cette entrée ; les
+autres fonctions, le noyau d'activation et ses droits restent inchangés.

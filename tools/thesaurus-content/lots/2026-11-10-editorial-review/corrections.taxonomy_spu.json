@@ -1,0 +1,784 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_spu-1",
+  "proposals": [
+    {
+      "concept_id": "2b34cdb6-4a69-47cc-9558-6875fed73aca",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "bus_station",
+      "base": {
+        "description": "Gare routière, pôle d'échanges",
+        "description_i18n": {
+          "de": "Busbahnhof oder Verkehrsknotenpunkt.",
+          "en": "Bus station or transport interchange hub.",
+          "es": "Estación de autobuses o nodo de intercambio.",
+          "fr": "Gare routière, pôle d'échanges"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2b34cdb6-4a69-47cc-9558-6875fed73aca. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2b34cdb6-4a69-47cc-9558-6875fed73aca"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lieu de départ, d’arrivée ou de correspondance des transports collectifs routiers, comme une gare routière ou un arrêt structurant. La catégorie décrit l’équipement et non l’entreprise d’autocar.",
+        "description_i18n": {
+          "de": "Abfahrts-, Ankunfts- oder Umsteigeort des öffentlichen Straßenverkehrs, etwa Busbahnhof oder Haupthaltestelle. Die Kategorie bezeichnet die Anlage und kein Reisebusunternehmen.",
+          "en": "Departure, arrival or interchange place for road public transport, such as a bus station or main stop. It describes the facility rather than a coach company.",
+          "es": "Lugar de salida, llegada o correspondencia del transporte colectivo por carretera, como una estación o parada principal. Describe la instalación, no la compañía de autocares.",
+          "fr": "Lieu de départ, d’arrivée ou de correspondance des transports collectifs routiers, comme une gare routière ou un arrêt structurant. La catégorie décrit l’équipement et non l’entreprise d’autocar."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2b34cdb6-4a69-47cc-9558-6875fed73aca. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2b34cdb6-4a69-47cc-9558-6875fed73aca"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "96fbaf11-dbc6-414b-a666-6b4157679448",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "carpool_area",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/96fbaf11-dbc6-414b-a666-6b4157679448. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/96fbaf11-dbc6-414b-a666-6b4157679448"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/96fbaf11-dbc6-414b-a666-6b4157679448. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/96fbaf11-dbc6-414b-a666-6b4157679448"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c72f6815-06d8-4673-81cc-8cf92f6e40c8",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "drinking_water",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c72f6815-06d8-4673-81cc-8cf92f6e40c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c72f6815-06d8-4673-81cc-8cf92f6e40c8"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Frei zugänglicher Trinkbrunnen oder Wasserhahn"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "drinking fountain"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Public-access drinking fountain or tap"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "fuente de agua potable"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Fuente o grifo de agua potable de libre acceso"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "fontaine d'eau"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Fontaine ou robinet d’eau potable en libre accès"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c72f6815-06d8-4673-81cc-8cf92f6e40c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c72f6815-06d8-4673-81cc-8cf92f6e40c8"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Frei zugänglicher Trinkbrunnen oder Wasserhahn"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "drinking fountain"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Public-access drinking fountain or tap"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "fuente de agua potable"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Fuente o grifo de agua potable de libre acceso"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "fontaine d'eau"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Fontaine ou robinet d’eau potable en libre accès"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "33f4eafd-fd2c-4f7b-b4cd-c93fc8747bc5",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "electric_charging",
+      "base": {
+        "description": "Station de recharge pour véhicules électriques",
+        "description_i18n": {
+          "de": "Ladestation für Elektrofahrzeuge.",
+          "en": "Charging station for electric vehicles.",
+          "es": "Estación de recarga para vehículos eléctricos.",
+          "fr": "Station de recharge pour véhicules électriques"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/33f4eafd-fd2c-4f7b-b4cd-c93fc8747bc5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/33f4eafd-fd2c-4f7b-b4cd-c93fc8747bc5"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point ou station permettant la recharge de véhicules électriques, décrit comme lieu ou service autonome. Les conditions d’accès et les caractéristiques des bornes restent des informations distinctes.",
+        "description_i18n": {
+          "de": "Punkt oder Station zum Laden von Elektrofahrzeugen als eigenständiger Ort oder Dienst. Zugangsbedingungen und Ladesäuleneigenschaften bleiben getrennte Angaben.",
+          "en": "Point or station for charging electric vehicles, described as a standalone place or service. Access conditions and charger specifications remain separate information.",
+          "es": "Punto o estación para recargar vehículos eléctricos, descrito como lugar o servicio autónomo. Las condiciones de acceso y características de los cargadores son datos distintos.",
+          "fr": "Point ou station permettant la recharge de véhicules électriques, décrit comme lieu ou service autonome. Les conditions d’accès et les caractéristiques des bornes restent des informations distinctes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/33f4eafd-fd2c-4f7b-b4cd-c93fc8747bc5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/33f4eafd-fd2c-4f7b-b4cd-c93fc8747bc5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "01399b15-365e-4644-a3a4-ccbcb41bf3cb",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "marina",
+      "base": {
+        "description": "Port de plaisance, base nautique publique",
+        "description_i18n": {
+          "de": "Sportboothafen oder öffentlicher Wassersportstützpunkt.",
+          "en": "Leisure boat harbour or public nautical base.",
+          "es": "Puerto deportivo o base náutica pública.",
+          "fr": "Port de plaisance, base nautique publique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/01399b15-365e-4644-a3a4-ccbcb41bf3cb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/01399b15-365e-4644-a3a4-ccbcb41bf3cb"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Port ou installation d’accueil de la navigation de plaisance, incluant le service de capitainerie associé. Il se distingue d’un club qui organise une activité nautique ou d’une sortie en bateau.",
+        "description_i18n": {
+          "de": "Hafen oder Einrichtung für Freizeitschifffahrt einschließlich zugehöriger Hafenmeisterei. Er unterscheidet sich von einem Wassersportverein oder einem Bootsausflug.",
+          "en": "Harbour or facility accommodating leisure navigation, including its associated harbour office service. It differs from a club organising water activities or a boat outing.",
+          "es": "Puerto o instalación de acogida de la navegación de recreo, incluido su servicio de capitanía. Se distingue de un club que organiza actividades náuticas o de una salida en barco.",
+          "fr": "Port ou installation d’accueil de la navigation de plaisance, incluant le service de capitainerie associé. Il se distingue d’un club qui organise une activité nautique ou d’une sortie en bateau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/01399b15-365e-4644-a3a4-ccbcb41bf3cb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/01399b15-365e-4644-a3a4-ccbcb41bf3cb"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "78debc7f-6b19-4242-90f4-470098aa0513",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "motorhome_services",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/78debc7f-6b19-4242-90f4-470098aa0513. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/78debc7f-6b19-4242-90f4-470098aa0513"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/78debc7f-6b19-4242-90f4-470098aa0513. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/78debc7f-6b19-4242-90f4-470098aa0513"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1993bfaf-e315-464f-8eaa-a5ba83d9ed56",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "picnic_area",
+      "base": {
+        "description": "Aire de pique-nique aménagée, kiosques (ONF, Département, commune)",
+        "description_i18n": {
+          "de": "Eingerichteter Picknickplatz oder überdachter Unterstand.",
+          "en": "Developed picnic area or covered shelter.",
+          "es": "Área de picnic acondicionada o quiosco cubierto.",
+          "fr": "Aire de pique-nique aménagée, kiosques (ONF, Département, commune)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1993bfaf-e315-464f-8eaa-a5ba83d9ed56. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1993bfaf-e315-464f-8eaa-a5ba83d9ed56"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Eingerichteter Picknickplatz oder Unterstand"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Developed picnic area or shelter"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "picnic shelter"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "área de picnic"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Zona acondicionada de picnic o refugio"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Espace aménagé de pique-nique"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "kiosque"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Espace aménagé pour prendre un repas en plein air, pouvant comporter tables, abris ou kiosques. Il décrit un lieu de pique-nique, distinct d’un restaurant servant les repas.",
+        "description_i18n": {
+          "de": "Für Mahlzeiten im Freien eingerichteter Ort, gegebenenfalls mit Tischen oder Unterständen. Er bezeichnet einen Picknickplatz und kein Restaurant mit Speisenservice.",
+          "en": "Area arranged for outdoor meals, possibly including tables or shelters. It describes a picnic place rather than a restaurant serving food.",
+          "es": "Espacio acondicionado para comer al aire libre, que puede incluir mesas, refugios o quioscos. Describe un lugar de picnic, no un restaurante que sirve comidas.",
+          "fr": "Espace aménagé pour prendre un repas en plein air, pouvant comporter tables, abris ou kiosques. Il décrit un lieu de pique-nique, distinct d’un restaurant servant les repas."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1993bfaf-e315-464f-8eaa-a5ba83d9ed56. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1993bfaf-e315-464f-8eaa-a5ba83d9ed56"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Eingerichteter Picknickplatz oder Unterstand"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Developed picnic area or shelter"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "picnic shelter"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "área de picnic"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Zona acondicionada de picnic o refugio"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Espace aménagé de pique-nique"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "kiosque"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bdfe2590-80e4-4504-90bb-8f8bd15871b4",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "playground",
+      "base": {
+        "description": "Aire de jeux publique",
+        "description_i18n": {
+          "de": "Öffentlicher Spielplatz.",
+          "en": "Public play area.",
+          "es": "Área de juegos pública.",
+          "fr": "Aire de jeux publique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bdfe2590-80e4-4504-90bb-8f8bd15871b4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bdfe2590-80e4-4504-90bb-8f8bd15871b4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Espace public aménagé avec des installations destinées au jeu, notamment pour les enfants. Il se distingue d’un parc de loisirs ou d’une activité encadrée vendue comme prestation.",
+        "description_i18n": {
+          "de": "Öffentlicher Bereich mit Spieleinrichtungen, insbesondere für Kinder. Er unterscheidet sich von einem Freizeitpark oder einer als Leistung verkauften betreuten Aktivität.",
+          "en": "Public area equipped with play installations, particularly for children. It differs from a leisure park or a supervised activity sold as a service.",
+          "es": "Espacio público acondicionado con instalaciones de juego, especialmente para niños. Se distingue de un parque de ocio o una actividad guiada vendida como prestación.",
+          "fr": "Espace public aménagé avec des installations destinées au jeu, notamment pour les enfants. Il se distingue d’un parc de loisirs ou d’une activité encadrée vendue comme prestation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bdfe2590-80e4-4504-90bb-8f8bd15871b4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bdfe2590-80e4-4504-90bb-8f8bd15871b4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6c478509-faf3-4070-8c2e-14e8224be0bf",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "public_library",
+      "base": {
+        "description": "Équipement culturel public en accès libre",
+        "description_i18n": {
+          "de": "Öffentliche Kultureinrichtung mit freiem Zugang.",
+          "en": "Free-access public cultural facility.",
+          "es": "Equipamiento cultural público de acceso libre.",
+          "fr": "Équipement culturel public en accès libre"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c478509-faf3-4070-8c2e-14e8224be0bf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c478509-faf3-4070-8c2e-14e8224be0bf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Équipement culturel public donnant accès à des livres, documents ou ressources multimédias pour la consultation et, selon le service, l’emprunt. Il se distingue d’une librairie vendant des ouvrages.",
+        "description_i18n": {
+          "de": "Öffentliche Kultureinrichtung mit Büchern, Dokumenten oder Multimediaressourcen zum Lesen und je nach Angebot zur Ausleihe. Sie unterscheidet sich von einer Buchhandlung.",
+          "en": "Public cultural facility providing books, documents or multimedia resources for consultation and, depending on the service, borrowing. It differs from a shop selling books.",
+          "es": "Equipamiento cultural público que ofrece libros, documentos o recursos multimedia para consulta y, según el servicio, préstamo. Se distingue de una librería que vende obras.",
+          "fr": "Équipement culturel public donnant accès à des livres, documents ou ressources multimédias pour la consultation et, selon le service, l’emprunt. Il se distingue d’une librairie vendant des ouvrages."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c478509-faf3-4070-8c2e-14e8224be0bf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c478509-faf3-4070-8c2e-14e8224be0bf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c3d6b2a2-a530-4cdd-aa7b-a041b0e33fba",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "public_pool",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3d6b2a2-a530-4cdd-aa7b-a041b0e33fba. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3d6b2a2-a530-4cdd-aa7b-a041b0e33fba"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3d6b2a2-a530-4cdd-aa7b-a041b0e33fba. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3d6b2a2-a530-4cdd-aa7b-a041b0e33fba"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "622289da-f044-4a08-b007-7450539e372c",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "public_sports_facility",
+      "base": {
+        "description": "Stade, gymnase, plateau sportif, skatepark, pumptrack",
+        "description_i18n": {
+          "de": "Stadion, Turnhalle, Sportfläche, Skatepark oder Pumptrack.",
+          "en": "Stadium, gymnasium, multi-sport court, skate park or pump track.",
+          "es": "Estadio, polideportivo, pista polideportiva, skatepark o pumptrack.",
+          "fr": "Stade, gymnase, plateau sportif, skatepark, pumptrack"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/622289da-f044-4a08-b007-7450539e372c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/622289da-f044-4a08-b007-7450539e372c"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sportanlage mit freiem Zugang"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Open-access sports facility"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "sports ground"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Equipamiento deportivo de libre acceso"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Installation sportive librement accessible"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "terrain de sport"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Installation sportive autonome proposée en accès libre, par exemple stade, terrain, skatepark ou pumptrack. Elle décrit l’équipement, distinct d’un club organisant des cours ou d’un équipement réservé aux clients d’une offre.",
+        "description_i18n": {
+          "de": "Eigenständige, frei zugängliche Sportanlage, etwa Stadion, Sportfläche, Skatepark oder Pumptrack. Sie bezeichnet die Anlage und keinen Kursverein oder eine nur für Kunden bestimmte Ausstattung.",
+          "en": "Standalone sports facility offered for free access, such as a stadium, court, skatepark or pump track. It describes the facility rather than a club offering lessons or equipment reserved for an offer’s customers.",
+          "es": "Instalación deportiva autónoma ofrecida en acceso libre, como estadio, pista, skatepark o pumptrack. Describe el equipamiento, no un club que organiza clases o instalaciones reservadas a clientes.",
+          "fr": "Installation sportive autonome proposée en accès libre, par exemple stade, terrain, skatepark ou pumptrack. Elle décrit l’équipement, distinct d’un club organisant des cours ou d’un équipement réservé aux clients d’une offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/622289da-f044-4a08-b007-7450539e372c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/622289da-f044-4a08-b007-7450539e372c"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Sportanlage mit freiem Zugang"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Open-access sports facility"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "sports ground"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Equipamiento deportivo de libre acceso"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Installation sportive librement accessible"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "terrain de sport"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cb234a90-18fb-4b7e-9eef-f1e98186a0c1",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "public_toilets",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cb234a90-18fb-4b7e-9eef-f1e98186a0c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cb234a90-18fb-4b7e-9eef-f1e98186a0c1"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cb234a90-18fb-4b7e-9eef-f1e98186a0c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cb234a90-18fb-4b7e-9eef-f1e98186a0c1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "da49d8a9-59ae-43ab-bafb-e1ca91910779",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Service public",
+        "description_i18n": {
+          "de": "Technische Wurzel für öffentliche Dienste; nicht direkt zuweisbar.",
+          "en": "Technical root for public service categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de servicios públicos; no asignable directamente.",
+          "fr": "Racine technique — Service public"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da49d8a9-59ae-43ab-bafb-e1ca91910779. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da49d8a9-59ae-43ab-bafb-e1ca91910779"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des services, équipements et espaces autonomes accessibles au public, utiles aux habitants ou aux visiteurs. Elle décrit une fiche de lieu ou de service, distincte d’un équipement attaché à un hôtel ou à une autre offre.",
+        "description_i18n": {
+          "de": "Oberkategorie für eigenständige, öffentlich zugängliche Dienste, Einrichtungen und Räume für Einwohner oder Besucher. Sie beschreibt einen Orts- oder Dienstleistungseintrag und keine Ausstattung eines Hotels oder anderen Angebots.",
+          "en": "General category for standalone services, facilities and spaces accessible to the public and useful to residents or visitors. It describes a place or service listing rather than a facility attached to a hotel or another offer.",
+          "es": "Categoría general de servicios, instalaciones y espacios autónomos accesibles al público, útiles para residentes o visitantes. Describe una ficha de lugar o servicio, no un equipamiento asociado a un hotel u otra oferta.",
+          "fr": "Catégorie générale des services, équipements et espaces autonomes accessibles au public, utiles aux habitants ou aux visiteurs. Elle décrit une fiche de lieu ou de service, distincte d’un équipement attaché à un hôtel ou à une autre offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da49d8a9-59ae-43ab-bafb-e1ca91910779. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da49d8a9-59ae-43ab-bafb-e1ca91910779"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9332bdd0-b057-4013-af07-e20bececce5c",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "tourist_info_office",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9332bdd0-b057-4013-af07-e20bececce5c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9332bdd0-b057-4013-af07-e20bececce5c"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Touristische Informationsstelle"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Visitor information centre"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Punto de atención e información turística"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "BIT"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "office de tourisme"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Point d'accueil et d'information touristique"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9332bdd0-b057-4013-af07-e20bececce5c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9332bdd0-b057-4013-af07-e20bececce5c"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Touristische Informationsstelle"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Visitor information centre"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Punto de atención e información turística"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "BIT"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "office de tourisme"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Point d'accueil et d'information touristique"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aba5110f-7479-4b1b-a227-1901af0c9f86",
+      "domain": "taxonomy_spu",
+      "context_key": "",
+      "code": "tourist_parking",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aba5110f-7479-4b1b-a227-1901af0c9f86. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aba5110f-7479-4b1b-a227-1901af0c9f86"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aba5110f-7479-4b1b-a227-1901af0c9f86. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aba5110f-7479-4b1b-a227-1901af0c9f86"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_rva-1",
+  "proposals": [
+    {
+      "concept_id": "db57b295-f314-44b2-8292-cf4784df9a7e",
+      "domain": "taxonomy_rva",
+      "context_key": "",
+      "code": "aparthotel",
+      "base": {
+        "description": "Résidence hôtelière : logements équipés loués avec services para-hôteliers.",
+        "description_i18n": {
+          "de": "Ausgestattete Apartments mit hotelähnlichen Dienstleistungen.",
+          "en": "Equipped apartments let with hotel-type services.",
+          "es": "Apartamentos equipados alquilados con servicios de tipo hotelero.",
+          "fr": "Résidence hôtelière : logements équipés loués avec services para-hôteliers."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/db57b295-f314-44b2-8292-cf4784df9a7e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/db57b295-f314-44b2-8292-cf4784df9a7e"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Apartmenthotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "apart-hotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Apartment hotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "apartahotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Apartotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Appart-hôtel"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ensemble de logements équipés proposés à la location avec des services de type hôtelier. La catégorie décrit la résidence comme établissement, distincte du type de lit ou de logement qui compose chaque unité.",
+        "description_i18n": {
+          "de": "Anlage ausgestatteter Mieteinheiten mit hotelähnlichen Leistungen. Die Kategorie bezeichnet den Betrieb und nicht die Bett- oder Wohnungsart der einzelnen Einheit.",
+          "en": "Complex of equipped accommodation units offered for rent with hotel-type services. This category describes the establishment rather than the bed or dwelling type of each unit.",
+          "es": "Conjunto de alojamientos equipados ofrecidos en alquiler con servicios de tipo hotelero. Describe la residencia como establecimiento, no el tipo de cama o vivienda de cada unidad.",
+          "fr": "Ensemble de logements équipés proposés à la location avec des services de type hôtelier. La catégorie décrit la résidence comme établissement, distincte du type de lit ou de logement qui compose chaque unité."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/db57b295-f314-44b2-8292-cf4784df9a7e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/db57b295-f314-44b2-8292-cf4784df9a7e"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Apartmenthotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Apartment hotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "apartahotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Apartotel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Appart-hôtel"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "47c0287e-155e-41bd-b178-c3d9d8f61d84",
+      "domain": "taxonomy_rva",
+      "context_key": "",
+      "code": "holiday_village",
+      "base": {
+        "description": "Village de vacances : ensemble d'hébergements avec services et animations collectives.",
+        "description_i18n": {
+          "de": "Gruppe von Unterkünften mit Services und gemeinsamen Aktivitäten.",
+          "en": "Set of accommodation with services and shared activities.",
+          "es": "Conjunto de alojamientos con servicios y actividades colectivas.",
+          "fr": "Village de vacances : ensemble d'hébergements avec services et animations collectives."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/47c0287e-155e-41bd-b178-c3d9d8f61d84. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/47c0287e-155e-41bd-b178-c3d9d8f61d84"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ensemble d’hébergements destiné aux séjours de vacances, avec des services, équipements ou animations collectifs. Il se distingue d’une localité appelée village et d’une location isolée.",
+        "description_i18n": {
+          "de": "Unterkunftsanlage für Ferienaufenthalte mit gemeinsamen Leistungen, Einrichtungen oder Aktivitäten. Sie unterscheidet sich von einer Ortschaft und einer einzelnen Ferienvermietung.",
+          "en": "Accommodation complex intended for holidays, with shared services, facilities or activities. It differs from a locality called a village and from an isolated rental.",
+          "es": "Conjunto de alojamientos destinado a estancias vacacionales, con servicios, instalaciones o actividades colectivas. Se distingue de una localidad llamada pueblo y de un alquiler aislado.",
+          "fr": "Ensemble d’hébergements destiné aux séjours de vacances, avec des services, équipements ou animations collectifs. Il se distingue d’une localité appelée village et d’une location isolée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/47c0287e-155e-41bd-b178-c3d9d8f61d84. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/47c0287e-155e-41bd-b178-c3d9d8f61d84"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d4a15c8f-542e-4e73-b654-2fb31a386760",
+      "domain": "taxonomy_rva",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Résidence de vacances",
+        "description_i18n": {
+          "de": "Technische Wurzel für Ferienresidenzen; nicht direkt zuweisbar.",
+          "en": "Technical root for holiday residence categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de residencias vacacionales; no asignable directamente.",
+          "fr": "Racine technique — Résidence de vacances"
+        },
+        "name_i18n": {
+          "de": "Ferienresidenzen",
+          "en": "Holiday residences",
+          "es": "Residencias vacacionales",
+          "fr": "Résidence de vacances"
+        },
+        "name": "Résidence de vacances",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d4a15c8f-542e-4e73-b654-2fb31a386760. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d4a15c8f-542e-4e73-b654-2fb31a386760"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des résidences et villages accueillant les vacanciers dans un ensemble d’hébergements avec services ou équipements communs. La nature de l’ensemble et son classement éventuel restent deux informations distinctes.",
+        "description_i18n": {
+          "de": "Oberkategorie für Residenzen und Feriendörfer mit Unterkunftseinheiten und gemeinsamen Leistungen oder Einrichtungen. Art der Anlage und eine etwaige Klassifizierung bleiben getrennte Angaben.",
+          "en": "General category for residences and villages hosting holidaymakers in accommodation complexes with shared services or facilities. The complex type and any rating remain distinct information.",
+          "es": "Categoría general de residencias y complejos que acogen a turistas en conjuntos de alojamientos con servicios o instalaciones comunes. La naturaleza del conjunto y su clasificación siguen siendo datos distintos.",
+          "fr": "Catégorie générale des résidences et villages accueillant les vacanciers dans un ensemble d’hébergements avec services ou équipements communs. La nature de l’ensemble et son classement éventuel restent deux informations distinctes."
+        },
+        "name_i18n": {
+          "de": "Ferienresidenzen und Feriendörfer",
+          "en": "Holiday residences and villages",
+          "es": "Residencias y complejos vacacionales",
+          "fr": "Résidences et villages de vacances"
+        },
+        "name": "Résidences et villages de vacances",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d4a15c8f-542e-4e73-b654-2fb31a386760. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d4a15c8f-542e-4e73-b654-2fb31a386760"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1204b438-b539-4ca5-adc5-66c6139b4894",
+      "domain": "taxonomy_rva",
+      "context_key": "",
+      "code": "tourism_residence",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1204b438-b539-4ca5-adc5-66c6139b4894. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1204b438-b539-4ca5-adc5-66c6139b4894"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1204b438-b539-4ca5-adc5-66c6139b4894. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1204b438-b539-4ca5-adc5-66c6139b4894"
+          }
+        ]
+      }
+    }
+  ]
+}

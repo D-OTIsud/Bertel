@@ -1,0 +1,737 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_psv-1",
+  "proposals": [
+    {
+      "concept_id": "2fd0075e-7f63-4501-9cc5-8b7c523c5331",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "autocar_compagnie",
+      "base": {
+        "name_i18n": {
+          "de": "Busunternehmen",
+          "en": "Coach operator",
+          "es": "Empresa de autocares",
+          "fr": "Autocar (compagnie)"
+        },
+        "name": "Autocar (compagnie)",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2fd0075e-7f63-4501-9cc5-8b7c523c5331. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2fd0075e-7f63-4501-9cc5-8b7c523c5331"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Reisebusunternehmen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Coach transport company"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Operador de transporte en autocar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Transporteur par autocar"
+          }
+        ]
+      },
+      "changes": {
+        "name_i18n": {
+          "de": "Reisebusunternehmen",
+          "en": "Coach operator",
+          "es": "Empresa de autocares",
+          "fr": "Compagnie d’autocars"
+        },
+        "name": "Compagnie d’autocars",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2fd0075e-7f63-4501-9cc5-8b7c523c5331. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2fd0075e-7f63-4501-9cc5-8b7c523c5331"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Coach transport company"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Operador de transporte en autocar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Transporteur par autocar"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c11826cf-2b79-4f6f-8c0b-21ed07b3f40a",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "cycle_scooter_rental",
+      "base": {
+        "name_i18n": {
+          "de": "Fahrrad- und Tretrollerverleih",
+          "en": "Bicycle and scooter rental",
+          "es": "Alquiler de bicicletas y patinetes",
+          "fr": "Location de vélos et trottinettes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c11826cf-2b79-4f6f-8c0b-21ed07b3f40a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c11826cf-2b79-4f6f-8c0b-21ed07b3f40a"
+          }
+        ]
+      },
+      "changes": {
+        "name_i18n": {
+          "de": "Fahrrad- und Tretrollerverleih",
+          "en": "Bicycle and kick-scooter rental",
+          "es": "Alquiler de bicicletas y patinetes",
+          "fr": "Location de vélos et trottinettes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c11826cf-2b79-4f6f-8c0b-21ed07b3f40a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c11826cf-2b79-4f6f-8c0b-21ed07b3f40a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "23fc26a5-f890-4072-a4a1-57712f923cfc",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "excursion_touristique",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/23fc26a5-f890-4072-a4a1-57712f923cfc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/23fc26a5-f890-4072-a4a1-57712f923cfc"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Organisierter Reisebusausflug"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Organised coach sightseeing trip"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "sightseeing trip"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Excursión turística organizada en autocar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Excursion organisée en autocar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "sortie organisée"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/23fc26a5-f890-4072-a4a1-57712f923cfc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/23fc26a5-f890-4072-a4a1-57712f923cfc"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Organisierter Reisebusausflug"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Organised coach sightseeing trip"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "sightseeing trip"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Excursión turística organizada en autocar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Excursion organisée en autocar"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "sortie organisée"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cfb83563-e9a6-4046-ba10-abe363f5b3b1",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "location_de_voiture_avec_chauffeur",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cfb83563-e9a6-4046-ba10-abe363f5b3b1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cfb83563-e9a6-4046-ba10-abe363f5b3b1"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cfb83563-e9a6-4046-ba10-abe363f5b3b1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cfb83563-e9a6-4046-ba10-abe363f5b3b1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1b36f564-8cf0-4921-8c99-20587d1b0f17",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "location_vehicule",
+      "base": {
+        "name_i18n": {
+          "de": "Fahrzeugvermietung",
+          "en": "Vehicle hire",
+          "es": "Alquiler de vehículos",
+          "fr": "Location véhicule"
+        },
+        "name": "Location véhicule",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1b36f564-8cf0-4921-8c99-20587d1b0f17. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1b36f564-8cf0-4921-8c99-20587d1b0f17"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Fahrzeugverleih"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "car hire"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Vehicle rental"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "alquiler de coches"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Renta de vehículos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Location de véhicules"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "location de voiture"
+          }
+        ]
+      },
+      "changes": {
+        "name_i18n": {
+          "de": "Fahrzeugvermietung",
+          "en": "Vehicle hire",
+          "es": "Alquiler de vehículos",
+          "fr": "Location de véhicules"
+        },
+        "name": "Location de véhicules",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1b36f564-8cf0-4921-8c99-20587d1b0f17. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1b36f564-8cf0-4921-8c99-20587d1b0f17"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Fahrzeugverleih"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "car hire"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Vehicle rental"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "alquiler de coches"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Renta de vehículos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "location de voiture"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b7d86c3e-2a39-4541-bc64-68fe8f2b4883",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "private_driver",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7d86c3e-2a39-4541-bc64-68fe8f2b4883. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7d86c3e-2a39-4541-bc64-68fe8f2b4883"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7d86c3e-2a39-4541-bc64-68fe8f2b4883. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7d86c3e-2a39-4541-bc64-68fe8f2b4883"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4a7264f2-2319-480c-a357-d7ee67a1ce07",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Prestataire",
+        "description_i18n": {
+          "de": "Technische Wurzel für Dienstleisterkategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for service provider categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de prestadores de servicios; no asignable directamente.",
+          "fr": "Racine technique — Prestataire"
+        },
+        "name_i18n": {
+          "de": "Dienstleister",
+          "en": "Service providers",
+          "es": "Prestadores de servicios",
+          "fr": "Prestataire"
+        },
+        "name": "Prestataire",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a7264f2-2319-480c-a357-d7ee67a1ce07. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a7264f2-2319-480c-a357-d7ee67a1ce07"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des prestataires de services aux visiteurs, notamment de transport, mobilité, location et organisation de séjour. Les sous-catégories décrivent la prestation proposée, distincte du mode de transport seul.",
+        "description_i18n": {
+          "de": "Oberkategorie für Dienstleister für Besucher, insbesondere Beförderung, Mobilität, Vermietung und Aufenthaltsorganisation. Unterkategorien beschreiben die angebotene Leistung und nicht nur das Verkehrsmittel.",
+          "en": "General category for visitor service providers, particularly transport, mobility, rental and stay organisation. Subcategories describe the service offered rather than the transport mode alone.",
+          "es": "Categoría general de prestadores de servicios a visitantes, especialmente transporte, movilidad, alquiler y organización de estancias. Las subcategorías describen la prestación, no solo el medio de transporte.",
+          "fr": "Catégorie générale des prestataires de services aux visiteurs, notamment de transport, mobilité, location et organisation de séjour. Les sous-catégories décrivent la prestation proposée, distincte du mode de transport seul."
+        },
+        "name_i18n": {
+          "de": "Dienstleister",
+          "en": "Service providers",
+          "es": "Prestadores de servicios",
+          "fr": "Prestataires de services"
+        },
+        "name": "Prestataires de services",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a7264f2-2319-480c-a357-d7ee67a1ce07. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a7264f2-2319-480c-a357-d7ee67a1ce07"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2bc3f8e1-1249-450c-a0ad-ae895e439842",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "services",
+      "base": {
+        "name_i18n": {
+          "de": "Dienstleistungen",
+          "en": "Services",
+          "es": "Servicios",
+          "fr": "Services"
+        },
+        "name": "Services",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2bc3f8e1-1249-450c-a0ad-ae895e439842. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2bc3f8e1-1249-450c-a0ad-ae895e439842"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Mobilitätsdienstleistungen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Mobility services"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Servicios de movilidad"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Services de mobilité"
+          }
+        ]
+      },
+      "changes": {
+        "name_i18n": {
+          "de": "Mobilitätsdienstleistungen",
+          "en": "Mobility services",
+          "es": "Servicios de movilidad",
+          "fr": "Services de mobilité"
+        },
+        "name": "Services de mobilité",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2bc3f8e1-1249-450c-a0ad-ae895e439842. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2bc3f8e1-1249-450c-a0ad-ae895e439842"
+          }
+        ],
+        "labels": []
+      }
+    },
+    {
+      "concept_id": "8c3544d7-8e20-4dbd-aa7a-52cd1c703a1c",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "taxi",
+      "base": {
+        "description": "Opérateur de taxi",
+        "description_i18n": {
+          "de": "Taxiunternehmen.",
+          "en": "Taxi operator.",
+          "es": "Operador de taxi.",
+          "fr": "Opérateur de taxi"
+        }
+      },
+      "changes": {
+        "description": "Prestataire assurant le transport de clients dans un véhicule avec chauffeur sous l’appellation taxi. Cette catégorie classe l’opérateur et se distingue du seul mode de déplacement enregistré pour un trajet.",
+        "description_i18n": {
+          "de": "Anbieter von Kundenbeförderung in einem Fahrzeug mit Fahrer unter der Bezeichnung Taxi. Die Kategorie bezeichnet den Anbieter und nicht nur das Verkehrsmittel einer Fahrt.",
+          "en": "Provider transporting customers in a chauffeur-driven vehicle under the taxi designation. This category classifies the operator rather than only a journey’s transport mode.",
+          "es": "Prestador que transporta clientes en un vehículo con conductor bajo la denominación taxi. Clasifica al operador, no solo el medio de desplazamiento de un trayecto.",
+          "fr": "Prestataire assurant le transport de clients dans un véhicule avec chauffeur sous l’appellation taxi. Cette catégorie classe l’opérateur et se distingue du seul mode de déplacement enregistré pour un trajet."
+        }
+      }
+    },
+    {
+      "concept_id": "27d8e67b-b2af-4262-b856-bfdf92db4819",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "tourist_excursion_transport",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/27d8e67b-b2af-4262-b856-bfdf92db4819. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/27d8e67b-b2af-4262-b856-bfdf92db4819"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/27d8e67b-b2af-4262-b856-bfdf92db4819. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/27d8e67b-b2af-4262-b856-bfdf92db4819"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d242af32-894c-4b25-9e2b-9d4925f11233",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "transport_mobility",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d242af32-894c-4b25-9e2b-9d4925f11233. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d242af32-894c-4b25-9e2b-9d4925f11233"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d242af32-894c-4b25-9e2b-9d4925f11233. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d242af32-894c-4b25-9e2b-9d4925f11233"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8d6965b3-d850-4723-939a-36c5e2f4d9f2",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "v_t_t_autres_cycles",
+      "base": {
+        "description": "Services proposés aux visiteurs autour des vélos tout terrain (VTT) et d'autres cycles.",
+        "description_i18n": {
+          "de": "Dienstleistungen für Besucher rund um Mountainbikes und andere Fahrräder.",
+          "en": "Visitor services involving mountain bikes and other cycles.",
+          "es": "Servicios para visitantes relacionados con bicicletas de montaña y otros ciclos.",
+          "fr": "Services proposés aux visiteurs autour des vélos tout terrain (VTT) et d'autres cycles."
+        },
+        "name_i18n": {
+          "de": "Mountainbikes und andere Fahrräder",
+          "en": "Mountain bikes and other cycles",
+          "es": "Bicicletas de montaña y otros ciclos",
+          "fr": "V.T.T. - Autres cycles"
+        },
+        "name": "V.T.T. - Autres cycles",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8d6965b3-d850-4723-939a-36c5e2f4d9f2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8d6965b3-d850-4723-939a-36c5e2f4d9f2"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Dienstleistungen für Mountainbikes und andere Fahrräder"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Mountain-bike and cycle services"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "MTB"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Servicios de bicicleta de montaña y otros ciclos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Services VTT et autres vélos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "VTT"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie de prestataires liés au vélo tout terrain et aux autres cycles, dans les services de mobilité proposés aux visiteurs. Elle ne décrit pas le tracé d’un itinéraire ni une sortie guidée particulière.",
+        "description_i18n": {
+          "de": "Kategorie von Anbietern rund um Mountainbikes und andere Fahrräder innerhalb der Mobilitätsangebote für Besucher. Sie bezeichnet weder einen Routenverlauf noch eine bestimmte geführte Ausfahrt.",
+          "en": "Category of providers related to mountain bikes and other cycles within visitor mobility services. It describes neither an itinerary’s route nor a particular guided outing.",
+          "es": "Categoría de prestadores vinculados a bicicletas de montaña y otros ciclos dentro de los servicios de movilidad para visitantes. No describe el trazado de un itinerario ni una salida guiada concreta.",
+          "fr": "Catégorie de prestataires liés au vélo tout terrain et aux autres cycles, dans les services de mobilité proposés aux visiteurs. Elle ne décrit pas le tracé d’un itinéraire ni une sortie guidée particulière."
+        },
+        "name_i18n": {
+          "de": "Mountainbikes und andere Fahrräder",
+          "en": "Mountain bikes and other cycles",
+          "es": "Bicicletas de montaña y otros ciclos",
+          "fr": "Services pour VTT et autres cycles"
+        },
+        "name": "Services pour VTT et autres cycles",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8d6965b3-d850-4723-939a-36c5e2f4d9f2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8d6965b3-d850-4723-939a-36c5e2f4d9f2"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Dienstleistungen für Mountainbikes und andere Fahrräder"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Mountain-bike and cycle services"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "MTB"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Servicios de bicicleta de montaña y otros ciclos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Services VTT et autres vélos"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "VTT"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d82b7bcd-a333-4b95-81f7-c516d726ab2c",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "vans_amenages",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d82b7bcd-a333-4b95-81f7-c516d726ab2c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d82b7bcd-a333-4b95-81f7-c516d726ab2c"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d82b7bcd-a333-4b95-81f7-c516d726ab2c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d82b7bcd-a333-4b95-81f7-c516d726ab2c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1049a575-a98b-42ec-927e-e3fb4561cb27",
+      "domain": "taxonomy_psv",
+      "context_key": "",
+      "code": "vtc",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1049a575-a98b-42ec-927e-e3fb4561cb27. Sources externes réellement consultées : https://entreprendre.service-public.gouv.fr/vosdroits/F31027.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1049a575-a98b-42ec-927e-e3fb4561cb27 ; https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1049a575-a98b-42ec-927e-e3fb4561cb27. Sources externes réellement consultées : https://entreprendre.service-public.gouv.fr/vosdroits/F31027.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1049a575-a98b-42ec-927e-e3fb4561cb27 ; https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+          }
+        ]
+      }
+    }
+  ]
+}

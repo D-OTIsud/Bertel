@@ -1,0 +1,589 @@
+{
+  "format_version": 1,
+  "source_release_id": 8,
+  "reviewed": 1477,
+  "domains": {
+    "accommodation_family": {
+      "reviewed": 6,
+      "kept": 0,
+      "rewritten": 6,
+      "needs_business_decision": 0,
+      "proposals": 6
+    },
+    "accommodation_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "accommodation_unit_type": {
+      "reviewed": 22,
+      "kept": 0,
+      "rewritten": 22,
+      "needs_business_decision": 0,
+      "proposals": 22
+    },
+    "activity_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "allergen": {
+      "reviewed": 14,
+      "kept": 0,
+      "rewritten": 14,
+      "needs_business_decision": 0,
+      "proposals": 14
+    },
+    "amenity": {
+      "reviewed": 167,
+      "kept": 1,
+      "rewritten": 166,
+      "needs_business_decision": 0,
+      "proposals": 166
+    },
+    "amenity_family": {
+      "reviewed": 22,
+      "kept": 0,
+      "rewritten": 22,
+      "needs_business_decision": 0,
+      "proposals": 22
+    },
+    "assistance_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "bed_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "booking_status": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "classification_scheme": {
+      "reviewed": 39,
+      "kept": 4,
+      "rewritten": 35,
+      "needs_business_decision": 0,
+      "proposals": 35
+    },
+    "classification_value": {
+      "reviewed": 125,
+      "kept": 5,
+      "rewritten": 120,
+      "needs_business_decision": 0,
+      "proposals": 120
+    },
+    "client_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "commune": {
+      "reviewed": 24,
+      "kept": 0,
+      "rewritten": 24,
+      "needs_business_decision": 0,
+      "proposals": 24
+    },
+    "contact_kind": {
+      "reviewed": 15,
+      "kept": 0,
+      "rewritten": 15,
+      "needs_business_decision": 0,
+      "proposals": 15
+    },
+    "crm_sentiment": {
+      "reviewed": 6,
+      "kept": 0,
+      "rewritten": 6,
+      "needs_business_decision": 0,
+      "proposals": 6
+    },
+    "cuisine_type": {
+      "reviewed": 43,
+      "kept": 0,
+      "rewritten": 43,
+      "needs_business_decision": 0,
+      "proposals": 43
+    },
+    "demand_topic": {
+      "reviewed": 20,
+      "kept": 0,
+      "rewritten": 20,
+      "needs_business_decision": 0,
+      "proposals": 20
+    },
+    "destination_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "dietary_tag": {
+      "reviewed": 12,
+      "kept": 0,
+      "rewritten": 12,
+      "needs_business_decision": 0,
+      "proposals": 12
+    },
+    "distribution_channel": {
+      "reviewed": 8,
+      "kept": 0,
+      "rewritten": 8,
+      "needs_business_decision": 0,
+      "proposals": 8
+    },
+    "document_type": {
+      "reviewed": 3,
+      "kept": 0,
+      "rewritten": 3,
+      "needs_business_decision": 0,
+      "proposals": 3
+    },
+    "environment_tag": {
+      "reviewed": 30,
+      "kept": 0,
+      "rewritten": 30,
+      "needs_business_decision": 0,
+      "proposals": 30
+    },
+    "event_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "feedback_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "insurance_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "iti_difficulty": {
+      "reviewed": 5,
+      "kept": 0,
+      "rewritten": 5,
+      "needs_business_decision": 0,
+      "proposals": 5
+    },
+    "iti_open_status": {
+      "reviewed": 7,
+      "kept": 0,
+      "rewritten": 7,
+      "needs_business_decision": 0,
+      "proposals": 7
+    },
+    "iti_practice": {
+      "reviewed": 16,
+      "kept": 0,
+      "rewritten": 16,
+      "needs_business_decision": 0,
+      "proposals": 16
+    },
+    "iti_stage_kind": {
+      "reviewed": 8,
+      "kept": 0,
+      "rewritten": 8,
+      "needs_business_decision": 0,
+      "proposals": 8
+    },
+    "language": {
+      "reviewed": 20,
+      "kept": 0,
+      "rewritten": 20,
+      "needs_business_decision": 0,
+      "proposals": 20
+    },
+    "language_level": {
+      "reviewed": 7,
+      "kept": 0,
+      "rewritten": 7,
+      "needs_business_decision": 0,
+      "proposals": 7
+    },
+    "media_tag": {
+      "reviewed": 23,
+      "kept": 0,
+      "rewritten": 23,
+      "needs_business_decision": 0,
+      "proposals": 23
+    },
+    "media_type": {
+      "reviewed": 11,
+      "kept": 0,
+      "rewritten": 11,
+      "needs_business_decision": 0,
+      "proposals": 11
+    },
+    "meeting_equipment": {
+      "reviewed": 11,
+      "kept": 0,
+      "rewritten": 11,
+      "needs_business_decision": 0,
+      "proposals": 11
+    },
+    "membership_campaign": {
+      "reviewed": 3,
+      "kept": 0,
+      "rewritten": 3,
+      "needs_business_decision": 0,
+      "proposals": 3
+    },
+    "membership_tier": {
+      "reviewed": 4,
+      "kept": 0,
+      "rewritten": 4,
+      "needs_business_decision": 0,
+      "proposals": 4
+    },
+    "menu_category": {
+      "reviewed": 12,
+      "kept": 0,
+      "rewritten": 12,
+      "needs_business_decision": 0,
+      "proposals": 12
+    },
+    "mood": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "opening_period_type": {
+      "reviewed": 3,
+      "kept": 0,
+      "rewritten": 3,
+      "needs_business_decision": 0,
+      "proposals": 3
+    },
+    "opening_schedule_type": {
+      "reviewed": 5,
+      "kept": 0,
+      "rewritten": 5,
+      "needs_business_decision": 0,
+      "proposals": 5
+    },
+    "package_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "partnership_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "payment_method": {
+      "reviewed": 15,
+      "kept": 0,
+      "rewritten": 15,
+      "needs_business_decision": 0,
+      "proposals": 15
+    },
+    "price_kind": {
+      "reviewed": 15,
+      "kept": 0,
+      "rewritten": 15,
+      "needs_business_decision": 0,
+      "proposals": 15
+    },
+    "price_type": {
+      "reviewed": 8,
+      "kept": 0,
+      "rewritten": 8,
+      "needs_business_decision": 0,
+      "proposals": 8
+    },
+    "price_unit": {
+      "reviewed": 20,
+      "kept": 0,
+      "rewritten": 20,
+      "needs_business_decision": 0,
+      "proposals": 20
+    },
+    "promotion_type": {
+      "reviewed": 14,
+      "kept": 0,
+      "rewritten": 14,
+      "needs_business_decision": 0,
+      "proposals": 14
+    },
+    "room_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "season_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "service_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "social_network": {
+      "reviewed": 11,
+      "kept": 0,
+      "rewritten": 11,
+      "needs_business_decision": 0,
+      "proposals": 11
+    },
+    "sustainability_action": {
+      "reviewed": 239,
+      "kept": 0,
+      "rewritten": 239,
+      "needs_business_decision": 0,
+      "proposals": 239
+    },
+    "sustainability_category": {
+      "reviewed": 9,
+      "kept": 0,
+      "rewritten": 9,
+      "needs_business_decision": 0,
+      "proposals": 9
+    },
+    "taxonomy_act": {
+      "reviewed": 24,
+      "kept": 0,
+      "rewritten": 24,
+      "needs_business_decision": 0,
+      "proposals": 21
+    },
+    "taxonomy_asc": {
+      "reviewed": 7,
+      "kept": 0,
+      "rewritten": 7,
+      "needs_business_decision": 0,
+      "proposals": 7
+    },
+    "taxonomy_camp": {
+      "reviewed": 3,
+      "kept": 0,
+      "rewritten": 3,
+      "needs_business_decision": 0,
+      "proposals": 3
+    },
+    "taxonomy_com": {
+      "reviewed": 13,
+      "kept": 0,
+      "rewritten": 13,
+      "needs_business_decision": 0,
+      "proposals": 11
+    },
+    "taxonomy_fma": {
+      "reviewed": 12,
+      "kept": 0,
+      "rewritten": 12,
+      "needs_business_decision": 0,
+      "proposals": 9
+    },
+    "taxonomy_hlo": {
+      "reviewed": 15,
+      "kept": 0,
+      "rewritten": 15,
+      "needs_business_decision": 0,
+      "proposals": 15
+    },
+    "taxonomy_hot": {
+      "reviewed": 11,
+      "kept": 0,
+      "rewritten": 11,
+      "needs_business_decision": 0,
+      "proposals": 11
+    },
+    "taxonomy_hpa": {
+      "reviewed": 9,
+      "kept": 0,
+      "rewritten": 9,
+      "needs_business_decision": 0,
+      "proposals": 9
+    },
+    "taxonomy_iti": {
+      "reviewed": 7,
+      "kept": 0,
+      "rewritten": 7,
+      "needs_business_decision": 0,
+      "proposals": 7
+    },
+    "taxonomy_loi": {
+      "reviewed": 37,
+      "kept": 0,
+      "rewritten": 37,
+      "needs_business_decision": 0,
+      "proposals": 35
+    },
+    "taxonomy_org": {
+      "reviewed": 8,
+      "kept": 0,
+      "rewritten": 8,
+      "needs_business_decision": 0,
+      "proposals": 8
+    },
+    "taxonomy_pcu": {
+      "reviewed": 7,
+      "kept": 0,
+      "rewritten": 7,
+      "needs_business_decision": 0,
+      "proposals": 7
+    },
+    "taxonomy_pna": {
+      "reviewed": 14,
+      "kept": 0,
+      "rewritten": 14,
+      "needs_business_decision": 0,
+      "proposals": 14
+    },
+    "taxonomy_prd": {
+      "reviewed": 11,
+      "kept": 0,
+      "rewritten": 11,
+      "needs_business_decision": 0,
+      "proposals": 7
+    },
+    "taxonomy_psv": {
+      "reviewed": 17,
+      "kept": 0,
+      "rewritten": 17,
+      "needs_business_decision": 0,
+      "proposals": 14
+    },
+    "taxonomy_res": {
+      "reviewed": 30,
+      "kept": 0,
+      "rewritten": 30,
+      "needs_business_decision": 0,
+      "proposals": 29
+    },
+    "taxonomy_rva": {
+      "reviewed": 4,
+      "kept": 0,
+      "rewritten": 4,
+      "needs_business_decision": 0,
+      "proposals": 4
+    },
+    "taxonomy_spu": {
+      "reviewed": 15,
+      "kept": 0,
+      "rewritten": 15,
+      "needs_business_decision": 0,
+      "proposals": 15
+    },
+    "taxonomy_vil": {
+      "reviewed": 5,
+      "kept": 0,
+      "rewritten": 5,
+      "needs_business_decision": 0,
+      "proposals": 5
+    },
+    "tourism_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "trail_link_role": {
+      "reviewed": 6,
+      "kept": 0,
+      "rewritten": 6,
+      "needs_business_decision": 0,
+      "proposals": 6
+    },
+    "transport_type": {
+      "reviewed": 10,
+      "kept": 0,
+      "rewritten": 10,
+      "needs_business_decision": 0,
+      "proposals": 10
+    },
+    "view_type": {
+      "reviewed": 13,
+      "kept": 0,
+      "rewritten": 13,
+      "needs_business_decision": 0,
+      "proposals": 13
+    },
+    "weekday": {
+      "reviewed": 7,
+      "kept": 0,
+      "rewritten": 7,
+      "needs_business_decision": 0,
+      "proposals": 7
+    }
+  },
+  "proposals": 1449,
+  "ready": true,
+  "errors": [],
+  "warnings": [],
+  "limits": "Mechanical checks establish completeness and structural consistency. Editorial reasons document the review; they do not certify providers or independent human/native review.",
+  "source_workspace_sha256": "af2a53f11287adcb1838a648a6ea9564069bf7f951aa8f9d42190f032b18114e",
+  "source_fingerprint": "8053ad8d270ddf8db2cd519f928bc7da",
+  "source_export_stable": true,
+  "baseline": {
+    "concepts": 1477,
+    "domains": 78,
+    "active": 1439,
+    "deprecated": 38,
+    "outside_current_snapshot": 115,
+    "missing_definitions": {
+      "fr": 27,
+      "en": 102,
+      "es": 102,
+      "de": 152
+    },
+    "related_document_links": 950
+  },
+  "changed_documents": {
+    "definitions": 1177,
+    "french_names": 158,
+    "labels": 128,
+    "notes": 1284,
+    "parents_or_relations": 0
+  },
+  "resulting_required_languages": [
+    "fr",
+    "en",
+    "es",
+    "de"
+  ],
+  "application_status": "Prepared offline; production application is a separate verified operation."
+}

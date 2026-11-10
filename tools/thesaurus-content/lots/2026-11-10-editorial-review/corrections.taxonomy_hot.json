@@ -1,0 +1,330 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_hot-1",
+  "proposals": [
+    {
+      "concept_id": "324a1966-e5e4-4fea-b5ed-58d46df1eaf5",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "boutique_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/324a1966-e5e4-4fea-b5ed-58d46df1eaf5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/324a1966-e5e4-4fea-b5ed-58d46df1eaf5"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/324a1966-e5e4-4fea-b5ed-58d46df1eaf5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/324a1966-e5e4-4fea-b5ed-58d46df1eaf5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c5bc2190-3667-4e39-8f20-171f8a8ac98f",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "business_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c5bc2190-3667-4e39-8f20-171f8a8ac98f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c5bc2190-3667-4e39-8f20-171f8a8ac98f"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c5bc2190-3667-4e39-8f20-171f8a8ac98f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c5bc2190-3667-4e39-8f20-171f8a8ac98f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e40c99bb-edd1-41a6-b028-a699f9a666be",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "eco_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e40c99bb-edd1-41a6-b028-a699f9a666be. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e40c99bb-edd1-41a6-b028-a699f9a666be"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e40c99bb-edd1-41a6-b028-a699f9a666be. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e40c99bb-edd1-41a6-b028-a699f9a666be"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "30cb7173-6f70-4381-9752-fdc91db9daae",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "family_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/30cb7173-6f70-4381-9752-fdc91db9daae. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/30cb7173-6f70-4381-9752-fdc91db9daae"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/30cb7173-6f70-4381-9752-fdc91db9daae. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/30cb7173-6f70-4381-9752-fdc91db9daae"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "25f92533-5b65-40a0-a8c4-d6d133d0ef88",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "heritage_hotel",
+      "base": {
+        "description_i18n": {
+          "de": "Hotel in einem Gebäude mit historischem oder patrimonialem Charakter; diese Positionierung ist kein amtliches Label.",
+          "en": "Hotel housed in a building with heritage or historic character; the positioning implies no official label.",
+          "es": "Hotel instalado en un edificio de carácter patrimonial o histórico; el posicionamiento no implica un distintivo oficial.",
+          "fr": "Hôtel installé dans un bâtiment au caractère patrimonial ou historique ; ce positionnement n'implique pas un label officiel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/25f92533-5b65-40a0-a8c4-d6d133d0ef88. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/25f92533-5b65-40a0-a8c4-d6d133d0ef88"
+          }
+        ]
+      },
+      "changes": {
+        "description_i18n": {
+          "de": "Hotel in einem Gebäude mit kulturhistorischem Charakter; diese Positionierung setzt kein amtliches Label voraus.",
+          "en": "Hotel housed in a building with heritage or historic character; the positioning implies no official label.",
+          "es": "Hotel instalado en un edificio de carácter patrimonial o histórico; el posicionamiento no implica un distintivo oficial.",
+          "fr": "Hôtel installé dans un bâtiment au caractère patrimonial ou historique ; ce positionnement n'implique pas un label officiel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/25f92533-5b65-40a0-a8c4-d6d133d0ef88. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/25f92533-5b65-40a0-a8c4-d6d133d0ef88"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ae9c883b-1a6d-4370-a103-e0da1f19a3ff",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "hotel",
+      "base": {
+        "description_i18n": {
+          "de": "Gewerbebetrieb mit möblierten Zimmern oder Apartments für Durchreisende. Die Klassifizierung wird separat gefiltert.",
+          "en": "Commercial establishment offering furnished rooms or apartments to passing guests. Star rating is filtered separately.",
+          "es": "Establecimiento comercial que ofrece habitaciones o apartamentos amueblados a clientes de paso. La clasificación se filtra por separado.",
+          "fr": "Établissement commercial proposant des chambres ou appartements meublés à une clientèle de passage. Le classement se filtre séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ae9c883b-1a6d-4370-a103-e0da1f19a3ff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ae9c883b-1a6d-4370-a103-e0da1f19a3ff"
+          }
+        ]
+      },
+      "changes": {
+        "description_i18n": {
+          "de": "Gewerbebetrieb mit möblierten Zimmern oder Apartments für vorübergehende Aufenthalte. Die Klassifizierung wird separat gefiltert.",
+          "en": "Commercial establishment offering furnished rooms or apartments for temporary stays. Star rating is filtered separately.",
+          "es": "Establecimiento comercial que ofrece habitaciones o apartamentos amueblados a clientes de paso. La clasificación se filtra por separado.",
+          "fr": "Établissement commercial proposant des chambres ou appartements meublés à une clientèle de passage. Le classement se filtre séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ae9c883b-1a6d-4370-a103-e0da1f19a3ff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ae9c883b-1a6d-4370-a103-e0da1f19a3ff"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d16f62f5-2447-4c16-bfa2-25b94f337347",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "hotel_with_restaurant",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d16f62f5-2447-4c16-bfa2-25b94f337347. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d16f62f5-2447-4c16-bfa2-25b94f337347"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d16f62f5-2447-4c16-bfa2-25b94f337347. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d16f62f5-2447-4c16-bfa2-25b94f337347"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bb19605b-c7cb-47e4-ae1e-0f049cbc57ee",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "modern_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bb19605b-c7cb-47e4-ae1e-0f049cbc57ee. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bb19605b-c7cb-47e4-ae1e-0f049cbc57ee"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bb19605b-c7cb-47e4-ae1e-0f049cbc57ee. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bb19605b-c7cb-47e4-ae1e-0f049cbc57ee"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9183dd15-0a1c-48d6-a0ff-0b7fd0358c88",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "romantic_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9183dd15-0a1c-48d6-a0ff-0b7fd0358c88. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9183dd15-0a1c-48d6-a0ff-0b7fd0358c88"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9183dd15-0a1c-48d6-a0ff-0b7fd0358c88. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9183dd15-0a1c-48d6-a0ff-0b7fd0358c88"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "02f4f835-34bc-481b-8ec0-6f5c664d0d0d",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Hôtel",
+        "description_i18n": {
+          "de": "Technische Wurzel für Hotelkategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for hotel positioning categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de hotel; no asignable directamente.",
+          "fr": "Racine technique — Hôtel"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/02f4f835-34bc-481b-8ec0-6f5c664d0d0d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/02f4f835-34bc-481b-8ec0-6f5c664d0d0d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des établissements hôteliers proposant des chambres ou appartements à une clientèle de passage. Les sous-catégories décrivent leur nature ou leur positionnement, séparément du nombre d’étoiles.",
+        "description_i18n": {
+          "de": "Oberkategorie für Hotelbetriebe mit Zimmern oder Apartments für vorübergehende Gäste. Unterkategorien beschreiben Art oder Ausrichtung getrennt von der Sterneklassifizierung.",
+          "en": "General category for hotel establishments offering rooms or apartments to temporary guests. Subcategories describe their type or positioning separately from star ratings.",
+          "es": "Categoría general de establecimientos hoteleros que ofrecen habitaciones o apartamentos a clientes de paso. Las subcategorías describen su naturaleza o posicionamiento, por separado de las estrellas.",
+          "fr": "Catégorie générale des établissements hôteliers proposant des chambres ou appartements à une clientèle de passage. Les sous-catégories décrivent leur nature ou leur positionnement, séparément du nombre d’étoiles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/02f4f835-34bc-481b-8ec0-6f5c664d0d0d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/02f4f835-34bc-481b-8ec0-6f5c664d0d0d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c0b951c4-e645-465d-8dd3-824493f991b1",
+      "domain": "taxonomy_hot",
+      "context_key": "",
+      "code": "traditional_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c0b951c4-e645-465d-8dd3-824493f991b1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c0b951c4-e645-465d-8dd3-824493f991b1"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c0b951c4-e645-465d-8dd3-824493f991b1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c0b951c4-e645-465d-8dd3-824493f991b1"
+          }
+        ]
+      }
+    }
+  ]
+}

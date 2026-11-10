@@ -1,0 +1,480 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-meeting_equipment-1",
+  "proposals": [
+    {
+      "concept_id": "d2bc14ef-1937-448c-a34d-67e8035db328",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "ecran",
+      "base": {
+        "description": "Écran de projection",
+        "description_i18n": {
+          "de": "Projektionsleinwand",
+          "en": "Projection screen",
+          "es": "Pantalla de proyección",
+          "fr": "Écran de projection"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2bc14ef-1937-448c-a34d-67e8035db328. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2bc14ef-1937-448c-a34d-67e8035db328"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Surface sur laquelle sont projetés des documents ou des images pour les participants d'une réunion ou d'une présentation ; à distinguer du vidéoprojecteur qui produit l'image.",
+        "description_i18n": {
+          "de": "Fläche, auf die Dokumente oder Bilder für die Teilnehmenden einer Besprechung oder Präsentation projiziert werden; vom Projektor zu unterscheiden, der das Bild erzeugt.",
+          "en": "Surface onto which documents or images are projected for participants in a meeting or presentation; distinct from the projector that produces the image.",
+          "es": "Superficie sobre la que se proyectan documentos o imágenes para los participantes en una reunión o presentación; se distingue del proyector que genera la imagen.",
+          "fr": "Surface sur laquelle sont projetés des documents ou des images pour les participants d'une réunion ou d'une présentation ; à distinguer du vidéoprojecteur qui produit l'image."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2bc14ef-1937-448c-a34d-67e8035db328. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2bc14ef-1937-448c-a34d-67e8035db328"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f5b2ab46-4790-4fde-b0b2-e3d78551bff7",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "lumieres",
+      "base": {
+        "description": "Éclairage scénique",
+        "description_i18n": {
+          "de": "Bühnenbeleuchtung",
+          "en": "Stage lighting",
+          "es": "Iluminación escénica",
+          "fr": "Éclairage scénique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f5b2ab46-4790-4fde-b0b2-e3d78551bff7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f5b2ab46-4790-4fde-b0b2-e3d78551bff7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Éclairage scénique disponible pour mettre en lumière les intervenants ou l'espace de présentation lors d'une réunion ou d'un événement.",
+        "description_i18n": {
+          "de": "Bühnenbeleuchtung, mit der Vortragende oder der Präsentationsbereich bei einer Besprechung oder Veranstaltung ausgeleuchtet werden können.",
+          "en": "Stage lighting available to illuminate speakers or the presentation area during a meeting or event.",
+          "es": "Iluminación escénica disponible para iluminar a los ponentes o el espacio de presentación durante una reunión o un evento.",
+          "fr": "Éclairage scénique disponible pour mettre en lumière les intervenants ou l'espace de présentation lors d'une réunion ou d'un événement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f5b2ab46-4790-4fde-b0b2-e3d78551bff7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f5b2ab46-4790-4fde-b0b2-e3d78551bff7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5f5d1d08-45d2-4ed9-b199-1c0ff9034772",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "micro",
+      "base": {
+        "description": "Micros HF / filaires",
+        "description_i18n": {
+          "de": "Funk- oder Kabelmikrofone",
+          "en": "Wireless or wired microphones",
+          "es": "Micrófonos inalámbricos o con cable",
+          "fr": "Micros HF / filaires"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5f5d1d08-45d2-4ed9-b199-1c0ff9034772. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5f5d1d08-45d2-4ed9-b199-1c0ff9034772"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Microphone filaire ou sans fil disponible pour capter la voix d'un intervenant lors d'une réunion ; sa présence ne décrit pas à elle seule l'ensemble de la sonorisation.",
+        "description_i18n": {
+          "de": "Kabel- oder Funkmikrofon zur Aufnahme der Stimme von Vortragenden bei einer Besprechung; sein Vorhandensein beschreibt noch nicht die gesamte Beschallungsanlage.",
+          "en": "Wired or wireless microphone available to pick up a speaker's voice during a meeting; its presence alone does not describe the complete sound system.",
+          "es": "Micrófono con cable o inalámbrico disponible para captar la voz de un ponente durante una reunión; su presencia por sí sola no describe todo el sistema de sonido.",
+          "fr": "Microphone filaire ou sans fil disponible pour capter la voix d'un intervenant lors d'une réunion ; sa présence ne décrit pas à elle seule l'ensemble de la sonorisation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5f5d1d08-45d2-4ed9-b199-1c0ff9034772. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5f5d1d08-45d2-4ed9-b199-1c0ff9034772"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "32ddeb46-6e24-42ef-b9e8-545dfab41d72",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "paperboard",
+      "base": {
+        "description": "Paperboard et marqueurs",
+        "description_i18n": {
+          "de": "Flipchart mit Markern",
+          "en": "Flipchart with markers",
+          "es": "Papelógrafo con rotuladores",
+          "fr": "Paperboard et marqueurs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/32ddeb46-6e24-42ef-b9e8-545dfab41d72. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/32ddeb46-6e24-42ef-b9e8-545dfab41d72"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Flip-Chart"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Flip chart"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Rotafolio"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Tableau à feuilles mobiles"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tableau à feuilles mobiles fourni avec des marqueurs pour noter et présenter les idées pendant une réunion ou un atelier.",
+        "description_i18n": {
+          "de": "Tafel mit einem Block umblätterbarer Papierbögen und Markern zum Festhalten und Vorstellen von Ideen bei Besprechungen oder Workshops.",
+          "en": "Board with a pad of removable paper sheets and markers for recording and presenting ideas during a meeting or workshop.",
+          "es": "Tablero con hojas de papel móviles y rotuladores para anotar y presentar ideas durante una reunión o un taller.",
+          "fr": "Tableau à feuilles mobiles fourni avec des marqueurs pour noter et présenter les idées pendant une réunion ou un atelier."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/32ddeb46-6e24-42ef-b9e8-545dfab41d72. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/32ddeb46-6e24-42ef-b9e8-545dfab41d72"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Rotafolio"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Tableau à feuilles mobiles"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9e93a710-cb75-4e4a-8e3d-ca10bef30379",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "pupitre",
+      "base": {
+        "description": "Pupitre pour orateur",
+        "description_i18n": {
+          "de": "Rednerpult für Vortragende",
+          "en": "Speaker lectern",
+          "es": "Atril para oradores",
+          "fr": "Pupitre pour orateur"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9e93a710-cb75-4e4a-8e3d-ca10bef30379. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9e93a710-cb75-4e4a-8e3d-ca10bef30379"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Meuble placé devant un orateur pour poser ses notes et conduire une présentation devant les participants d'une réunion ou d'un événement.",
+        "description_i18n": {
+          "de": "Pult, auf dem Vortragende ihre Unterlagen ablegen, während sie zu den Teilnehmenden einer Besprechung oder Veranstaltung sprechen.",
+          "en": "Stand placed in front of a speaker to hold notes while addressing participants in a meeting or event.",
+          "es": "Mueble situado delante de un orador para apoyar sus notas mientras se dirige a los participantes en una reunión o un evento.",
+          "fr": "Meuble placé devant un orateur pour poser ses notes et conduire une présentation devant les participants d'une réunion ou d'un événement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9e93a710-cb75-4e4a-8e3d-ca10bef30379. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9e93a710-cb75-4e4a-8e3d-ca10bef30379"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9568fc78-e235-41ef-9fd6-5b94677eab7c",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "scene",
+      "base": {
+        "description": "Estrade / scène",
+        "description_i18n": {
+          "de": "Bühne oder Podest",
+          "en": "Stage or platform",
+          "es": "Escenario o tarima",
+          "fr": "Estrade / scène"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9568fc78-e235-41ef-9fd6-5b94677eab7c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9568fc78-e235-41ef-9fd6-5b94677eab7c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Estrade ou plateforme aménagée pour accueillir les intervenants ou une présentation devant le public d'une réunion ou d'un événement.",
+        "description_i18n": {
+          "de": "Bühne oder Podest, auf dem Vortragende auftreten oder Präsentationen vor dem Publikum einer Besprechung oder Veranstaltung stattfinden.",
+          "en": "Raised platform or stage arranged to accommodate speakers or a presentation before the audience at a meeting or event.",
+          "es": "Tarima o plataforma acondicionada para acoger a los ponentes o una presentación ante el público de una reunión o un evento.",
+          "fr": "Estrade ou plateforme aménagée pour accueillir les intervenants ou une présentation devant le public d'une réunion ou d'un événement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9568fc78-e235-41ef-9fd6-5b94677eab7c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9568fc78-e235-41ef-9fd6-5b94677eab7c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "81b830d2-8ee7-4fe1-b239-6cd462956c0c",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "sonorisation",
+      "base": {
+        "description": "Système de sonorisation",
+        "description_i18n": {
+          "de": "Audio-Beschallungsanlage",
+          "en": "Audio amplification system",
+          "es": "Sistema de sonido",
+          "fr": "Système de sonorisation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/81b830d2-8ee7-4fe1-b239-6cd462956c0c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/81b830d2-8ee7-4fe1-b239-6cd462956c0c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ensemble d'équipements audio permettant d'amplifier et de diffuser la parole ou d'autres sons dans l'espace de réunion ou d'événement.",
+        "description_i18n": {
+          "de": "Zusammenstellung von Audiogeräten zur Verstärkung und Wiedergabe von Sprache oder anderen Klängen in einem Besprechungs- oder Veranstaltungsraum.",
+          "en": "Set of audio equipment used to amplify and distribute speech or other sounds throughout a meeting or event space.",
+          "es": "Conjunto de equipos de audio que permite amplificar y difundir la voz u otros sonidos en el espacio de una reunión o un evento.",
+          "fr": "Ensemble d'équipements audio permettant d'amplifier et de diffuser la parole ou d'autres sons dans l'espace de réunion ou d'événement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/81b830d2-8ee7-4fe1-b239-6cd462956c0c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/81b830d2-8ee7-4fe1-b239-6cd462956c0c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8ab3d988-8c17-42bf-99b4-889d694442e9",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "traduction",
+      "base": {
+        "description": "Cabine d'interprétation simultanée",
+        "description_i18n": {
+          "de": "Kabine für Simultandolmetschen",
+          "en": "Simultaneous interpretation booth",
+          "es": "Cabina de interpretación simultánea",
+          "fr": "Cabine d'interprétation simultanée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3d988-8c17-42bf-99b4-889d694442e9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3d988-8c17-42bf-99b4-889d694442e9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cabine mise à disposition des interprètes pour traduire oralement les interventions en simultané lors d'une réunion multilingue ; elle désigne l'équipement, pas une prestation de traduction écrite.",
+        "description_i18n": {
+          "de": "Kabine für Dolmetschende zur gleichzeitigen mündlichen Übertragung der Beiträge einer mehrsprachigen Besprechung; bezeichnet die Ausstattung und keine schriftliche Übersetzungsleistung.",
+          "en": "Booth provided for interpreters to interpret speeches simultaneously during a multilingual meeting; it denotes equipment rather than a written translation service.",
+          "es": "Cabina a disposición de los intérpretes para interpretar simultáneamente las intervenciones en una reunión multilingüe; designa el equipamiento, no un servicio de traducción escrita.",
+          "fr": "Cabine mise à disposition des interprètes pour traduire oralement les interventions en simultané lors d'une réunion multilingue ; elle désigne l'équipement, pas une prestation de traduction écrite."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3d988-8c17-42bf-99b4-889d694442e9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3d988-8c17-42bf-99b4-889d694442e9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ac2e009e-5685-40d5-9757-649d0e7776d2",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "videoprojecteur",
+      "base": {
+        "description": "Projecteur multimédia",
+        "description_i18n": {
+          "de": "Multimedia-Projektor",
+          "en": "Multimedia projector",
+          "es": "Proyector multimedia",
+          "fr": "Projecteur multimédia"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ac2e009e-5685-40d5-9757-649d0e7776d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ac2e009e-5685-40d5-9757-649d0e7776d2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Appareil qui projette des images ou des documents numériques pour les participants d'une réunion ; à distinguer de l'écran qui reçoit la projection.",
+        "description_i18n": {
+          "de": "Gerät, das digitale Bilder oder Dokumente für die Teilnehmenden einer Besprechung projiziert; von der Projektionsfläche zu unterscheiden, die das Bild aufnimmt.",
+          "en": "Device that projects digital images or documents for meeting participants; distinct from the screen onto which the image is projected.",
+          "es": "Aparato que proyecta imágenes o documentos digitales para los participantes en una reunión; se distingue de la pantalla que recibe la proyección.",
+          "fr": "Appareil qui projette des images ou des documents numériques pour les participants d'une réunion ; à distinguer de l'écran qui reçoit la projection."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ac2e009e-5685-40d5-9757-649d0e7776d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ac2e009e-5685-40d5-9757-649d0e7776d2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "848e8f71-5783-43ff-80ef-9e85f6e38311",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "visioconference",
+      "base": {
+        "description": "Système de visioconférence",
+        "description_i18n": {
+          "de": "Videokonferenzsystem",
+          "en": "Video conferencing system",
+          "es": "Sistema de videoconferencia",
+          "fr": "Système de visioconférence"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/848e8f71-5783-43ff-80ef-9e85f6e38311. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/848e8f71-5783-43ff-80ef-9e85f6e38311"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Dispositif audio et vidéo permettant à des personnes à distance de participer à une réunion et d'échanger avec les personnes présentes sur place.",
+        "description_i18n": {
+          "de": "Audio- und Videotechnik, mit der räumlich entfernte Personen an einer Besprechung teilnehmen und sich mit den vor Ort Anwesenden austauschen können.",
+          "en": "Audio and video equipment that allows remote participants to join a meeting and communicate with people attending in person.",
+          "es": "Dispositivo de audio y vídeo que permite a personas a distancia participar en una reunión e intercambiar con quienes están presentes en el lugar.",
+          "fr": "Dispositif audio et vidéo permettant à des personnes à distance de participer à une réunion et d'échanger avec les personnes présentes sur place."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/848e8f71-5783-43ff-80ef-9e85f6e38311. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/848e8f71-5783-43ff-80ef-9e85f6e38311"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c2a1a49e-6a12-4ce0-8c53-477dd89c1a11",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "wifi",
+      "base": {
+        "description": "Connexion Wi-Fi haut débit",
+        "description_i18n": {
+          "de": "Highspeed-WLAN-Verbindung",
+          "en": "High-speed Wi-Fi connection",
+          "es": "Conexión Wi-Fi de alta velocidad",
+          "fr": "Connexion Wi-Fi haut débit"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c2a1a49e-6a12-4ce0-8c53-477dd89c1a11. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c2a1a49e-6a12-4ce0-8c53-477dd89c1a11"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Connexion sans fil à Internet annoncée comme haut débit et mise à disposition des participants dans l'espace de réunion ; aucun débit chiffré n'est défini par cette valeur.",
+        "description_i18n": {
+          "de": "Als schnell angebotener drahtloser Internetzugang für die Teilnehmenden im Besprechungsbereich; dieser Wert legt keine zahlenmäßige Übertragungsgeschwindigkeit fest.",
+          "en": "Wireless Internet connection advertised as high-speed and made available to participants in the meeting space; this value specifies no numerical connection speed.",
+          "es": "Conexión inalámbrica a Internet anunciada como de alta velocidad y a disposición de los participantes en el espacio de reunión; este valor no fija una velocidad numérica.",
+          "fr": "Connexion sans fil à Internet annoncée comme haut débit et mise à disposition des participants dans l'espace de réunion ; aucun débit chiffré n'est défini par cette valeur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c2a1a49e-6a12-4ce0-8c53-477dd89c1a11. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c2a1a49e-6a12-4ce0-8c53-477dd89c1a11"
+          }
+        ]
+      }
+    }
+  ]
+}

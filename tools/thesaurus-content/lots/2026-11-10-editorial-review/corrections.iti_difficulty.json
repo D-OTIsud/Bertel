@@ -1,0 +1,206 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-iti_difficulty-1",
+  "proposals": [
+    {
+      "concept_id": "5ade5c5a-f82f-4743-bd31-1e69eed1421a",
+      "domain": "iti_difficulty",
+      "context_key": "",
+      "code": "1",
+      "base": {
+        "description": "Niveau de difficulté 1/5",
+        "description_i18n": {
+          "de": "Schwierigkeitsgrad 1 von 5",
+          "en": "Difficulty level 1 of 5",
+          "es": "Nivel de dificultad 1 de 5",
+          "fr": "Niveau de difficulté 1/5"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5ade5c5a-f82f-4743-bd31-1e69eed1421a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5ade5c5a-f82f-4743-bd31-1e69eed1421a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau « très facile », premier degré de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il exprime l’appréciation renseignée pour le parcours, sans fixer de seuil automatique de distance ou de dénivelé.",
+        "description_i18n": {
+          "de": "Sehr leicht, der erste Grad der fünfstufigen Schwierigkeitsskala einer Route. Er bezeichnet die eingetragene Einschätzung, ohne automatische Grenzen für Entfernung oder Höhenunterschied festzulegen.",
+          "en": "Very easy, the first degree on the itinerary’s five-level difficulty scale. It expresses the assessment entered for the route without imposing automatic distance or elevation thresholds.",
+          "es": "Nivel muy fácil, primer grado de la escala de dificultad del itinerario de cinco niveles. Expresa la valoración indicada sin fijar umbrales automáticos de distancia o desnivel.",
+          "fr": "Niveau « très facile », premier degré de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il exprime l’appréciation renseignée pour le parcours, sans fixer de seuil automatique de distance ou de dénivelé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5ade5c5a-f82f-4743-bd31-1e69eed1421a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5ade5c5a-f82f-4743-bd31-1e69eed1421a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "52817808-78bf-4e7b-aa70-ed9fec706047",
+      "domain": "iti_difficulty",
+      "context_key": "",
+      "code": "2",
+      "base": {
+        "description": "Niveau de difficulté 2/5",
+        "description_i18n": {
+          "de": "Schwierigkeitsgrad 2 von 5",
+          "en": "Difficulty level 2 of 5",
+          "es": "Nivel de dificultad 2 de 5",
+          "fr": "Niveau de difficulté 2/5"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/52817808-78bf-4e7b-aa70-ed9fec706047. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/52817808-78bf-4e7b-aa70-ed9fec706047"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau « facile », deuxième degré de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il se situe au-dessus du niveau très facile sans définir à lui seul les caractéristiques techniques du parcours.",
+        "description_i18n": {
+          "de": "Leicht, der zweite Grad der fünfstufigen Schwierigkeitsskala einer Route. Er liegt über sehr leicht, ohne allein die technischen Eigenschaften der Strecke festzulegen.",
+          "en": "Easy, the second degree on the itinerary’s five-level difficulty scale. It sits above very easy without independently defining the route’s technical characteristics.",
+          "es": "Nivel fácil, segundo grado de la escala de dificultad del itinerario de cinco niveles. Se sitúa por encima de muy fácil sin definir por sí solo las características técnicas del recorrido.",
+          "fr": "Niveau « facile », deuxième degré de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il se situe au-dessus du niveau très facile sans définir à lui seul les caractéristiques techniques du parcours."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/52817808-78bf-4e7b-aa70-ed9fec706047. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/52817808-78bf-4e7b-aa70-ed9fec706047"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "861e2bba-3077-4ad6-8dec-ad874f4b0285",
+      "domain": "iti_difficulty",
+      "context_key": "",
+      "code": "3",
+      "base": {
+        "description": "Niveau de difficulté 3/5",
+        "description_i18n": {
+          "de": "Schwierigkeitsgrad 3 von 5",
+          "en": "Difficulty level 3 of 5",
+          "es": "Nivel de dificultad 3 de 5",
+          "fr": "Niveau de difficulté 3/5"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/861e2bba-3077-4ad6-8dec-ad874f4b0285. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/861e2bba-3077-4ad6-8dec-ad874f4b0285"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau « moyen », degré intermédiaire de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il qualifie la difficulté déclarée du parcours entre les niveaux facile et difficile.",
+        "description_i18n": {
+          "de": "Mittel, der mittlere Grad der fünfstufigen Schwierigkeitsskala einer Route. Er bezeichnet die angegebene Schwierigkeit zwischen leicht und schwer.",
+          "en": "Moderate, the middle degree on the itinerary’s five-level difficulty scale. It describes declared route difficulty between easy and difficult.",
+          "es": "Nivel medio, grado intermedio de la escala de dificultad del itinerario de cinco niveles. Describe la dificultad declarada entre fácil y difícil.",
+          "fr": "Niveau « moyen », degré intermédiaire de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il qualifie la difficulté déclarée du parcours entre les niveaux facile et difficile."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/861e2bba-3077-4ad6-8dec-ad874f4b0285. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/861e2bba-3077-4ad6-8dec-ad874f4b0285"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a24737b8-e8d4-4081-9272-4683b10adc83",
+      "domain": "iti_difficulty",
+      "context_key": "",
+      "code": "4",
+      "base": {
+        "description": "Niveau de difficulté 4/5",
+        "description_i18n": {
+          "de": "Schwierigkeitsgrad 4 von 5",
+          "en": "Difficulty level 4 of 5",
+          "es": "Nivel de dificultad 4 de 5",
+          "fr": "Niveau de difficulté 4/5"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a24737b8-e8d4-4081-9272-4683b10adc83. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a24737b8-e8d4-4081-9272-4683b10adc83"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau « difficile », quatrième degré de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il indique une appréciation plus exigeante que le niveau moyen, distincte du niveau très difficile.",
+        "description_i18n": {
+          "de": "Schwer, der vierte Grad der fünfstufigen Schwierigkeitsskala einer Route. Er bezeichnet eine anspruchsvollere Einschätzung als mittel und unterscheidet sich von sehr schwer.",
+          "en": "Difficult, the fourth degree on the itinerary’s five-level difficulty scale. It indicates a more demanding assessment than moderate, distinct from very difficult.",
+          "es": "Nivel difícil, cuarto grado de la escala de dificultad del itinerario de cinco niveles. Indica una valoración más exigente que medio, distinta de muy difícil.",
+          "fr": "Niveau « difficile », quatrième degré de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il indique une appréciation plus exigeante que le niveau moyen, distincte du niveau très difficile."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a24737b8-e8d4-4081-9272-4683b10adc83. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a24737b8-e8d4-4081-9272-4683b10adc83"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c44be502-1bdc-4e2e-a646-512ba1ac167e",
+      "domain": "iti_difficulty",
+      "context_key": "",
+      "code": "5",
+      "base": {
+        "description": "Niveau de difficulté 5/5",
+        "description_i18n": {
+          "de": "Schwierigkeitsgrad 5 von 5",
+          "en": "Difficulty level 5 of 5",
+          "es": "Nivel de dificultad 5 de 5",
+          "fr": "Niveau de difficulté 5/5"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c44be502-1bdc-4e2e-a646-512ba1ac167e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c44be502-1bdc-4e2e-a646-512ba1ac167e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Niveau « très difficile », degré le plus élevé de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il exprime l’exigence déclarée du parcours sans constituer une norme technique universelle.",
+        "description_i18n": {
+          "de": "Sehr schwer, der höchste Grad der fünfstufigen Schwierigkeitsskala einer Route. Er bezeichnet die angegebene Anforderung, ohne einen allgemeingültigen technischen Standard darzustellen.",
+          "en": "Very difficult, the highest degree on the itinerary’s five-level difficulty scale. It expresses the route’s declared demands without constituting a universal technical standard.",
+          "es": "Nivel muy difícil, grado más alto de la escala de dificultad del itinerario de cinco niveles. Expresa la exigencia declarada del recorrido sin constituir una norma técnica universal.",
+          "fr": "Niveau « très difficile », degré le plus élevé de l’échelle de difficulté à cinq niveaux de l’itinéraire. Il exprime l’exigence déclarée du parcours sans constituer une norme technique universelle."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c44be502-1bdc-4e2e-a646-512ba1ac167e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c44be502-1bdc-4e2e-a646-512ba1ac167e"
+          }
+        ]
+      }
+    }
+  ]
+}

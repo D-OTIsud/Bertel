@@ -1,0 +1,406 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-transport_type-1",
+  "proposals": [
+    {
+      "concept_id": "ab54f5da-67a8-40ae-a461-ce2698018e6b",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "airplane",
+      "base": {
+        "description": "Transport aérien",
+        "description_i18n": {
+          "de": "Lufttransport",
+          "en": "Air transportation",
+          "es": "Transporte aéreo",
+          "fr": "Transport aérien"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ab54f5da-67a8-40ae-a461-ce2698018e6b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ab54f5da-67a8-40ae-a461-ce2698018e6b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de déplacement aérien en avion pour rejoindre une destination ou effectuer un trajet. Il décrit le moyen de transport plutôt qu’une compagnie ou une prestation particulière.",
+        "description_i18n": {
+          "de": "Fortbewegung mit dem Flugzeug zu einem Ziel oder auf einer Strecke. Die Angabe bezeichnet das Verkehrsmittel und keine bestimmte Fluggesellschaft oder Leistung.",
+          "en": "Air travel by airplane to reach a destination or make a journey. It describes the transport mode rather than a particular carrier or service.",
+          "es": "Modo de desplazamiento aéreo en avión para llegar a un destino o realizar un trayecto. Describe el medio de transporte, no una compañía o prestación concreta.",
+          "fr": "Mode de déplacement aérien en avion pour rejoindre une destination ou effectuer un trajet. Il décrit le moyen de transport plutôt qu’une compagnie ou une prestation particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ab54f5da-67a8-40ae-a461-ce2698018e6b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ab54f5da-67a8-40ae-a461-ce2698018e6b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "084258a4-d9bf-4bc7-94c8-6fe8127cbf1b",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "bicycle",
+      "base": {
+        "description": "Transport à vélo",
+        "description_i18n": {
+          "de": "Fortbewegung mit dem Fahrrad",
+          "en": "Bicycle transportation",
+          "es": "Transporte en bicicleta",
+          "fr": "Transport à vélo"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/084258a4-d9bf-4bc7-94c8-6fe8127cbf1b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/084258a4-d9bf-4bc7-94c8-6fe8127cbf1b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de déplacement réalisé à vélo. Cette valeur identifie le moyen de transport et se distingue de la pratique d’un itinéraire de cyclotourisme ou de VTT.",
+        "description_i18n": {
+          "de": "Fortbewegung mit dem Fahrrad. Die Angabe bezeichnet das Verkehrsmittel im Unterschied zur Aktivitätsart einer Radwander- oder Mountainbike-Route.",
+          "en": "Travel using a bicycle. This identifies the transport mode rather than the activity classification of a cycle-touring or mountain-bike route.",
+          "es": "Desplazamiento realizado en bicicleta. Identifica el medio de transporte y se distingue de la práctica de un itinerario cicloturista o de montaña.",
+          "fr": "Mode de déplacement réalisé à vélo. Cette valeur identifie le moyen de transport et se distingue de la pratique d’un itinéraire de cyclotourisme ou de VTT."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/084258a4-d9bf-4bc7-94c8-6fe8127cbf1b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/084258a4-d9bf-4bc7-94c8-6fe8127cbf1b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2eeb10f6-44f3-460e-bcd7-9b47b0a4513c",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "bus",
+      "base": {
+        "description": "Transport par bus",
+        "description_i18n": {
+          "de": "Beförderung mit dem Bus",
+          "en": "Bus transportation",
+          "es": "Transporte en autobús",
+          "fr": "Transport par bus"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2eeb10f6-44f3-460e-bcd7-9b47b0a4513c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2eeb10f6-44f3-460e-bcd7-9b47b0a4513c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de transport collectif par autobus ou autocar. Il permet de qualifier le moyen utilisé pour le trajet, sans préciser une ligne ou ses horaires.",
+        "description_i18n": {
+          "de": "Gemeinschaftliche Beförderung mit Bus oder Reisebus. Die Angabe bezeichnet das Verkehrsmittel, ohne eine Linie oder einen Fahrplan festzulegen.",
+          "en": "Collective transport by bus or coach. It identifies the travel mode without specifying a route or timetable.",
+          "es": "Transporte colectivo en autobús o autocar. Identifica el medio usado para el trayecto sin precisar una línea ni sus horarios.",
+          "fr": "Mode de transport collectif par autobus ou autocar. Il permet de qualifier le moyen utilisé pour le trajet, sans préciser une ligne ou ses horaires."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2eeb10f6-44f3-460e-bcd7-9b47b0a4513c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2eeb10f6-44f3-460e-bcd7-9b47b0a4513c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9bda79e3-914a-4460-8873-08cddd885868",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "car",
+      "base": {
+        "description": "Transport automobile",
+        "description_i18n": {
+          "de": "Fortbewegung mit dem Auto",
+          "en": "Car transportation",
+          "es": "Transporte en coche",
+          "fr": "Transport automobile"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bda79e3-914a-4460-8873-08cddd885868. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bda79e3-914a-4460-8873-08cddd885868"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de déplacement en voiture. Il décrit le véhicule utilisé pour le trajet, indépendamment de sa propriété ou d’une éventuelle location.",
+        "description_i18n": {
+          "de": "Fortbewegung mit dem Auto. Die Angabe beschreibt das für die Fahrt genutzte Fahrzeug unabhängig von Eigentum oder Miete.",
+          "en": "Travel by car. It describes the vehicle used for a journey regardless of ownership or rental arrangements.",
+          "es": "Desplazamiento en coche. Describe el vehículo utilizado con independencia de su propiedad o de un posible alquiler.",
+          "fr": "Mode de déplacement en voiture. Il décrit le véhicule utilisé pour le trajet, indépendamment de sa propriété ou d’une éventuelle location."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9bda79e3-914a-4460-8873-08cddd885868. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9bda79e3-914a-4460-8873-08cddd885868"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aa035f8a-91d8-409f-b59d-b0d2db353eb6",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "cruise",
+      "base": {
+        "description": "Transport par croisière",
+        "description_i18n": {
+          "de": "Beförderung im Rahmen einer Kreuzfahrt",
+          "en": "Cruise transportation",
+          "es": "Transporte en crucero",
+          "fr": "Transport par croisière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa035f8a-91d8-409f-b59d-b0d2db353eb6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa035f8a-91d8-409f-b59d-b0d2db353eb6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Déplacement ou voyage à bord d’un navire de croisière. Ce mode se distingue d’une traversée par ferry et ne précise pas à lui seul les escales ou prestations du voyage.",
+        "description_i18n": {
+          "de": "Reise an Bord eines Kreuzfahrtschiffs. Sie unterscheidet sich von einer Fährüberfahrt und legt allein weder Zwischenstopps noch enthaltene Leistungen fest.",
+          "en": "Travel aboard a cruise ship. This differs from a ferry crossing and does not itself specify stops or included services.",
+          "es": "Desplazamiento o viaje a bordo de un buque de crucero. Se distingue de una travesía en ferri y no precisa por sí solo las escalas o prestaciones.",
+          "fr": "Déplacement ou voyage à bord d’un navire de croisière. Ce mode se distingue d’une traversée par ferry et ne précise pas à lui seul les escales ou prestations du voyage."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa035f8a-91d8-409f-b59d-b0d2db353eb6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa035f8a-91d8-409f-b59d-b0d2db353eb6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e80028a6-3807-42e8-8168-40f419e9633c",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "ferry",
+      "base": {
+        "description": "Transport par ferry",
+        "description_i18n": {
+          "de": "Beförderung mit der Fähre",
+          "en": "Ferry transportation",
+          "es": "Transporte en ferri",
+          "fr": "Transport par ferry"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e80028a6-3807-42e8-8168-40f419e9633c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e80028a6-3807-42e8-8168-40f419e9633c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de transport par bateau assurant une traversée entre des points desservis. Il se distingue du voyage de croisière et ne précise pas à lui seul l’embarquement de véhicules.",
+        "description_i18n": {
+          "de": "Schiffsbeförderung für eine Überfahrt zwischen bedienten Orten. Sie unterscheidet sich von einer Kreuzfahrt und sagt allein nichts über die Fahrzeugmitnahme aus.",
+          "en": "Boat transport providing a crossing between served points. It differs from a cruise and does not itself specify whether vehicles can be carried.",
+          "es": "Transporte en barco que realiza una travesía entre puntos atendidos. Se distingue de un crucero y no precisa por sí solo si admite vehículos.",
+          "fr": "Mode de transport par bateau assurant une traversée entre des points desservis. Il se distingue du voyage de croisière et ne précise pas à lui seul l’embarquement de véhicules."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e80028a6-3807-42e8-8168-40f419e9633c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e80028a6-3807-42e8-8168-40f419e9633c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "de4939b9-abea-4cf5-9722-51630918a63c",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "helicopter",
+      "base": {
+        "description": "Transport par hélicoptère",
+        "description_i18n": {
+          "de": "Beförderung mit dem Hubschrauber",
+          "en": "Helicopter transportation",
+          "es": "Transporte en helicóptero",
+          "fr": "Transport par hélicoptère"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/de4939b9-abea-4cf5-9722-51630918a63c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/de4939b9-abea-4cf5-9722-51630918a63c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de déplacement aérien en hélicoptère. Il qualifie le moyen utilisé, sans confondre un transfert avec une activité de survol touristique particulière.",
+        "description_i18n": {
+          "de": "Fortbewegung mit dem Hubschrauber. Sie bezeichnet das Verkehrsmittel, ohne einen Transfer mit einem bestimmten touristischen Rundflug gleichzusetzen.",
+          "en": "Air travel by helicopter. It identifies the transport mode without equating a transfer with a specific sightseeing flight.",
+          "es": "Desplazamiento aéreo en helicóptero. Identifica el medio utilizado sin confundir un traslado con una actividad concreta de vuelo turístico.",
+          "fr": "Mode de déplacement aérien en hélicoptère. Il qualifie le moyen utilisé, sans confondre un transfert avec une activité de survol touristique particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/de4939b9-abea-4cf5-9722-51630918a63c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/de4939b9-abea-4cf5-9722-51630918a63c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "246d8e43-2e97-4e28-9e87-35d93d0d13e2",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "taxi",
+      "base": {
+        "description": "Transport par taxi",
+        "description_i18n": {
+          "de": "Beförderung mit dem Taxi",
+          "en": "Taxi transportation",
+          "es": "Transporte en taxi",
+          "fr": "Transport par taxi"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/246d8e43-2e97-4e28-9e87-35d93d0d13e2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/246d8e43-2e97-4e28-9e87-35d93d0d13e2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de transport en véhicule avec chauffeur proposé comme service de taxi. Il se distingue de la voiture conduite par le voyageur et ne décrit pas son tarif.",
+        "description_i18n": {
+          "de": "Beförderung in einem Fahrzeug mit Fahrer als Taxidienst. Sie unterscheidet sich vom selbst gefahrenen Auto und beschreibt keinen Fahrpreis.",
+          "en": "Transport in a chauffeur-driven vehicle offered as a taxi service. It differs from a traveller-driven car and does not describe the fare.",
+          "es": "Transporte en un vehículo con conductor ofrecido como servicio de taxi. Se distingue del coche conducido por el viajero y no describe su tarifa.",
+          "fr": "Mode de transport en véhicule avec chauffeur proposé comme service de taxi. Il se distingue de la voiture conduite par le voyageur et ne décrit pas son tarif."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/246d8e43-2e97-4e28-9e87-35d93d0d13e2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/246d8e43-2e97-4e28-9e87-35d93d0d13e2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "002f0196-14d9-421f-9b3a-2f24b4a4e979",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "train",
+      "base": {
+        "description": "Transport ferroviaire",
+        "description_i18n": {
+          "de": "Beförderung auf der Schiene",
+          "en": "Rail transportation",
+          "es": "Transporte ferroviario",
+          "fr": "Transport ferroviaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/002f0196-14d9-421f-9b3a-2f24b4a4e979. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/002f0196-14d9-421f-9b3a-2f24b4a4e979"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de transport ferroviaire à bord d’un train. Il décrit le moyen de déplacement et ne garantit pas l’existence d’une desserte sur chaque territoire.",
+        "description_i18n": {
+          "de": "Beförderung mit einem Zug auf der Schiene. Die Angabe beschreibt das Verkehrsmittel, ohne eine Verbindung in jeder Region zu gewährleisten.",
+          "en": "Rail transport aboard a train. It describes the travel mode without guaranteeing service in every area.",
+          "es": "Transporte ferroviario a bordo de un tren. Describe el medio de desplazamiento sin garantizar un servicio en todos los territorios.",
+          "fr": "Mode de transport ferroviaire à bord d’un train. Il décrit le moyen de déplacement et ne garantit pas l’existence d’une desserte sur chaque territoire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/002f0196-14d9-421f-9b3a-2f24b4a4e979. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/002f0196-14d9-421f-9b3a-2f24b4a4e979"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "21b82e20-b427-42e9-ac16-0e6aaca798c1",
+      "domain": "transport_type",
+      "context_key": "",
+      "code": "walking",
+      "base": {
+        "description": "Transport à pied",
+        "description_i18n": {
+          "de": "Fortbewegung zu Fuß",
+          "en": "Travel on foot",
+          "es": "Desplazamiento a pie",
+          "fr": "Transport à pied"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/21b82e20-b427-42e9-ac16-0e6aaca798c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/21b82e20-b427-42e9-ac16-0e6aaca798c1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode de déplacement effectué à pied. Il peut décrire l’accès ou un trajet courant, indépendamment de la qualification d’un itinéraire comme randonnée.",
+        "description_i18n": {
+          "de": "Fortbewegung zu Fuß. Sie kann den Zugang oder einen gewöhnlichen Weg beschreiben, unabhängig von der Einstufung einer Route als Wanderung.",
+          "en": "Travel on foot. It may describe access or an ordinary journey independently of an itinerary being classified as a hike.",
+          "es": "Desplazamiento realizado a pie. Puede describir el acceso o un trayecto habitual con independencia de que un itinerario se clasifique como senderismo.",
+          "fr": "Mode de déplacement effectué à pied. Il peut décrire l’accès ou un trajet courant, indépendamment de la qualification d’un itinéraire comme randonnée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/21b82e20-b427-42e9-ac16-0e6aaca798c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/21b82e20-b427-42e9-ac16-0e6aaca798c1"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,571 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-season_type-1",
+  "proposals": [
+    {
+      "concept_id": "6b01bb04-258a-4cf2-acd2-7050e14e9eaa",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "cyclone_season",
+      "base": {
+        "description": "Période cyclonique à La Réunion",
+        "description_i18n": {
+          "de": "Zyklonsaison auf La Réunion",
+          "en": "Cyclone period in La Réunion",
+          "es": "Periodo ciclónico en La Reunión",
+          "fr": "Période cyclonique à La Réunion"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6b01bb04-258a-4cf2-acd2-7050e14e9eaa. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6b01bb04-258a-4cf2-acd2-7050e14e9eaa"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période identifiée comme saison cyclonique à La Réunion, utilisée pour décrire une saison d'offre, de tarif ou de promotion ; ses dates sont précisées dans le calendrier concerné.",
+        "description_i18n": {
+          "de": "Als Zyklonsaison auf Réunion bezeichneter Zeitraum zur Beschreibung einer Angebots-, Tarif- oder Werbesaison; die Termine ergeben sich aus dem jeweiligen Kalender.",
+          "en": "Period identified as Réunion's cyclone season, used to describe an offer, rate or promotion season; its dates are specified in the relevant calendar.",
+          "es": "Periodo identificado como temporada ciclónica en Reunión, utilizado para describir una temporada de oferta, tarifa o promoción; sus fechas se precisan en el calendario correspondiente.",
+          "fr": "Période identifiée comme saison cyclonique à La Réunion, utilisée pour décrire une saison d'offre, de tarif ou de promotion ; ses dates sont précisées dans le calendrier concerné."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6b01bb04-258a-4cf2-acd2-7050e14e9eaa. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6b01bb04-258a-4cf2-acd2-7050e14e9eaa"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9eea495c-499b-4597-91a8-6d2ec7bd62d1",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "festival_season",
+      "base": {
+        "description": "Période des festivals",
+        "description_i18n": {
+          "de": "Zeitraum der Festivals",
+          "en": "Festival period",
+          "es": "Periodo de festivales",
+          "fr": "Période des festivals"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9eea495c-499b-4597-91a8-6d2ec7bd62d1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9eea495c-499b-4597-91a8-6d2ec7bd62d1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période caractérisée par la tenue de festivals dans le territoire concerné, à laquelle une offre, un tarif ou une promotion peut être rattaché.",
+        "description_i18n": {
+          "de": "Durch Festivals im betreffenden Gebiet geprägter Zeitraum, dem ein Angebot, Tarif oder eine Werbeaktion zugeordnet werden kann.",
+          "en": "Period characterised by festivals taking place in the relevant area, to which an offer, rate or promotion may be linked.",
+          "es": "Periodo caracterizado por la celebración de festivales en el territorio correspondiente, al que puede vincularse una oferta, tarifa o promoción.",
+          "fr": "Période caractérisée par la tenue de festivals dans le territoire concerné, à laquelle une offre, un tarif ou une promotion peut être rattaché."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9eea495c-499b-4597-91a8-6d2ec7bd62d1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9eea495c-499b-4597-91a8-6d2ec7bd62d1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "95959be0-1c4a-4848-9388-9da056382d37",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "high_season",
+      "base": {
+        "description": "Période de haute affluence",
+        "description_i18n": {
+          "de": "Zeitraum mit hohem Besucheraufkommen",
+          "en": "Peak demand period",
+          "es": "Periodo de alta afluencia",
+          "fr": "Période de haute affluence"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95959be0-1c4a-4848-9388-9da056382d37. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95959be0-1c4a-4848-9388-9da056382d37"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période de fréquentation ou de demande touristique élevée retenue pour l'offre, servant notamment à distinguer sa tarification de celle de basse saison.",
+        "description_i18n": {
+          "de": "Für das Angebot festgelegter Zeitraum mit hoher touristischer Nachfrage oder Besucherzahl, insbesondere zur Unterscheidung von der Preisgestaltung in der Nebensaison.",
+          "en": "Period of high visitor numbers or tourism demand defined for the offer, notably used to distinguish its pricing from low season.",
+          "es": "Periodo de elevada afluencia o demanda turística definido para la oferta, utilizado en particular para distinguir su tarifa de la temporada baja.",
+          "fr": "Période de fréquentation ou de demande touristique élevée retenue pour l'offre, servant notamment à distinguer sa tarification de celle de basse saison."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95959be0-1c4a-4848-9388-9da056382d37. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95959be0-1c4a-4848-9388-9da056382d37"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "689b7ea5-8f81-4dfd-b155-10abfdadda13",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "holiday_season",
+      "base": {
+        "description": "Période des vacances",
+        "description_i18n": {
+          "de": "Zeitraum der Schulferien oder Feiertage",
+          "en": "School or public holiday period",
+          "es": "Período de vacaciones escolares o días festivos",
+          "fr": "Période des vacances"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/689b7ea5-8f81-4dfd-b155-10abfdadda13. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/689b7ea5-8f81-4dfd-b155-10abfdadda13"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période associée à un calendrier de vacances, utilisée pour situer une offre ou sa tarification ; le calendrier géographique concerné doit être celui de l'offre.",
+        "description_i18n": {
+          "de": "Mit einem Ferienkalender verbundener Zeitraum zur Einordnung eines Angebots oder seiner Preise; maßgeblich ist der geografische Kalender des Angebots.",
+          "en": "Period associated with a holiday calendar, used to situate an offer or its pricing; the relevant geographical calendar is the one specified by the offer.",
+          "es": "Periodo asociado a un calendario de vacaciones, utilizado para situar una oferta o su tarifa; el calendario geográfico de referencia es el de la oferta.",
+          "fr": "Période associée à un calendrier de vacances, utilisée pour situer une offre ou sa tarification ; le calendrier géographique concerné doit être celui de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/689b7ea5-8f81-4dfd-b155-10abfdadda13. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/689b7ea5-8f81-4dfd-b155-10abfdadda13"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ec6ee515-eaf1-4d9c-b792-3132c79a3783",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "low_season",
+      "base": {
+        "description": "Période de faible affluence",
+        "description_i18n": {
+          "de": "Zeitraum mit geringem Besucheraufkommen",
+          "en": "Low demand period",
+          "es": "Periodo de baja afluencia",
+          "fr": "Période de faible affluence"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ec6ee515-eaf1-4d9c-b792-3132c79a3783. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ec6ee515-eaf1-4d9c-b792-3132c79a3783"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période de fréquentation ou de demande touristique plus faible retenue pour l'offre, distincte de sa haute saison et définie par ses propres dates.",
+        "description_i18n": {
+          "de": "Für das Angebot festgelegter Zeitraum mit geringerer touristischer Nachfrage oder Besucherzahl, getrennt von der Hauptsaison und mit eigenen Datumsangaben.",
+          "en": "Period of lower visitor numbers or tourism demand defined for the offer, distinct from its high season and identified by its own dates.",
+          "es": "Periodo de menor afluencia o demanda turística definido para la oferta, distinto de su temporada alta y delimitado por sus propias fechas.",
+          "fr": "Période de fréquentation ou de demande touristique plus faible retenue pour l'offre, distincte de sa haute saison et définie par ses propres dates."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ec6ee515-eaf1-4d9c-b792-3132c79a3783. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ec6ee515-eaf1-4d9c-b792-3132c79a3783"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "970d01e7-ec99-459f-ab9d-c432988071df",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "lychee_season",
+      "base": {
+        "description": "Période des litchis",
+        "description_i18n": {
+          "de": "Saisonaler Zeitraum für Litschis",
+          "en": "Seasonal period for lychees",
+          "es": "Periodo estacional de los litchis",
+          "fr": "Période des litchis"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/970d01e7-ec99-459f-ab9d-c432988071df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/970d01e7-ec99-459f-ab9d-c432988071df"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Litschi-Saison"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Lychee period"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Época de litchis"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Période des litchis"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période de production ou de récolte des litchis à laquelle une offre touristique, agricole ou gastronomique est rattachée, sans fixer des dates identiques chaque année.",
+        "description_i18n": {
+          "de": "Zeitraum der Litschiproduktion oder -ernte, dem ein touristisches, landwirtschaftliches oder gastronomisches Angebot zugeordnet wird, ohne jährlich gleiche Termine festzulegen.",
+          "en": "Lychee production or harvest period to which a tourism, farm or food offer is linked, without fixing identical dates every year.",
+          "es": "Periodo de producción o cosecha del lichi al que se vincula una oferta turística, agrícola o gastronómica, sin fijar las mismas fechas todos los años.",
+          "fr": "Période de production ou de récolte des litchis à laquelle une offre touristique, agricole ou gastronomique est rattachée, sans fixer des dates identiques chaque année."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/970d01e7-ec99-459f-ab9d-c432988071df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/970d01e7-ec99-459f-ab9d-c432988071df"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Lychee period"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Época de litchis"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Période des litchis"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "04f906f0-aad3-4e73-8bfb-db97f660938d",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "sugar_cane_harvest",
+      "base": {
+        "description": "Période de récolte de la canne à sucre",
+        "description_i18n": {
+          "de": "Zeitraum der Zuckerrohrernte",
+          "en": "Sugar cane harvest period",
+          "es": "Periodo de cosecha de caña de azúcar",
+          "fr": "Période de récolte de la canne à sucre"
+        },
+        "name": "Récolte canne à sucre",
+        "name_i18n": {
+          "de": "Zuckerrohrernte",
+          "en": "Sugar cane harvest",
+          "es": "Cosecha de caña de azúcar",
+          "fr": "Récolte canne à sucre"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Zuckerrohr-Erntezeit"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Sugar-cane harvesting season"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Temporada de cosecha de caña de azúcar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Campagne de récolte de la canne à sucre"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04f906f0-aad3-4e73-8bfb-db97f660938d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04f906f0-aad3-4e73-8bfb-db97f660938d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période consacrée à la récolte de la canne à sucre, utilisée pour situer une offre ou une expérience liée à cette activité agricole.",
+        "description_i18n": {
+          "de": "Zeitraum der Zuckerrohrernte zur zeitlichen Einordnung eines Angebots oder Erlebnisses mit Bezug zu dieser landwirtschaftlichen Tätigkeit.",
+          "en": "Period devoted to harvesting sugar cane, used to situate an offer or experience associated with that agricultural activity.",
+          "es": "Periodo dedicado a la cosecha de caña de azúcar, utilizado para situar una oferta o experiencia vinculada a esa actividad agrícola.",
+          "fr": "Période consacrée à la récolte de la canne à sucre, utilisée pour situer une offre ou une expérience liée à cette activité agricole."
+        },
+        "name": "Récolte de la canne à sucre",
+        "name_i18n": {
+          "de": "Zuckerrohrernte",
+          "en": "Sugar-cane harvest",
+          "es": "Cosecha de caña de azúcar",
+          "fr": "Récolte de la canne à sucre"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Zuckerrohr-Erntezeit"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Sugar-cane harvesting season"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Temporada de cosecha de caña de azúcar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Campagne de récolte de la canne à sucre"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Récolte canne à sucre"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04f906f0-aad3-4e73-8bfb-db97f660938d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04f906f0-aad3-4e73-8bfb-db97f660938d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d787ddd9-9a95-477b-b8a7-2125e731ae05",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "summer",
+      "base": {
+        "description": "Saison estivale",
+        "description_i18n": {
+          "de": "Sommerliche Jahreszeit",
+          "en": "Summer season",
+          "es": "Temporada estival",
+          "fr": "Saison estivale"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d787ddd9-9a95-477b-b8a7-2125e731ae05. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d787ddd9-9a95-477b-b8a7-2125e731ae05"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Saison estivale du lieu de l'offre, utilisée pour regrouper des dates de prestation, de tarif ou de promotion ; elle suit le calendrier local et non automatiquement celui de l'hémisphère Nord.",
+        "description_i18n": {
+          "de": "Sommersaison am Angebotsort zur Gruppierung von Leistungs-, Tarif- oder Werbezeiträumen; sie folgt dem örtlichen Kalender und nicht automatisch dem der Nordhalbkugel.",
+          "en": "Summer season at the offer's location, used to group service, rate or promotion dates; it follows the local calendar rather than automatically the Northern Hemisphere calendar.",
+          "es": "Temporada de verano del lugar de la oferta, utilizada para agrupar fechas de prestación, tarifa o promoción; sigue el calendario local y no automáticamente el del hemisferio norte.",
+          "fr": "Saison estivale du lieu de l'offre, utilisée pour regrouper des dates de prestation, de tarif ou de promotion ; elle suit le calendrier local et non automatiquement celui de l'hémisphère Nord."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d787ddd9-9a95-477b-b8a7-2125e731ae05. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d787ddd9-9a95-477b-b8a7-2125e731ae05"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b7778604-3610-4fad-86a0-22cf027de1f2",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "vanilla_harvest",
+      "base": {
+        "description": "Période de récolte de la vanille",
+        "description_i18n": {
+          "de": "Zeitraum der Vanilleernte",
+          "en": "Vanilla harvest period",
+          "es": "Periodo de cosecha de vainilla",
+          "fr": "Période de récolte de la vanille"
+        },
+        "name": "Récolte vanille",
+        "name_i18n": {
+          "de": "Vanilleernte",
+          "en": "Vanilla harvest",
+          "es": "Cosecha de vainilla",
+          "fr": "Récolte vanille"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Vanille-Erntezeit"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Vanilla harvesting season"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Temporada de recolección de vainilla"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Période de récolte de la vanille"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7778604-3610-4fad-86a0-22cf027de1f2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7778604-3610-4fad-86a0-22cf027de1f2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Période de récolte de la vanille utilisée pour situer une visite, une activité ou une offre liée à cette production, distincte de l'ensemble du cycle de préparation de la vanille.",
+        "description_i18n": {
+          "de": "Zeitraum der Vanilleernte zur Einordnung eines Besuchs, einer Aktivität oder eines entsprechenden Angebots, getrennt vom gesamten Aufbereitungszyklus der Vanille.",
+          "en": "Vanilla harvest period used to situate a visit, activity or offer associated with that crop, distinct from the entire vanilla-processing cycle.",
+          "es": "Periodo de cosecha de vainilla utilizado para situar una visita, actividad u oferta vinculada a esa producción, distinto del conjunto del ciclo de preparación de la vainilla.",
+          "fr": "Période de récolte de la vanille utilisée pour situer une visite, une activité ou une offre liée à cette production, distincte de l'ensemble du cycle de préparation de la vanille."
+        },
+        "name": "Récolte de la vanille",
+        "name_i18n": {
+          "de": "Vanilleernte",
+          "en": "Vanilla harvest",
+          "es": "Cosecha de vainilla",
+          "fr": "Récolte de la vanille"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Vanille-Erntezeit"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Vanilla harvesting season"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Temporada de recolección de vainilla"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Période de récolte de la vanille"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Récolte vanille"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7778604-3610-4fad-86a0-22cf027de1f2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7778604-3610-4fad-86a0-22cf027de1f2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e6b6a582-2143-43af-8da8-3bc0242c7cd4",
+      "domain": "season_type",
+      "context_key": "",
+      "code": "winter",
+      "base": {
+        "description": "Saison hivernale",
+        "description_i18n": {
+          "de": "Winterliche Jahreszeit",
+          "en": "Winter season",
+          "es": "Temporada invernal",
+          "fr": "Saison hivernale"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e6b6a582-2143-43af-8da8-3bc0242c7cd4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e6b6a582-2143-43af-8da8-3bc0242c7cd4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Saison hivernale du lieu de l'offre, utilisée pour situer ses périodes commerciales ou touristiques ; ses dates suivent le calendrier local, notamment austral à La Réunion.",
+        "description_i18n": {
+          "de": "Wintersaison am Angebotsort zur Einordnung kommerzieller oder touristischer Zeiträume; die Termine folgen dem örtlichen Kalender, auf Réunion also dem Südwinter.",
+          "en": "Winter season at the offer's location, used to situate its commercial or tourism periods; its dates follow the local calendar, including the southern winter in Réunion.",
+          "es": "Temporada de invierno del lugar de la oferta, utilizada para situar sus periodos comerciales o turísticos; sus fechas siguen el calendario local, incluido el invierno austral en Reunión.",
+          "fr": "Saison hivernale du lieu de l'offre, utilisée pour situer ses périodes commerciales ou touristiques ; ses dates suivent le calendrier local, notamment austral à La Réunion."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e6b6a582-2143-43af-8da8-3bc0242c7cd4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e6b6a582-2143-43af-8da8-3bc0242c7cd4"
+          }
+        ]
+      }
+    }
+  ]
+}

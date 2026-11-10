@@ -1,0 +1,592 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-price_kind-1",
+  "proposals": [
+    {
+      "concept_id": "0e232892-f7fd-4f12-8f99-cdc33135599a",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "abonne",
+      "base": {
+        "description": "Tarif abonné / adhérent",
+        "description_i18n": {
+          "de": "Tarif für Mitglieder oder Abonnenten",
+          "en": "Member or subscriber rate",
+          "es": "Tarifa para socios o abonados",
+          "fr": "Tarif abonné / adhérent"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0e232892-f7fd-4f12-8f99-cdc33135599a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0e232892-f7fd-4f12-8f99-cdc33135599a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif réservé aux personnes bénéficiant d'un abonnement ou d'une adhésion reconnus par le prestataire, selon les conditions de l'offre.",
+        "description_i18n": {
+          "de": "Tarif für Personen mit einem vom Anbieter anerkannten Abonnement oder einer Mitgliedschaft nach den Angebotsbedingungen.",
+          "en": "Rate for people holding a subscription or membership recognised by the provider, according to the offer's conditions.",
+          "es": "Tarifa destinada a quienes poseen un abono o una adhesión reconocidos por el prestador, según las condiciones de la oferta.",
+          "fr": "Tarif réservé aux personnes bénéficiant d'un abonnement ou d'une adhésion reconnus par le prestataire, selon les conditions de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0e232892-f7fd-4f12-8f99-cdc33135599a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0e232892-f7fd-4f12-8f99-cdc33135599a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1605f44b-97b6-402c-8e45-ea7c53e0ee68",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "adulte",
+      "base": {
+        "description": "Tarif adulte plein",
+        "description_i18n": {
+          "de": "Normaltarif für Erwachsene",
+          "en": "Full adult rate",
+          "es": "Tarifa completa adulto",
+          "fr": "Tarif adulte plein"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1605f44b-97b6-402c-8e45-ea7c53e0ee68. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1605f44b-97b6-402c-8e45-ea7c53e0ee68"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif de référence destiné au public adulte pour la prestation décrite ; les limites d'âge et les catégories bénéficiant d'autres tarifs sont précisées par le prestataire.",
+        "description_i18n": {
+          "de": "Referenztarif für erwachsene Gäste bei der beschriebenen Leistung; Altersgrenzen und Kategorien mit anderen Tarifen werden vom Anbieter angegeben.",
+          "en": "Reference rate for adult customers for the described service; age limits and categories eligible for other rates are specified by the provider.",
+          "es": "Tarifa de referencia para el público adulto de la prestación descrita; el prestador precisa los límites de edad y las categorías con otras tarifas.",
+          "fr": "Tarif de référence destiné au public adulte pour la prestation décrite ; les limites d'âge et les catégories bénéficiant d'autres tarifs sont précisées par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1605f44b-97b6-402c-8e45-ea7c53e0ee68. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1605f44b-97b6-402c-8e45-ea7c53e0ee68"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "21ac6147-8d99-40ec-aecf-66b4396920c4",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "bebe",
+      "base": {
+        "description": "Tarif bébé / tout-petit",
+        "description_i18n": {
+          "de": "Tarif für Babys und Kleinkinder",
+          "en": "Baby / toddler rate",
+          "es": "Tarifa para bebés / niños pequeños",
+          "fr": "Tarif bébé / tout-petit"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/21ac6147-8d99-40ec-aecf-66b4396920c4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/21ac6147-8d99-40ec-aecf-66b4396920c4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné aux bébés ou tout-petits ; le terme ne fixe ni âge limite ni gratuité automatique.",
+        "description_i18n": {
+          "de": "Tarif für Babys oder Kleinkinder; die Bezeichnung legt weder eine Altersgrenze noch automatische Kostenfreiheit fest.",
+          "en": "Rate intended for babies or toddlers; the term specifies neither an age limit nor automatic free admission.",
+          "es": "Tarifa destinada a bebés o niños de corta edad; el término no fija una edad límite ni una gratuidad automática.",
+          "fr": "Tarif destiné aux bébés ou tout-petits ; le terme ne fixe ni âge limite ni gratuité automatique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/21ac6147-8d99-40ec-aecf-66b4396920c4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/21ac6147-8d99-40ec-aecf-66b4396920c4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1c36f471-244b-4df7-8527-423fac97904d",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "couple",
+      "base": {
+        "description": "Tarif duo / couple",
+        "description_i18n": {
+          "de": "Tarif für zwei Gäste",
+          "en": "Rate for two guests",
+          "es": "Tarifa para dos personas",
+          "fr": "Tarif duo / couple"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1c36f471-244b-4df7-8527-423fac97904d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1c36f471-244b-4df7-8527-423fac97904d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif proposé pour deux personnes dans une même offre duo ou couple ; il ne correspond pas nécessairement à deux fois le tarif individuel.",
+        "description_i18n": {
+          "de": "Tarif für zwei Personen im selben Duo- oder Paarangebot; er entspricht nicht zwangsläufig dem doppelten Einzeltarif.",
+          "en": "Rate offered for two people in the same duo or couple offer; it is not necessarily twice the individual rate.",
+          "es": "Tarifa ofrecida para dos personas dentro de una misma oferta dúo o pareja; no equivale necesariamente al doble de la tarifa individual.",
+          "fr": "Tarif proposé pour deux personnes dans une même offre duo ou couple ; il ne correspond pas nécessairement à deux fois le tarif individuel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1c36f471-244b-4df7-8527-423fac97904d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1c36f471-244b-4df7-8527-423fac97904d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b5506662-b1f6-4e1c-84dc-1bff63f40a5b",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "demandeur_emploi",
+      "base": {
+        "description": "Tarif demandeur d'emploi",
+        "description_i18n": {
+          "de": "Tarif für Arbeitsuchende",
+          "en": "Job seeker rate",
+          "es": "Tarifa para personas demandantes de empleo",
+          "fr": "Tarif demandeur d'emploi"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b5506662-b1f6-4e1c-84dc-1bff63f40a5b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b5506662-b1f6-4e1c-84dc-1bff63f40a5b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné aux personnes en recherche d'emploi, dont les conditions d'accès sont celles annoncées par le prestataire.",
+        "description_i18n": {
+          "de": "Tarif für Arbeitssuchende nach den vom Anbieter angegebenen Zugangsbedingungen.",
+          "en": "Rate intended for job seekers, subject to the access conditions stated by the provider.",
+          "es": "Tarifa destinada a personas demandantes de empleo, según las condiciones de acceso indicadas por el prestador.",
+          "fr": "Tarif destiné aux personnes en recherche d'emploi, dont les conditions d'accès sont celles annoncées par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b5506662-b1f6-4e1c-84dc-1bff63f40a5b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b5506662-b1f6-4e1c-84dc-1bff63f40a5b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8d6974b0-7946-41f2-a72f-9179fe9ae69e",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "enfant",
+      "base": {
+        "description": "Tarif enfant",
+        "description_i18n": {
+          "de": "Kindertarif",
+          "en": "Child rate",
+          "es": "Tarifa infantil",
+          "fr": "Tarif enfant"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8d6974b0-7946-41f2-a72f-9179fe9ae69e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8d6974b0-7946-41f2-a72f-9179fe9ae69e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné aux enfants pour la prestation décrite ; la tranche d'âge concernée est définie dans l'offre.",
+        "description_i18n": {
+          "de": "Tarif für Kinder bei der beschriebenen Leistung; der zugehörige Altersbereich wird im Angebot festgelegt.",
+          "en": "Rate intended for children for the described service; the applicable age range is defined in the offer.",
+          "es": "Tarifa destinada a niños para la prestación descrita; la oferta define la franja de edad correspondiente.",
+          "fr": "Tarif destiné aux enfants pour la prestation décrite ; la tranche d'âge concernée est définie dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8d6974b0-7946-41f2-a72f-9179fe9ae69e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8d6974b0-7946-41f2-a72f-9179fe9ae69e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0bcffaeb-5536-4b10-86be-6c39e6570bf4",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "etudiant",
+      "base": {
+        "description": "Tarif étudiant",
+        "description_i18n": {
+          "de": "Studententarif",
+          "en": "Student rate",
+          "es": "Tarifa estudiante",
+          "fr": "Tarif étudiant"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0bcffaeb-5536-4b10-86be-6c39e6570bf4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0bcffaeb-5536-4b10-86be-6c39e6570bf4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné aux personnes ayant le statut d'étudiant, selon les conditions ou justificatifs annoncés dans l'offre.",
+        "description_i18n": {
+          "de": "Tarif für Personen mit Studierendenstatus entsprechend den im Angebot genannten Bedingungen oder Nachweisen.",
+          "en": "Rate intended for people with student status, according to the conditions or supporting documents stated in the offer.",
+          "es": "Tarifa destinada a personas con condición de estudiante, según las condiciones o justificantes indicados en la oferta.",
+          "fr": "Tarif destiné aux personnes ayant le statut d'étudiant, selon les conditions ou justificatifs annoncés dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0bcffaeb-5536-4b10-86be-6c39e6570bf4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0bcffaeb-5536-4b10-86be-6c39e6570bf4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "38a6239c-59dd-4969-b8cd-12375df1e696",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "famille",
+      "base": {
+        "description": "Forfait famille",
+        "description_i18n": {
+          "de": "Familienpaket",
+          "en": "Family package",
+          "es": "Paquete familiar",
+          "fr": "Forfait famille"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/38a6239c-59dd-4969-b8cd-12375df1e696. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/38a6239c-59dd-4969-b8cd-12375df1e696"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif ou forfait proposé à un ensemble familial ; la composition du groupe familial et les prestations incluses sont précisées par le prestataire.",
+        "description_i18n": {
+          "de": "Tarif oder Pauschalangebot für eine Familie; die Zusammensetzung der Familiengruppe und die enthaltenen Leistungen werden vom Anbieter angegeben.",
+          "en": "Rate or package offered to a family party; the composition of the family group and included services are specified by the provider.",
+          "es": "Tarifa o paquete ofrecido a un grupo familiar; el prestador precisa su composición y las prestaciones incluidas.",
+          "fr": "Tarif ou forfait proposé à un ensemble familial ; la composition du groupe familial et les prestations incluses sont précisées par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/38a6239c-59dd-4969-b8cd-12375df1e696. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/38a6239c-59dd-4969-b8cd-12375df1e696"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "07dcf8a2-96c5-4b28-b3a2-239b761c67ea",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "gratuit",
+      "base": {
+        "description": "Accès gratuit",
+        "description_i18n": {
+          "de": "Kostenloser Zugang",
+          "en": "Free access",
+          "es": "Acceso gratuito",
+          "fr": "Accès gratuit"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/07dcf8a2-96c5-4b28-b3a2-239b761c67ea. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/07dcf8a2-96c5-4b28-b3a2-239b761c67ea"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Absence de prix à payer pour l'accès ou la prestation décrite, dans le périmètre annoncé par le prestataire ; les éventuelles autres prestations sont distinctes.",
+        "description_i18n": {
+          "de": "Kein zu zahlender Preis für den beschriebenen Zugang oder die Leistung im vom Anbieter angegebenen Umfang; etwaige weitere Leistungen sind davon getrennt.",
+          "en": "No price payable for the described admission or service within the scope stated by the provider; any other services are separate.",
+          "es": "Ausencia de precio a pagar por el acceso o la prestación descrita dentro del alcance indicado por el prestador; otras posibles prestaciones son independientes.",
+          "fr": "Absence de prix à payer pour l'accès ou la prestation décrite, dans le périmètre annoncé par le prestataire ; les éventuelles autres prestations sont distinctes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/07dcf8a2-96c5-4b28-b3a2-239b761c67ea. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/07dcf8a2-96c5-4b28-b3a2-239b761c67ea"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b4ba3829-449c-42df-a088-c26214e44644",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "groupe",
+      "base": {
+        "description": "Tarif groupe",
+        "description_i18n": {
+          "de": "Gruppentarif",
+          "en": "Group rate",
+          "es": "Tarifa para grupos",
+          "fr": "Tarif groupe"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b4ba3829-449c-42df-a088-c26214e44644. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b4ba3829-449c-42df-a088-c26214e44644"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif proposé à plusieurs personnes considérées comme un groupe ; l'effectif requis et le mode de facturation sont précisés dans l'offre.",
+        "description_i18n": {
+          "de": "Tarif für mehrere als Gruppe betrachtete Personen; erforderliche Gruppengröße und Abrechnungsgrundlage werden im Angebot angegeben.",
+          "en": "Rate offered to several people treated as a group; the required group size and billing basis are specified in the offer.",
+          "es": "Tarifa ofrecida a varias personas consideradas como un grupo; la oferta precisa el tamaño requerido y la base de facturación.",
+          "fr": "Tarif proposé à plusieurs personnes considérées comme un groupe ; l'effectif requis et le mode de facturation sont précisés dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b4ba3829-449c-42df-a088-c26214e44644. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b4ba3829-449c-42df-a088-c26214e44644"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8888ef4a-0005-49cf-9b83-af19e164999f",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "jeune",
+      "base": {
+        "description": "Tarif jeune / junior",
+        "description_i18n": {
+          "de": "Jugendtarif",
+          "en": "Youth rate",
+          "es": "Tarifa joven / junior",
+          "fr": "Tarif jeune / junior"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8888ef4a-0005-49cf-9b83-af19e164999f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8888ef4a-0005-49cf-9b83-af19e164999f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné au public jeune ou junior, distinct de la catégorie enfant lorsque le prestataire prévoit ces deux catégories ; les âges restent ceux de l'offre.",
+        "description_i18n": {
+          "de": "Tarif für junge Gäste oder Junioren, bei entsprechenden Angeboten getrennt vom Kindertarif; die Altersgrenzen ergeben sich aus dem Angebot.",
+          "en": "Rate intended for young or junior customers, distinct from the child category when both are offered by the provider; ages are those specified in the offer.",
+          "es": "Tarifa destinada al público joven o júnior, distinta de la categoría infantil cuando el prestador ofrece ambas; las edades son las indicadas en la oferta.",
+          "fr": "Tarif destiné au public jeune ou junior, distinct de la catégorie enfant lorsque le prestataire prévoit ces deux catégories ; les âges restent ceux de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8888ef4a-0005-49cf-9b83-af19e164999f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8888ef4a-0005-49cf-9b83-af19e164999f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2236c370-9585-41d4-ae59-0d201ea1f137",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "personne_handicapee",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2236c370-9585-41d4-ae59-0d201ea1f137. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2236c370-9585-41d4-ae59-0d201ea1f137"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2236c370-9585-41d4-ae59-0d201ea1f137. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2236c370-9585-41d4-ae59-0d201ea1f137"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "057056d6-e5dc-4049-89c4-586941a0ee22",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "resident",
+      "base": {
+        "description": "Tarif résident / local",
+        "description_i18n": {
+          "de": "Tarif für ortsansässige Personen",
+          "en": "Local resident rate",
+          "es": "Tarifa para residentes",
+          "fr": "Tarif résident / local"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/057056d6-e5dc-4049-89c4-586941a0ee22. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/057056d6-e5dc-4049-89c4-586941a0ee22"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné aux personnes résidant sur un territoire défini par le prestataire ; il ne fixe pas à lui seul ce territoire ni les justificatifs demandés.",
+        "description_i18n": {
+          "de": "Tarif für Personen mit Wohnsitz in einem vom Anbieter bestimmten Gebiet; die Bezeichnung allein legt weder dieses Gebiet noch erforderliche Nachweise fest.",
+          "en": "Rate intended for people living in an area defined by the provider; the term alone specifies neither that area nor the required evidence.",
+          "es": "Tarifa destinada a personas residentes en un territorio definido por el prestador; el término no fija por sí solo ese territorio ni los justificantes exigidos.",
+          "fr": "Tarif destiné aux personnes résidant sur un territoire défini par le prestataire ; il ne fixe pas à lui seul ce territoire ni les justificatifs demandés."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/057056d6-e5dc-4049-89c4-586941a0ee22. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/057056d6-e5dc-4049-89c4-586941a0ee22"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1224d5d0-d4d3-4661-b136-0be09925e50e",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "scolaire",
+      "base": {
+        "description": "Tarif groupe scolaire",
+        "description_i18n": {
+          "de": "Tarif für Schulgruppen",
+          "en": "School group rate",
+          "es": "Tarifa para grupos escolares",
+          "fr": "Tarif groupe scolaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1224d5d0-d4d3-4661-b136-0be09925e50e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1224d5d0-d4d3-4661-b136-0be09925e50e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné aux groupes accueillis dans le cadre d'une sortie ou d'une activité scolaire, selon la composition et les conditions annoncées par le prestataire.",
+        "description_i18n": {
+          "de": "Tarif für Gruppen im Rahmen eines Schulausflugs oder einer schulischen Aktivität nach der vom Anbieter angegebenen Zusammensetzung und den Bedingungen.",
+          "en": "Rate intended for groups attending a school outing or activity, according to the composition and conditions stated by the provider.",
+          "es": "Tarifa destinada a grupos que participan en una salida o actividad escolar, según la composición y las condiciones indicadas por el prestador.",
+          "fr": "Tarif destiné aux groupes accueillis dans le cadre d'une sortie ou d'une activité scolaire, selon la composition et les conditions annoncées par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1224d5d0-d4d3-4661-b136-0be09925e50e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1224d5d0-d4d3-4661-b136-0be09925e50e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cbf72cf4-9eea-4935-ad1d-07f3b2325e14",
+      "domain": "price_kind",
+      "context_key": "",
+      "code": "senior",
+      "base": {
+        "description": "Tarif senior",
+        "description_i18n": {
+          "de": "Seniorentarif",
+          "en": "Senior rate",
+          "es": "Tarifa senior",
+          "fr": "Tarif senior"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cbf72cf4-9eea-4935-ad1d-07f3b2325e14. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cbf72cf4-9eea-4935-ad1d-07f3b2325e14"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Tarif destiné au public senior ; le seuil d'âge, les conditions d'accès et la réduction éventuelle sont ceux indiqués par le prestataire.",
+        "description_i18n": {
+          "de": "Tarif für ältere Gäste; Altersgrenze, Zugangsbedingungen und eine mögliche Ermäßigung werden vom Anbieter angegeben.",
+          "en": "Rate intended for senior customers; the age threshold, access conditions and any discount are those stated by the provider.",
+          "es": "Tarifa destinada al público sénior; el umbral de edad, las condiciones de acceso y el posible descuento son los indicados por el prestador.",
+          "fr": "Tarif destiné au public senior ; le seuil d'âge, les conditions d'accès et la réduction éventuelle sont ceux indiqués par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cbf72cf4-9eea-4935-ad1d-07f3b2325e14. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cbf72cf4-9eea-4935-ad1d-07f3b2325e14"
+          }
+        ]
+      }
+    }
+  ]
+}

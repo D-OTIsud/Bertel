@@ -1,0 +1,32 @@
+# Relevé ciblé du contrat éditorial du thésaurus
+
+La requête [thesaurus_editorial_policy_catalog.sql](thesaurus_editorial_policy_catalog.sql)
+est un unique `SELECT`. Elle relève les signatures, propriétaires, ACL et empreintes
+des fonctions concernées, les politiques RLS du schéma privé, les exigences des
+vocabulaires et leurs contraintes. Elle ne retourne aucun concept, document de
+révision, jeton, corps de fonction ou ligne métier.
+
+Exécuter cette requête via le connecteur Supabase **Bertel**, projet
+`ryycrdhlkmzpxwwwwupy`, après confirmation des migrations installées. Enregistrer
+uniquement l'objet `supplement`, sans l'enveloppe de transport, puis y joindre la
+provenance réelle du transport et du projet. Ne jamais déduire l'environnement du
+seul nom de base `postgres`.
+
+Le premier relevé de cette livraison est
+[THESAURUS_EDITORIAL_POLICY_PHASE1_CATALOG.json](../../db-graph-out/THESAURUS_EDITORIAL_POLICY_PHASE1_CATALOG.json).
+Il observe seulement les trois premières migrations. Le complément final doit
+être capturé après confirmation de l'installation du correctif des recherches
+héritées et de la politique des quatre langues.
+
+Pour comparer les deux observations, vérifier les identités de domaines, les
+flags `is_public`/`is_governed`, les ACL/RLS, le propriétaire et les droits du rôle
+de publication, ainsi que les empreintes du noyau `activate` et des projections
+publiques. Les changements attendus concernent les validateurs, la lecture privée
+des termes hérités, leur writer et son registre de préparation. Un autre écart
+doit être expliqué ; aucune empreinte différente n'est réputée acceptable du seul
+fait qu'une migration a réussi.
+
+Ce relevé est un supplément. En l'absence de `TBLS_DSN`, il ne remplace pas la
+régénération complète décrite dans [README.md](README.md) et ne réécrit ni
+`graph.json`, ni les pages de tables, ni la référence HTML. Le collecteur général
+pourra l'absorber lors d'une prochaine extraction complète vérifiée.

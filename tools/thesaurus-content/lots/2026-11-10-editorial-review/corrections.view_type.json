@@ -1,0 +1,526 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-view_type-1",
+  "proposals": [
+    {
+      "concept_id": "761e4b1c-5de0-465d-a4c2-9b843d701f90",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "city",
+      "base": {
+        "description": "Vue sur la ville",
+        "description_i18n": {
+          "de": "Blick auf die Stadt",
+          "en": "View of the city",
+          "es": "Vista de la ciudad",
+          "fr": "Vue sur la ville"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/761e4b1c-5de0-465d-a4c2-9b843d701f90. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/761e4b1c-5de0-465d-a4c2-9b843d701f90"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur le paysage urbain, distincte de la seule indication que l'établissement est situé en ville.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf eine Stadtlandschaft; von der bloßen Angabe einer städtischen Lage des Betriebs zu unterscheiden.",
+          "en": "View from the room over an urban landscape, distinct from simply indicating that the establishment is in town.",
+          "es": "Vista desde la habitación sobre un paisaje urbano, distinta de la mera indicación de que el establecimiento está en la ciudad.",
+          "fr": "Vue depuis la chambre sur le paysage urbain, distincte de la seule indication que l'établissement est situé en ville."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/761e4b1c-5de0-465d-a4c2-9b843d701f90. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/761e4b1c-5de0-465d-a4c2-9b843d701f90"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c076ea18-565e-4f9a-9e2a-fe1d28acca13",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "courtyard",
+      "base": {
+        "description": "Vue sur la cour intérieure",
+        "description_i18n": {
+          "de": "Blick auf den Innenhof",
+          "en": "View of the inner courtyard",
+          "es": "Vista al patio interior",
+          "fr": "Vue sur la cour intérieure"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c076ea18-565e-4f9a-9e2a-fe1d28acca13. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c076ea18-565e-4f9a-9e2a-fe1d28acca13"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre donnant sur une cour intérieure du bâtiment ou de l'établissement.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf einen Innenhof des Gebäudes oder Betriebs.",
+          "en": "View from the room onto an inner courtyard of the building or establishment.",
+          "es": "Vista desde la habitación hacia un patio interior del edificio o establecimiento.",
+          "fr": "Vue depuis la chambre donnant sur une cour intérieure du bâtiment ou de l'établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c076ea18-565e-4f9a-9e2a-fe1d28acca13. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c076ea18-565e-4f9a-9e2a-fe1d28acca13"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "750aafcf-6a78-4dfd-80af-ae077d32c893",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "forest",
+      "base": {
+        "description": "Vue sur la forêt",
+        "description_i18n": {
+          "de": "Blick auf den Wald",
+          "en": "View of the forest",
+          "es": "Vista del bosque",
+          "fr": "Vue sur la forêt"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/750aafcf-6a78-4dfd-80af-ae077d32c893. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/750aafcf-6a78-4dfd-80af-ae077d32c893"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur une forêt ; le paysage visible est distinct de la seule proximité d'un espace boisé.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf einen Wald; die sichtbare Landschaft ist von bloßer Waldnähe zu unterscheiden.",
+          "en": "View from the room onto a forest; the visible landscape is distinct from merely being near woodland.",
+          "es": "Vista desde la habitación hacia un bosque; el paisaje visible es distinto de la mera proximidad a una zona arbolada.",
+          "fr": "Vue depuis la chambre sur une forêt ; le paysage visible est distinct de la seule proximité d'un espace boisé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/750aafcf-6a78-4dfd-80af-ae077d32c893. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/750aafcf-6a78-4dfd-80af-ae077d32c893"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "666968b8-ab89-4d31-a3a3-ff9fbaef48c0",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "garden",
+      "base": {
+        "description": "Vue sur le jardin",
+        "description_i18n": {
+          "de": "Blick auf den Garten",
+          "en": "View of the garden",
+          "es": "Vista del jardín",
+          "fr": "Vue sur le jardin"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/666968b8-ab89-4d31-a3a3-ff9fbaef48c0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/666968b8-ab89-4d31-a3a3-ff9fbaef48c0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur un jardin, sans que cette valeur précise les conditions d'accès au jardin.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf einen Garten, ohne die Bedingungen für den Zugang zu diesem Garten festzulegen.",
+          "en": "View from the room onto a garden, without specifying the conditions of access to it.",
+          "es": "Vista desde la habitación hacia un jardín, sin especificar las condiciones de acceso a él.",
+          "fr": "Vue depuis la chambre sur un jardin, sans que cette valeur précise les conditions d'accès au jardin."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/666968b8-ab89-4d31-a3a3-ff9fbaef48c0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/666968b8-ab89-4d31-a3a3-ff9fbaef48c0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b4d5f564-44b1-4afb-b080-a4ace70f2f13",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "lake",
+      "base": {
+        "description": "Vue sur le lac",
+        "description_i18n": {
+          "de": "Blick auf den See",
+          "en": "View of the lake",
+          "es": "Vista del lago",
+          "fr": "Vue sur le lac"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b4d5f564-44b1-4afb-b080-a4ace70f2f13. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b4d5f564-44b1-4afb-b080-a4ace70f2f13"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre donnant sur un lac, distincte d'une vue sur la mer ou sur une rivière.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf einen See; von einem Meer- oder Flussblick zu unterscheiden.",
+          "en": "View from the room onto a lake, distinct from a sea or river view.",
+          "es": "Vista desde la habitación hacia un lago, distinta de vistas al mar o a un río.",
+          "fr": "Vue depuis la chambre donnant sur un lac, distincte d'une vue sur la mer ou sur une rivière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b4d5f564-44b1-4afb-b080-a4ace70f2f13. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b4d5f564-44b1-4afb-b080-a4ace70f2f13"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "19cc7f63-0dfd-4f80-926e-cb601dc25950",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "mountain",
+      "base": {
+        "description": "Vue sur les montagnes",
+        "description_i18n": {
+          "de": "Blick auf die Berge",
+          "en": "View of the mountains",
+          "es": "Vista de las montañas",
+          "fr": "Vue sur les montagnes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/19cc7f63-0dfd-4f80-926e-cb601dc25950. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/19cc7f63-0dfd-4f80-926e-cb601dc25950"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur les montagnes, distincte de la seule implantation de l'établissement en zone montagneuse.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf Berge; von der bloßen Lage des Betriebs in einer Bergregion zu unterscheiden.",
+          "en": "View from the room of the mountains, distinct from simply locating the establishment in a mountain area.",
+          "es": "Vista desde la habitación hacia las montañas, distinta de la mera ubicación del establecimiento en una zona montañosa.",
+          "fr": "Vue depuis la chambre sur les montagnes, distincte de la seule implantation de l'établissement en zone montagneuse."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/19cc7f63-0dfd-4f80-926e-cb601dc25950. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/19cc7f63-0dfd-4f80-926e-cb601dc25950"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c449476a-e958-40f6-9e99-18889877a645",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "none",
+      "base": {
+        "description": "Pas de vue spécifique",
+        "description_i18n": {
+          "de": "Keine bestimmte Aussicht",
+          "en": "No specific view offered",
+          "es": "Sin vista específica",
+          "fr": "Pas de vue spécifique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c449476a-e958-40f6-9e99-18889877a645. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c449476a-e958-40f6-9e99-18889877a645"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Chambre pour laquelle aucune vue particulière n'est annoncée ; cette valeur n'indique pas l'absence de fenêtre.",
+        "description_i18n": {
+          "de": "Zimmer, für das keine besondere Aussicht angegeben wird; dieser Wert bedeutet nicht, dass kein Fenster vorhanden ist.",
+          "en": "Room for which no particular view is advertised; this value does not indicate the absence of a window.",
+          "es": "Habitación para la que no se anuncia ninguna vista particular; este valor no indica ausencia de ventana.",
+          "fr": "Chambre pour laquelle aucune vue particulière n'est annoncée ; cette valeur n'indique pas l'absence de fenêtre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c449476a-e958-40f6-9e99-18889877a645. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c449476a-e958-40f6-9e99-18889877a645"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ababd32f-ed8d-4a31-a291-872bd093be51",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "ocean",
+      "base": {
+        "description": "Vue panoramique sur l'océan",
+        "description_i18n": {
+          "de": "Panoramablick auf den Ozean",
+          "en": "Panoramic view of the ocean",
+          "es": "Vista panorámica del océano",
+          "fr": "Vue panoramique sur l'océan"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ababd32f-ed8d-4a31-a291-872bd093be51. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ababd32f-ed8d-4a31-a291-872bd093be51"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue panoramique depuis la chambre sur l'océan, plus spécifique que l'indication générale de vue sur la mer dans ce catalogue.",
+        "description_i18n": {
+          "de": "Panoramablick aus dem Zimmer auf den Ozean; in diesem Katalog spezifischer als die allgemeine Angabe Meerblick.",
+          "en": "Panoramic view of the ocean from the room, more specific than the general sea-view indication in this catalogue.",
+          "es": "Vista panorámica del océano desde la habitación, más específica que la indicación general de vistas al mar en este catálogo.",
+          "fr": "Vue panoramique depuis la chambre sur l'océan, plus spécifique que l'indication générale de vue sur la mer dans ce catalogue."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ababd32f-ed8d-4a31-a291-872bd093be51. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ababd32f-ed8d-4a31-a291-872bd093be51"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4278306b-c583-4b5c-b656-0f6c50a6de07",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "park",
+      "base": {
+        "description": "Vue sur le parc",
+        "description_i18n": {
+          "de": "Blick auf den Park",
+          "en": "View of the park",
+          "es": "Vista del parque",
+          "fr": "Vue sur le parc"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4278306b-c583-4b5c-b656-0f6c50a6de07. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4278306b-c583-4b5c-b656-0f6c50a6de07"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur un parc, sans que cette valeur implique un classement en parc national.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf einen Park, ohne damit einen Nationalparkstatus vorauszusetzen.",
+          "en": "View from the room onto a park, without implying national park status.",
+          "es": "Vista desde la habitación hacia un parque, sin implicar una clasificación como parque nacional.",
+          "fr": "Vue depuis la chambre sur un parc, sans que cette valeur implique un classement en parc national."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4278306b-c583-4b5c-b656-0f6c50a6de07. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4278306b-c583-4b5c-b656-0f6c50a6de07"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6edde1b3-6d48-4340-9f32-50e035a45078",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "pool",
+      "base": {
+        "description": "Vue sur la piscine",
+        "description_i18n": {
+          "de": "Blick auf den Pool",
+          "en": "View of the pool",
+          "es": "Vista de la piscina",
+          "fr": "Vue sur la piscine"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6edde1b3-6d48-4340-9f32-50e035a45078. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6edde1b3-6d48-4340-9f32-50e035a45078"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur une piscine ; la vue et les conditions d'utilisation du bassin sont deux informations distinctes.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf ein Schwimmbecken; die Aussicht und die Nutzungsbedingungen des Beckens sind getrennte Angaben.",
+          "en": "View from the room onto a swimming pool; the view and the conditions for using the pool are separate matters.",
+          "es": "Vista desde la habitación hacia una piscina; las vistas y las condiciones de uso de la piscina son informaciones distintas.",
+          "fr": "Vue depuis la chambre sur une piscine ; la vue et les conditions d'utilisation du bassin sont deux informations distinctes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6edde1b3-6d48-4340-9f32-50e035a45078. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6edde1b3-6d48-4340-9f32-50e035a45078"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cd97ef75-05e2-42c9-8e95-a4c421f12ab7",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "river",
+      "base": {
+        "description": "Vue sur la rivière",
+        "description_i18n": {
+          "de": "Blick auf den Fluss",
+          "en": "View of the river",
+          "es": "Vista del río",
+          "fr": "Vue sur la rivière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cd97ef75-05e2-42c9-8e95-a4c421f12ab7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cd97ef75-05e2-42c9-8e95-a4c421f12ab7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur une rivière ou un cours d'eau, distincte de la seule proximité de ce dernier.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf einen Fluss oder Wasserlauf; von der bloßen Nähe dazu zu unterscheiden.",
+          "en": "View from the room onto a river or watercourse, distinct from merely being near it.",
+          "es": "Vista desde la habitación hacia un río o curso de agua, distinta de la mera proximidad a él.",
+          "fr": "Vue depuis la chambre sur une rivière ou un cours d'eau, distincte de la seule proximité de ce dernier."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cd97ef75-05e2-42c9-8e95-a4c421f12ab7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cd97ef75-05e2-42c9-8e95-a4c421f12ab7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e7a48dc5-880a-4f0b-bb90-26f287b4ef79",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "sea",
+      "base": {
+        "description": "Vue sur la mer ou l'océan",
+        "description_i18n": {
+          "de": "Blick auf das Meer oder den Ozean",
+          "en": "View of the sea or ocean",
+          "es": "Vista al mar u océano",
+          "fr": "Vue sur la mer ou l'océan"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e7a48dc5-880a-4f0b-bb90-26f287b4ef79. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e7a48dc5-880a-4f0b-bb90-26f287b4ef79"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre sur la mer ou l'océan, sans exigence de panorama étendu définie par cette valeur.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf das Meer oder den Ozean, ohne dass dieser Wert ein weites Panorama voraussetzt.",
+          "en": "View from the room onto the sea or ocean, with no wide-panorama requirement defined by this value.",
+          "es": "Vista desde la habitación hacia el mar o el océano, sin exigencia de un panorama amplio definida por este valor.",
+          "fr": "Vue depuis la chambre sur la mer ou l'océan, sans exigence de panorama étendu définie par cette valeur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e7a48dc5-880a-4f0b-bb90-26f287b4ef79. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e7a48dc5-880a-4f0b-bb90-26f287b4ef79"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bffe6bf5-29a0-4768-9c7d-668d4f4e5f2f",
+      "domain": "view_type",
+      "context_key": "",
+      "code": "street",
+      "base": {
+        "description": "Vue sur la rue",
+        "description_i18n": {
+          "de": "Blick auf die Straße",
+          "en": "View of the street",
+          "es": "Vista de la calle",
+          "fr": "Vue sur la rue"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bffe6bf5-29a0-4768-9c7d-668d4f4e5f2f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bffe6bf5-29a0-4768-9c7d-668d4f4e5f2f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vue depuis la chambre donnant sur une rue ; elle précise l'orientation visible, pas le niveau sonore.",
+        "description_i18n": {
+          "de": "Blick aus dem Zimmer auf eine Straße; diese Angabe beschreibt den sichtbaren Ausblick und nicht den Geräuschpegel.",
+          "en": "View from the room onto a street; this specifies the visible outlook rather than the noise level.",
+          "es": "Vista desde la habitación hacia una calle; especifica la orientación visible, no el nivel de ruido.",
+          "fr": "Vue depuis la chambre donnant sur une rue ; elle précise l'orientation visible, pas le niveau sonore."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bffe6bf5-29a0-4768-9c7d-668d4f4e5f2f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bffe6bf5-29a0-4768-9c7d-668d4f4e5f2f"
+          }
+        ]
+      }
+    }
+  ]
+}

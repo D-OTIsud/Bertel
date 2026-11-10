@@ -1,0 +1,464 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-insurance_type-1",
+  "proposals": [
+    {
+      "concept_id": "4c84aff8-0387-408c-b02a-787ac18070a2",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "adventure",
+      "base": {
+        "description": "Assurance pour sports d'aventure",
+        "description_i18n": {
+          "de": "Versicherung für Abenteuersportarten",
+          "en": "Adventure sports insurance",
+          "es": "Seguro para deportes de aventura",
+          "fr": "Assurance pour sports d'aventure"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4c84aff8-0387-408c-b02a-787ac18070a2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4c84aff8-0387-408c-b02a-787ac18070a2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Assurance destinée aux risques liés aux activités ou sports d'aventure pendant un séjour ; les activités effectivement couvertes sont celles du contrat.",
+        "description_i18n": {
+          "de": "Versicherung für Risiken bei Abenteueraktivitäten oder -sportarten während eines Aufenthalts; die tatsächlich versicherten Aktivitäten ergeben sich aus dem Vertrag.",
+          "en": "Insurance intended for risks associated with adventure activities or sports during a stay; the activities actually covered are those specified in the contract.",
+          "es": "Seguro destinado a los riesgos de actividades o deportes de aventura durante una estancia; las actividades realmente cubiertas son las previstas en el contrato.",
+          "fr": "Assurance destinée aux risques liés aux activités ou sports d'aventure pendant un séjour ; les activités effectivement couvertes sont celles du contrat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4c84aff8-0387-408c-b02a-787ac18070a2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4c84aff8-0387-408c-b02a-787ac18070a2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2870da84-0af4-42ff-ab7a-96c0d2094784",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "business",
+      "base": {
+        "description": "Assurance voyage d'affaires",
+        "description_i18n": {
+          "de": "Reiseversicherung für Geschäftsreisen",
+          "en": "Business travel insurance",
+          "es": "Seguro de viaje de negocios",
+          "fr": "Assurance voyage d'affaires"
+        },
+        "name": "Assurance business",
+        "name_i18n": {
+          "de": "Geschäftsreiseversicherung",
+          "en": "Business insurance",
+          "es": "Seguro de negocios",
+          "fr": "Assurance business"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Business travel insurance"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Seguro de viaje de negocios"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assurance voyage d’affaires"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2870da84-0af4-42ff-ab7a-96c0d2094784. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2870da84-0af4-42ff-ab7a-96c0d2094784"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Assurance voyage conçue pour les déplacements professionnels ; elle décrit l'objet du contrat et non le statut professionnel de l'assuré dans le catalogue de clientèle.",
+        "description_i18n": {
+          "de": "Für Geschäftsreisen vorgesehene Reiseversicherung; sie bezeichnet den Vertragszweck und nicht den beruflichen Status im Gästeprofilkatalog.",
+          "en": "Travel insurance designed for business trips; it identifies the contract's purpose rather than the insured person's status in the customer-profile catalogue.",
+          "es": "Seguro de viaje concebido para desplazamientos profesionales; identifica el objeto del contrato, no la condición profesional del asegurado en el catálogo de clientela.",
+          "fr": "Assurance voyage conçue pour les déplacements professionnels ; elle décrit l'objet du contrat et non le statut professionnel de l'assuré dans le catalogue de clientèle."
+        },
+        "name": "Assurance voyages d'affaires",
+        "name_i18n": {
+          "de": "Geschäftsreiseversicherung",
+          "en": "Business travel insurance",
+          "es": "Seguro de viajes de negocios",
+          "fr": "Assurance voyages d'affaires"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Seguro de viaje de negocios"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assurance voyage d’affaires"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Business insurance"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Seguro de negocios"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Assurance business"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2870da84-0af4-42ff-ab7a-96c0d2094784. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2870da84-0af4-42ff-ab7a-96c0d2094784"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5a4911c0-c219-4048-bce9-afb146d3852d",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "cancellation",
+      "base": {
+        "description": "Garantie couvrant l'annulation d'un voyage ou d'une prestation réservée",
+        "description_i18n": {
+          "de": "Schützt bei Stornierung einer gebuchten Reise oder Leistung",
+          "en": "Covers the cancellation of a booked trip or service",
+          "es": "Cubre la cancelación de un viaje o servicio reservado",
+          "fr": "Garantie couvrant l'annulation d'un voyage ou d'une prestation réservée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5a4911c0-c219-4048-bce9-afb146d3852d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5a4911c0-c219-4048-bce9-afb146d3852d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Garantie d'assurance portant sur les conséquences financières de l'annulation d'un voyage ou d'une prestation réservée, dans les situations prévues au contrat.",
+        "description_i18n": {
+          "de": "Versicherungsschutz für die finanziellen Folgen der Stornierung einer Reise oder gebuchten Leistung in den vertraglich vorgesehenen Fällen.",
+          "en": "Insurance cover for the financial consequences of cancelling a trip or booked service in the circumstances specified in the contract.",
+          "es": "Cobertura de seguro para las consecuencias económicas de cancelar un viaje o una prestación reservada en las situaciones previstas en el contrato.",
+          "fr": "Garantie d'assurance portant sur les conséquences financières de l'annulation d'un voyage ou d'une prestation réservée, dans les situations prévues au contrat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5a4911c0-c219-4048-bce9-afb146d3852d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5a4911c0-c219-4048-bce9-afb146d3852d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c8e277db-60a5-4dda-8e48-4b55bfe40d87",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "group",
+      "base": {
+        "description": "Assurance pour groupes",
+        "description_i18n": {
+          "de": "Gruppenreiseversicherung",
+          "en": "Group travel insurance",
+          "es": "Seguro para grupos",
+          "fr": "Assurance pour groupes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c8e277db-60a5-4dda-8e48-4b55bfe40d87. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c8e277db-60a5-4dda-8e48-4b55bfe40d87"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Assurance prévue pour couvrir plusieurs personnes participant à un même voyage ou à une même activité, selon les bénéficiaires et garanties du contrat.",
+        "description_i18n": {
+          "de": "Versicherung für mehrere Personen, die an derselben Reise oder Aktivität teilnehmen, entsprechend den vertraglich bestimmten Versicherten und Leistungen.",
+          "en": "Insurance intended to cover several people participating in the same trip or activity, according to the beneficiaries and cover specified in the contract.",
+          "es": "Seguro destinado a cubrir a varias personas que participan en un mismo viaje o actividad, según los beneficiarios y coberturas del contrato.",
+          "fr": "Assurance prévue pour couvrir plusieurs personnes participant à un même voyage ou à une même activité, selon les bénéficiaires et garanties du contrat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c8e277db-60a5-4dda-8e48-4b55bfe40d87. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c8e277db-60a5-4dda-8e48-4b55bfe40d87"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "36ce9c16-813d-466f-86dd-79505ee324d8",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "liability",
+      "base": {
+        "description": "Garantie couvrant les dommages causés à un tiers",
+        "description_i18n": {
+          "de": "Deckt Schäden ab, die Dritten zugefügt werden",
+          "en": "Covers damage or injury caused to third parties",
+          "es": "Cubre los daños causados a terceros",
+          "fr": "Garantie couvrant les dommages causés à un tiers"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/36ce9c16-813d-466f-86dd-79505ee324d8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/36ce9c16-813d-466f-86dd-79505ee324d8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Garantie d'assurance relative à la responsabilité pour des dommages causés à des tiers ; les situations et montants couverts dépendent du contrat.",
+        "description_i18n": {
+          "de": "Versicherungsschutz für die Haftung bei Schäden gegenüber Dritten; versicherte Fälle und Beträge richten sich nach dem Vertrag.",
+          "en": "Insurance cover relating to liability for harm caused to third parties; the covered circumstances and amounts depend on the contract.",
+          "es": "Cobertura de seguro relativa a la responsabilidad por daños causados a terceros; las situaciones y los importes cubiertos dependen del contrato.",
+          "fr": "Garantie d'assurance relative à la responsabilité pour des dommages causés à des tiers ; les situations et montants couverts dépendent du contrat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/36ce9c16-813d-466f-86dd-79505ee324d8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/36ce9c16-813d-466f-86dd-79505ee324d8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "811baf1c-df84-498b-b277-13a65bf042b7",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "luggage",
+      "base": {
+        "description": "Garantie couvrant la perte, le vol ou la détérioration des bagages",
+        "description_i18n": {
+          "de": "Deckt Verlust, Diebstahl oder Beschädigung von Gepäck ab",
+          "en": "Baggage insurance",
+          "es": "Cubre la pérdida, el robo o el daño del equipaje",
+          "fr": "Garantie couvrant la perte, le vol ou la détérioration des bagages"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/811baf1c-df84-498b-b277-13a65bf042b7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/811baf1c-df84-498b-b277-13a65bf042b7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Garantie d'assurance portant sur la perte, le vol ou la détérioration de bagages pendant le voyage, selon les événements et limites du contrat.",
+        "description_i18n": {
+          "de": "Versicherungsschutz bei Verlust, Diebstahl oder Beschädigung von Reisegepäck im Rahmen der vertraglich vorgesehenen Ereignisse und Grenzen.",
+          "en": "Insurance cover for loss, theft or damage to luggage during travel, subject to the events and limits specified in the contract.",
+          "es": "Cobertura de seguro para la pérdida, el robo o el deterioro del equipaje durante el viaje, según los acontecimientos y límites del contrato.",
+          "fr": "Garantie d'assurance portant sur la perte, le vol ou la détérioration de bagages pendant le voyage, selon les événements et limites du contrat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/811baf1c-df84-498b-b277-13a65bf042b7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/811baf1c-df84-498b-b277-13a65bf042b7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "eb3fb855-1fb3-40cb-adb9-529ca69de934",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "medical",
+      "base": {
+        "description": "Garantie couvrant les frais médicaux engagés pendant un voyage",
+        "description_i18n": {
+          "de": "Deckt medizinische Kosten während einer Reise ab",
+          "en": "Covers medical costs incurred while travelling",
+          "es": "Cubre los gastos médicos durante un viaje",
+          "fr": "Garantie couvrant les frais médicaux engagés pendant un voyage"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eb3fb855-1fb3-40cb-adb9-529ca69de934. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eb3fb855-1fb3-40cb-adb9-529ca69de934"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Garantie d'assurance portant sur des frais médicaux engagés pendant un voyage ; les soins et remboursements concernés sont déterminés par le contrat.",
+        "description_i18n": {
+          "de": "Versicherungsschutz für während einer Reise anfallende medizinische Kosten; erfasste Behandlungen und Erstattungen werden im Vertrag bestimmt.",
+          "en": "Insurance cover relating to medical expenses incurred during travel; the treatment and reimbursements concerned are determined by the contract.",
+          "es": "Cobertura de seguro relativa a gastos médicos durante un viaje; la atención y los reembolsos contemplados los determina el contrato.",
+          "fr": "Garantie d'assurance portant sur des frais médicaux engagés pendant un voyage ; les soins et remboursements concernés sont déterminés par le contrat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eb3fb855-1fb3-40cb-adb9-529ca69de934. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eb3fb855-1fb3-40cb-adb9-529ca69de934"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fc4144b9-bc3a-4373-9b9a-aa3ff24d3f17",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "multi_risk",
+      "base": {
+        "description": "Contrat regroupant plusieurs risques couverts dans une même formule",
+        "description_i18n": {
+          "de": "Umfassende Multirisk-Versicherung",
+          "en": "Comprehensive multi-risk insurance",
+          "es": "Seguro integral multirriesgo",
+          "fr": "Contrat regroupant plusieurs risques couverts dans une même formule"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fc4144b9-bc3a-4373-9b9a-aa3ff24d3f17. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fc4144b9-bc3a-4373-9b9a-aa3ff24d3f17"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Contrat ou formule d'assurance regroupant plusieurs catégories de risques dans une même offre, sans supposer que tous les risques possibles sont couverts.",
+        "description_i18n": {
+          "de": "Versicherungsvertrag oder -tarif, der mehrere Risikokategorien in einem Angebot bündelt, ohne dadurch sämtliche möglichen Risiken abzudecken.",
+          "en": "Insurance contract or plan combining several risk categories in one offer, without implying that every possible risk is covered.",
+          "es": "Contrato o modalidad de seguro que reúne varias categorías de riesgos en una misma oferta, sin suponer que cubre todos los riesgos posibles.",
+          "fr": "Contrat ou formule d'assurance regroupant plusieurs catégories de risques dans une même offre, sans supposer que tous les risques possibles sont couverts."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fc4144b9-bc3a-4373-9b9a-aa3ff24d3f17. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fc4144b9-bc3a-4373-9b9a-aa3ff24d3f17"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5512ae4c-0be0-4ae7-a0f4-1704ad69cce2",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "repatriation",
+      "base": {
+        "description": "Garantie couvrant le rapatriement du bénéficiaire vers son domicile",
+        "description_i18n": {
+          "de": "Deckt die Rückführung der versicherten Person an ihren Wohnort ab",
+          "en": "Covers the return of the insured person to their home",
+          "es": "Cubre el regreso de la persona asegurada a su domicilio",
+          "fr": "Garantie couvrant le rapatriement du bénéficiaire vers son domicile"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5512ae4c-0be0-4ae7-a0f4-1704ad69cce2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5512ae4c-0be0-4ae7-a0f4-1704ad69cce2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Garantie portant sur l'organisation ou la prise en charge du retour d'un bénéficiaire vers son domicile ou le lieu prévu au contrat en cas de situation couverte.",
+        "description_i18n": {
+          "de": "Schutz für die Organisation oder Kostenübernahme der Rückkehr einer versicherten Person nach Hause oder zum vertraglich vorgesehenen Ort bei einem versicherten Ereignis.",
+          "en": "Cover for arranging or paying for a beneficiary's return home or to the destination specified in the contract following a covered event.",
+          "es": "Cobertura para organizar o asumir el regreso de un beneficiario a su domicilio o al lugar previsto en el contrato ante una situación cubierta.",
+          "fr": "Garantie portant sur l'organisation ou la prise en charge du retour d'un bénéficiaire vers son domicile ou le lieu prévu au contrat en cas de situation couverte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5512ae4c-0be0-4ae7-a0f4-1704ad69cce2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5512ae4c-0be0-4ae7-a0f4-1704ad69cce2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d3e4adb1-c60b-4386-a5b5-feb1abbb9e9a",
+      "domain": "insurance_type",
+      "context_key": "",
+      "code": "travel",
+      "base": {
+        "description": "Garantie couvrant les risques liés à un voyage",
+        "description_i18n": {
+          "de": "Deckt Risiken einer Reise ab",
+          "en": "Covers risks related to a trip",
+          "es": "Cubre los riesgos asociados a un viaje",
+          "fr": "Garantie couvrant les risques liés à un voyage"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d3e4adb1-c60b-4386-a5b5-feb1abbb9e9a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d3e4adb1-c60b-4386-a5b5-feb1abbb9e9a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale d'assurance destinée aux risques associés à un voyage ; le détail des garanties distingue notamment annulation, bagages, frais médicaux ou rapatriement.",
+        "description_i18n": {
+          "de": "Allgemeine Versicherungskategorie für Reiserisiken; einzelne Leistungen unterscheiden beispielsweise Stornierung, Gepäck, medizinische Kosten oder Rücktransport.",
+          "en": "General insurance category for risks associated with travel; specific cover may distinguish cancellation, luggage, medical expenses or repatriation.",
+          "es": "Categoría general de seguro para riesgos asociados a un viaje; las coberturas específicas pueden distinguir cancelación, equipaje, gastos médicos o repatriación.",
+          "fr": "Catégorie générale d'assurance destinée aux risques associés à un voyage ; le détail des garanties distingue notamment annulation, bagages, frais médicaux ou rapatriement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d3e4adb1-c60b-4386-a5b5-feb1abbb9e9a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d3e4adb1-c60b-4386-a5b5-feb1abbb9e9a"
+          }
+        ]
+      }
+    }
+  ]
+}

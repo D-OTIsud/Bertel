@@ -1,0 +1,806 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-language-1",
+  "proposals": [
+    {
+      "concept_id": "aa7eb136-6021-40cd-a0b6-32d1f3ca0e82",
+      "domain": "language",
+      "context_key": "",
+      "code": "ar",
+      "base": {
+        "description": "Langue arabe (code ar)",
+        "description_i18n": {
+          "de": "Arabische Sprache (Code ar)",
+          "en": "Arabic language (code ar)",
+          "es": "Idioma árabe (código ar)",
+          "fr": "Langue arabe (code ar)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa7eb136-6021-40cd-a0b6-32d1f3ca0e82. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa7eb136-6021-40cd-a0b6-32d1f3ca0e82"
+          }
+        ]
+      },
+      "changes": {
+        "description": "L’arabe est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ar » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Arabisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code ar bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Arabic is a language that may be declared for guest welcome or listing content. Its code, ar, identifies the language; proficiency is specified separately.",
+          "es": "El idioma árabe puede declararse para la acogida o los contenidos de una ficha. Su código, ar, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "L’arabe est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ar » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa7eb136-6021-40cd-a0b6-32d1f3ca0e82. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa7eb136-6021-40cd-a0b6-32d1f3ca0e82"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "65f774e1-b79f-4682-946c-0b2f8e5c3f03",
+      "domain": "language",
+      "context_key": "",
+      "code": "de",
+      "base": {
+        "description": "Langue allemande (code de)",
+        "description_i18n": {
+          "de": "Deutsche Sprache (Code de)",
+          "en": "German language (code de)",
+          "es": "Idioma alemán (código de)",
+          "fr": "Langue allemande (code de)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65f774e1-b79f-4682-946c-0b2f8e5c3f03. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65f774e1-b79f-4682-946c-0b2f8e5c3f03"
+          }
+        ]
+      },
+      "changes": {
+        "description": "L’allemand est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « de » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Deutsch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code de bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "German is a language that may be declared for guest welcome or listing content. Its code, de, identifies the language; proficiency is specified separately.",
+          "es": "El idioma alemán puede declararse para la acogida o los contenidos de una ficha. Su código, de, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "L’allemand est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « de » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65f774e1-b79f-4682-946c-0b2f8e5c3f03. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65f774e1-b79f-4682-946c-0b2f8e5c3f03"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "65368368-f744-4ee4-9bb7-76fa1ca93cae",
+      "domain": "language",
+      "context_key": "",
+      "code": "en",
+      "base": {
+        "description": "Langue anglaise (code en)",
+        "description_i18n": {
+          "de": "Englische Sprache (Code en)",
+          "en": "English language (code en)",
+          "es": "Idioma inglés (código en)",
+          "fr": "Langue anglaise (code en)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65368368-f744-4ee4-9bb7-76fa1ca93cae. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65368368-f744-4ee4-9bb7-76fa1ca93cae"
+          }
+        ]
+      },
+      "changes": {
+        "description": "L’anglais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « en » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Englisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code en bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "English is a language that may be declared for guest welcome or listing content. Its code, en, identifies the language; proficiency is specified separately.",
+          "es": "El idioma inglés puede declararse para la acogida o los contenidos de una ficha. Su código, en, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "L’anglais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « en » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65368368-f744-4ee4-9bb7-76fa1ca93cae. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65368368-f744-4ee4-9bb7-76fa1ca93cae"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "194efd93-0d08-404c-85e2-0b945a7e2a3e",
+      "domain": "language",
+      "context_key": "",
+      "code": "es",
+      "base": {
+        "description": "Langue espagnole (code es)",
+        "description_i18n": {
+          "de": "Spanische Sprache (Code es)",
+          "en": "Spanish language (code es)",
+          "es": "Idioma español (código es)",
+          "fr": "Langue espagnole (code es)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/194efd93-0d08-404c-85e2-0b945a7e2a3e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/194efd93-0d08-404c-85e2-0b945a7e2a3e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "L’espagnol est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « es » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Spanisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code es bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Spanish is a language that may be declared for guest welcome or listing content. Its code, es, identifies the language; proficiency is specified separately.",
+          "es": "El idioma español puede declararse para la acogida o los contenidos de una ficha. Su código, es, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "L’espagnol est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « es » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/194efd93-0d08-404c-85e2-0b945a7e2a3e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/194efd93-0d08-404c-85e2-0b945a7e2a3e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3ae223e1-9eb4-4cd2-912e-8609f11019c8",
+      "domain": "language",
+      "context_key": "",
+      "code": "fr",
+      "base": {
+        "description": "Langue française (code fr)",
+        "description_i18n": {
+          "de": "Französische Sprache (Code fr)",
+          "en": "French language (code fr)",
+          "es": "Idioma francés (código fr)",
+          "fr": "Langue française (code fr)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3ae223e1-9eb4-4cd2-912e-8609f11019c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3ae223e1-9eb4-4cd2-912e-8609f11019c8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le français est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « fr » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Französisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code fr bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "French is a language that may be declared for guest welcome or listing content. Its code, fr, identifies the language; proficiency is specified separately.",
+          "es": "El idioma francés puede declararse para la acogida o los contenidos de una ficha. Su código, fr, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le français est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « fr » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3ae223e1-9eb4-4cd2-912e-8609f11019c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3ae223e1-9eb4-4cd2-912e-8609f11019c8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "03d53319-abb5-4db4-93e4-4014c5bccb8e",
+      "domain": "language",
+      "context_key": "",
+      "code": "haw",
+      "base": {
+        "description": "Langue hawaïenne (code haw)",
+        "description_i18n": {
+          "de": "Hawaiianische Sprache (Code haw)",
+          "en": "Hawaiian language (code haw)",
+          "es": "Idioma hawaiano (código haw)",
+          "fr": "Langue hawaïenne (code haw)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/03d53319-abb5-4db4-93e4-4014c5bccb8e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/03d53319-abb5-4db4-93e4-4014c5bccb8e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "L’hawaïen est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « haw » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Hawaiianisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code haw bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Hawaiian is a language that may be declared for guest welcome or listing content. Its code, haw, identifies the language; proficiency is specified separately.",
+          "es": "El idioma hawaiano puede declararse para la acogida o los contenidos de una ficha. Su código, haw, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "L’hawaïen est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « haw » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/03d53319-abb5-4db4-93e4-4014c5bccb8e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/03d53319-abb5-4db4-93e4-4014c5bccb8e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9fc81bda-a4ed-4de9-a818-8c06fe9faa3b",
+      "domain": "language",
+      "context_key": "",
+      "code": "hi",
+      "base": {
+        "description": "Langue hindi (code hi)",
+        "description_i18n": {
+          "de": "Hindi-Sprache (Code hi)",
+          "en": "Hindi language (code hi)",
+          "es": "Idioma hindi (código hi)",
+          "fr": "Langue hindi (code hi)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9fc81bda-a4ed-4de9-a818-8c06fe9faa3b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9fc81bda-a4ed-4de9-a818-8c06fe9faa3b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le hindi est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « hi » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Hindi kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code hi bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Hindi is a language that may be declared for guest welcome or listing content. Its code, hi, identifies the language; proficiency is specified separately.",
+          "es": "El idioma hindi puede declararse para la acogida o los contenidos de una ficha. Su código, hi, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le hindi est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « hi » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9fc81bda-a4ed-4de9-a818-8c06fe9faa3b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9fc81bda-a4ed-4de9-a818-8c06fe9faa3b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "04368041-716b-4ee8-8b81-f80eff428d8c",
+      "domain": "language",
+      "context_key": "",
+      "code": "it",
+      "base": {
+        "description": "Langue italienne (code it)",
+        "description_i18n": {
+          "de": "Italienische Sprache (Code it)",
+          "en": "Italian language (code it)",
+          "es": "Idioma italiano (código it)",
+          "fr": "Langue italienne (code it)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04368041-716b-4ee8-8b81-f80eff428d8c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04368041-716b-4ee8-8b81-f80eff428d8c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "L’italien est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « it » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Italienisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code it bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Italian is a language that may be declared for guest welcome or listing content. Its code, it, identifies the language; proficiency is specified separately.",
+          "es": "El idioma italiano puede declararse para la acogida o los contenidos de una ficha. Su código, it, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "L’italien est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « it » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04368041-716b-4ee8-8b81-f80eff428d8c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04368041-716b-4ee8-8b81-f80eff428d8c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "522a8f7f-1d93-4016-9e3c-23fa6bbdc0c2",
+      "domain": "language",
+      "context_key": "",
+      "code": "ja",
+      "base": {
+        "description": "Langue japonaise (code ja)",
+        "description_i18n": {
+          "de": "Japanische Sprache (Code ja)",
+          "en": "Japanese language (code ja)",
+          "es": "Idioma japonés (código ja)",
+          "fr": "Langue japonaise (code ja)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/522a8f7f-1d93-4016-9e3c-23fa6bbdc0c2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/522a8f7f-1d93-4016-9e3c-23fa6bbdc0c2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le japonais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ja » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Japanisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code ja bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Japanese is a language that may be declared for guest welcome or listing content. Its code, ja, identifies the language; proficiency is specified separately.",
+          "es": "El idioma japonés puede declararse para la acogida o los contenidos de una ficha. Su código, ja, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le japonais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ja » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/522a8f7f-1d93-4016-9e3c-23fa6bbdc0c2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/522a8f7f-1d93-4016-9e3c-23fa6bbdc0c2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "16f43cd9-fe53-4286-afb1-3e517865f22d",
+      "domain": "language",
+      "context_key": "",
+      "code": "ko",
+      "base": {
+        "description": "Langue coréenne (code ko)",
+        "description_i18n": {
+          "de": "Koreanische Sprache (Code ko)",
+          "en": "Korean language (code ko)",
+          "es": "Idioma coreano (código ko)",
+          "fr": "Langue coréenne (code ko)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/16f43cd9-fe53-4286-afb1-3e517865f22d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/16f43cd9-fe53-4286-afb1-3e517865f22d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le coréen est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ko » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Koreanisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code ko bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Korean is a language that may be declared for guest welcome or listing content. Its code, ko, identifies the language; proficiency is specified separately.",
+          "es": "El idioma coreano puede declararse para la acogida o los contenidos de una ficha. Su código, ko, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le coréen est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ko » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/16f43cd9-fe53-4286-afb1-3e517865f22d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/16f43cd9-fe53-4286-afb1-3e517865f22d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "25926ed5-cee8-441d-945f-9220961dc7d9",
+      "domain": "language",
+      "context_key": "",
+      "code": "mg",
+      "base": {
+        "description": "Langue malgache (code mg)",
+        "description_i18n": {
+          "de": "Madagassische Sprache (Code mg)",
+          "en": "Malagasy language (code mg)",
+          "es": "Idioma malgache (código mg)",
+          "fr": "Langue malgache (code mg)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/25926ed5-cee8-441d-945f-9220961dc7d9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/25926ed5-cee8-441d-945f-9220961dc7d9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le malgache est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « mg » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Malagasy kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code mg bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Malagasy is a language that may be declared for guest welcome or listing content. Its code, mg, identifies the language; proficiency is specified separately.",
+          "es": "El idioma malgache puede declararse para la acogida o los contenidos de una ficha. Su código, mg, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le malgache est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « mg » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/25926ed5-cee8-441d-945f-9220961dc7d9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/25926ed5-cee8-441d-945f-9220961dc7d9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "827ddd44-ae28-4eed-a605-8d0140fe61af",
+      "domain": "language",
+      "context_key": "",
+      "code": "nl",
+      "base": {
+        "description": "Langue néerlandaise (code nl)",
+        "description_i18n": {
+          "de": "Niederländische Sprache (Code nl)",
+          "en": "Dutch language (code nl)",
+          "es": "Idioma neerlandés (código nl)",
+          "fr": "Langue néerlandaise (code nl)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/827ddd44-ae28-4eed-a605-8d0140fe61af. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/827ddd44-ae28-4eed-a605-8d0140fe61af"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le néerlandais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « nl » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Niederländisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code nl bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Dutch is a language that may be declared for guest welcome or listing content. Its code, nl, identifies the language; proficiency is specified separately.",
+          "es": "El idioma neerlandés puede declararse para la acogida o los contenidos de una ficha. Su código, nl, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le néerlandais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « nl » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/827ddd44-ae28-4eed-a605-8d0140fe61af. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/827ddd44-ae28-4eed-a605-8d0140fe61af"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c23aac0a-4f5f-479d-a7a3-dd136d3a7040",
+      "domain": "language",
+      "context_key": "",
+      "code": "pt",
+      "base": {
+        "description": "Langue portugaise (code pt)",
+        "description_i18n": {
+          "de": "Portugiesische Sprache (Code pt)",
+          "en": "Portuguese language (code pt)",
+          "es": "Idioma portugués (código pt)",
+          "fr": "Langue portugaise (code pt)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c23aac0a-4f5f-479d-a7a3-dd136d3a7040. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c23aac0a-4f5f-479d-a7a3-dd136d3a7040"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le portugais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « pt » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Portugiesisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code pt bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Portuguese is a language that may be declared for guest welcome or listing content. Its code, pt, identifies the language; proficiency is specified separately.",
+          "es": "El idioma portugués puede declararse para la acogida o los contenidos de una ficha. Su código, pt, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le portugais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « pt » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c23aac0a-4f5f-479d-a7a3-dd136d3a7040. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c23aac0a-4f5f-479d-a7a3-dd136d3a7040"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "399389b8-359d-4111-8122-262760b24380",
+      "domain": "language",
+      "context_key": "",
+      "code": "rcf",
+      "base": {
+        "description": "Créole réunionnais (code de langue rcf).",
+        "description_i18n": {
+          "de": "Réunion-Kreol (Code rcf)",
+          "en": "Réunion Creole language (code rcf)",
+          "es": "Idioma criollo reunionés (código rcf)",
+          "fr": "Créole réunionnais (code de langue rcf)."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/399389b8-359d-4111-8122-262760b24380. Sources externes réellement consultées : https://iso639-3.sil.org/code/rcf.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/399389b8-359d-4111-8122-262760b24380 ; https://iso639-3.sil.org/code/rcf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le créole réunionnais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « rcf » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Réunion-Kreol kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code rcf bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Réunion Creole is a language that may be declared for guest welcome or listing content. Its code, rcf, identifies the language; proficiency is specified separately.",
+          "es": "El idioma criollo reunionés puede declararse para la acogida o los contenidos de una ficha. Su código, rcf, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le créole réunionnais est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « rcf » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/399389b8-359d-4111-8122-262760b24380. Sources externes réellement consultées : https://iso639-3.sil.org/code/rcf.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/399389b8-359d-4111-8122-262760b24380 ; https://iso639-3.sil.org/code/rcf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3558d0fe-7db7-4776-b3c8-a78ee128e5e2",
+      "domain": "language",
+      "context_key": "",
+      "code": "sw",
+      "base": {
+        "description": "Langue swahili (code sw)",
+        "description_i18n": {
+          "de": "Swahili-Sprache (Code sw)",
+          "en": "Swahili language (code sw)",
+          "es": "Idioma suajili (código sw)",
+          "fr": "Langue swahili (code sw)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3558d0fe-7db7-4776-b3c8-a78ee128e5e2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3558d0fe-7db7-4776-b3c8-a78ee128e5e2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le swahili est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « sw » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Swahili kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code sw bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Swahili is a language that may be declared for guest welcome or listing content. Its code, sw, identifies the language; proficiency is specified separately.",
+          "es": "El idioma suajili puede declararse para la acogida o los contenidos de una ficha. Su código, sw, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le swahili est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « sw » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3558d0fe-7db7-4776-b3c8-a78ee128e5e2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3558d0fe-7db7-4776-b3c8-a78ee128e5e2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d122223b-ff35-48f5-a639-db60a5fe1670",
+      "domain": "language",
+      "context_key": "",
+      "code": "ta",
+      "base": {
+        "description": "Langue tamoule (code ta)",
+        "description_i18n": {
+          "de": "Tamilische Sprache (Code ta)",
+          "en": "Tamil language (code ta)",
+          "es": "Idioma tamil (código ta)",
+          "fr": "Langue tamoule (code ta)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d122223b-ff35-48f5-a639-db60a5fe1670. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d122223b-ff35-48f5-a639-db60a5fe1670"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le tamoul est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ta » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Tamil kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code ta bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Tamil is a language that may be declared for guest welcome or listing content. Its code, ta, identifies the language; proficiency is specified separately.",
+          "es": "El idioma tamil puede declararse para la acogida o los contenidos de una ficha. Su código, ta, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le tamoul est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ta » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d122223b-ff35-48f5-a639-db60a5fe1670. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d122223b-ff35-48f5-a639-db60a5fe1670"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "80d6a034-adbc-4444-a3e5-06e4ac58c0ec",
+      "domain": "language",
+      "context_key": "",
+      "code": "th",
+      "base": {
+        "description": "Langue thaïe (code th)",
+        "description_i18n": {
+          "de": "Thailändische Sprache (Code th)",
+          "en": "Thai language (code th)",
+          "es": "Idioma tailandés (código th)",
+          "fr": "Langue thaïe (code th)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80d6a034-adbc-4444-a3e5-06e4ac58c0ec. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80d6a034-adbc-4444-a3e5-06e4ac58c0ec"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le thaï est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « th » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Thailändisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code th bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Thai is a language that may be declared for guest welcome or listing content. Its code, th, identifies the language; proficiency is specified separately.",
+          "es": "El idioma tailandés puede declararse para la acogida o los contenidos de una ficha. Su código, th, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le thaï est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « th » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80d6a034-adbc-4444-a3e5-06e4ac58c0ec. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80d6a034-adbc-4444-a3e5-06e4ac58c0ec"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "15aa0885-e713-4480-bae2-ac83d5eb83d7",
+      "domain": "language",
+      "context_key": "",
+      "code": "ty",
+      "base": {
+        "description": "Langue tahitienne (code ty)",
+        "description_i18n": {
+          "de": "Tahitische Sprache (Code ty)",
+          "en": "Tahitian language (code ty)",
+          "es": "Idioma tahitiano (código ty)",
+          "fr": "Langue tahitienne (code ty)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/15aa0885-e713-4480-bae2-ac83d5eb83d7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/15aa0885-e713-4480-bae2-ac83d5eb83d7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le tahitien est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ty » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Tahitisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code ty bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Tahitian is a language that may be declared for guest welcome or listing content. Its code, ty, identifies the language; proficiency is specified separately.",
+          "es": "El idioma tahitiano puede declararse para la acogida o los contenidos de una ficha. Su código, ty, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le tahitien est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « ty » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/15aa0885-e713-4480-bae2-ac83d5eb83d7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/15aa0885-e713-4480-bae2-ac83d5eb83d7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "78e5a772-ed4b-4277-ab91-1e089a1bf077",
+      "domain": "language",
+      "context_key": "",
+      "code": "zh",
+      "base": {
+        "description": "Langue chinoise (code zh)",
+        "description_i18n": {
+          "de": "Chinesische Sprache (Code zh)",
+          "en": "Chinese language (code zh)",
+          "es": "Idioma chino (código zh)",
+          "fr": "Langue chinoise (code zh)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/78e5a772-ed4b-4277-ab91-1e089a1bf077. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/78e5a772-ed4b-4277-ab91-1e089a1bf077"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le chinois est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « zh » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Chinesisch kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code zh bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Chinese is a language that may be declared for guest welcome or listing content. Its code, zh, identifies the language; proficiency is specified separately.",
+          "es": "El idioma chino puede declararse para la acogida o los contenidos de una ficha. Su código, zh, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le chinois est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « zh » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/78e5a772-ed4b-4277-ab91-1e089a1bf077. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/78e5a772-ed4b-4277-ab91-1e089a1bf077"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "debdf841-9391-4acd-b8fe-563b4749d00b",
+      "domain": "language",
+      "context_key": "",
+      "code": "zu",
+      "base": {
+        "description": "Langue zouloue (code zu)",
+        "description_i18n": {
+          "de": "Zulu-Sprache (Code zu)",
+          "en": "Zulu language (code zu)",
+          "es": "Idioma zulú (código zu)",
+          "fr": "Langue zouloue (code zu)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/debdf841-9391-4acd-b8fe-563b4749d00b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/debdf841-9391-4acd-b8fe-563b4749d00b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Le zoulou est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « zu » identifie la langue ; le niveau de maîtrise se renseigne séparément.",
+        "description_i18n": {
+          "de": "Zulu kann als Sprache für den Empfang oder für Inhalte eines Eintrags angegeben werden. Der Code zu bezeichnet die Sprache; die Sprachkenntnisse werden getrennt erfasst.",
+          "en": "Zulu is a language that may be declared for guest welcome or listing content. Its code, zu, identifies the language; proficiency is specified separately.",
+          "es": "El idioma zulú puede declararse para la acogida o los contenidos de una ficha. Su código, zu, identifica la lengua; el nivel de dominio se indica por separado.",
+          "fr": "Le zoulou est une langue que l’on peut déclarer pour l’accueil ou les contenus d’une fiche. Son code « zu » identifie la langue ; le niveau de maîtrise se renseigne séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/debdf841-9391-4acd-b8fe-563b4749d00b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/debdf841-9391-4acd-b8fe-563b4749d00b"
+          }
+        ]
+      }
+    }
+  ]
+}

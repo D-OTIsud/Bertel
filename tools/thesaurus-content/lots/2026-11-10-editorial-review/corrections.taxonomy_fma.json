@@ -1,0 +1,538 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_fma-1",
+  "proposals": [
+    {
+      "concept_id": "5b8d454b-afc0-4890-bce3-db0259b802ca",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "cultural_event",
+      "base": {
+        "description": "Spectacle, commémoration, manifestation culturelle",
+        "description_i18n": {
+          "de": "Aufführung, Gedenkveranstaltung oder andere kulturelle Veranstaltung.",
+          "en": "Performance, commemoration or other cultural event.",
+          "es": "Espectáculo, conmemoración u otro evento cultural.",
+          "fr": "Spectacle, commémoration, manifestation culturelle"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b8d454b-afc0-4890-bce3-db0259b802ca. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b8d454b-afc0-4890-bce3-db0259b802ca"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Kulturelle Veranstaltung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Cultural programme event"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Manifestación cultural"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Événement de programmation culturelle"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "spectacle"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Événement culturel présenté pour une date ou une période, tel qu’un spectacle ou une commémoration. Il se distingue du lieu culturel permanent et de l’organisme qui l’organise.",
+        "description_i18n": {
+          "de": "Kulturveranstaltung zu einem Termin oder Zeitraum, etwa Aufführung oder Gedenkveranstaltung. Sie unterscheidet sich vom dauerhaften Kulturort und vom Veranstalter.",
+          "en": "Cultural event presented for a date or period, such as a performance or commemoration. It differs from the permanent cultural venue and the organising body.",
+          "es": "Evento cultural presentado para una fecha o período, como un espectáculo o conmemoración. Se distingue del lugar cultural permanente y de la entidad organizadora.",
+          "fr": "Événement culturel présenté pour une date ou une période, tel qu’un spectacle ou une commémoration. Il se distingue du lieu culturel permanent et de l’organisme qui l’organise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b8d454b-afc0-4890-bce3-db0259b802ca. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b8d454b-afc0-4890-bce3-db0259b802ca"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Kulturelle Veranstaltung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Cultural programme event"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Manifestación cultural"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Événement de programmation culturelle"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "spectacle"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f82e808c-eb55-4803-b6a7-7d3855d23067",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "exhibition",
+      "base": {
+        "description": "Exposition temporaire datée",
+        "description_i18n": {
+          "de": "Zeitlich begrenzte Ausstellung mit festgelegtem Zeitraum.",
+          "en": "Dated temporary exhibition.",
+          "es": "Exposición temporal con fecha.",
+          "fr": "Exposition temporaire datée"
+        }
+      },
+      "changes": {
+        "description": "Présentation temporaire d’œuvres, d’objets ou de contenus au public pendant une période annoncée. La fiche décrit l’exposition datée plutôt que le musée ou le lieu permanent qui l’accueille.",
+        "description_i18n": {
+          "de": "Zeitweilige öffentliche Präsentation von Werken, Gegenständen oder Inhalten in einem angekündigten Zeitraum. Der Eintrag beschreibt die Ausstellung und nicht das Museum oder den dauerhaften Ausstellungsort.",
+          "en": "Temporary public presentation of works, objects or content during an advertised period. The listing describes the dated exhibition rather than its museum or permanent venue.",
+          "es": "Presentación temporal de obras, objetos o contenidos al público durante un período anunciado. La ficha describe la exposición con fechas, no el museo o lugar permanente que la acoge.",
+          "fr": "Présentation temporaire d’œuvres, d’objets ou de contenus au public pendant une période annoncée. La fiche décrit l’exposition datée plutôt que le musée ou le lieu permanent qui l’accueille."
+        }
+      }
+    },
+    {
+      "concept_id": "693288e4-4aa2-463c-956f-ba23f2e269bb",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "fair_show",
+      "base": {
+        "description": "Foire, salon, exposition",
+        "description_i18n": {
+          "de": "Messe, Fachmesse oder Ausstellung.",
+          "en": "Trade fair, exhibition or show.",
+          "es": "Feria, salón o exposición.",
+          "fr": "Foire, salon, exposition"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/693288e4-4aa2-463c-956f-ba23f2e269bb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/693288e4-4aa2-463c-956f-ba23f2e269bb"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Messe oder Ausstellungsveranstaltung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Fair, show or exhibition"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "trade show"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Feria, salón y exposición"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "exposition"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Foire, salon et exposition"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Manifestation réunissant des exposants autour de produits, d’un secteur ou d’un thème. La catégorie désigne une foire ou un salon daté, distinct du bâtiment qui l’accueille.",
+        "description_i18n": {
+          "de": "Veranstaltung mit Ausstellern zu Produkten, einer Branche oder einem Thema. Die Kategorie bezeichnet eine terminierte Messe und nicht das Veranstaltungsgebäude.",
+          "en": "Event bringing exhibitors together around products, an industry or a theme. This category identifies a dated fair or trade show rather than its venue building.",
+          "es": "Evento que reúne expositores en torno a productos, un sector o un tema. Identifica una feria o salón con fechas, no el edificio que lo acoge.",
+          "fr": "Manifestation réunissant des exposants autour de produits, d’un secteur ou d’un thème. La catégorie désigne une foire ou un salon daté, distinct du bâtiment qui l’accueille."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/693288e4-4aa2-463c-956f-ba23f2e269bb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/693288e4-4aa2-463c-956f-ba23f2e269bb"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Messe oder Ausstellungsveranstaltung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Fair, show or exhibition"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "trade show"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Feria, salón y exposición"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "exposition"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Foire, salon et exposition"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1063aa87-d65a-440e-9cc6-0b599462b1b0",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "festival",
+      "base": {
+        "description": "Festival (musique, arts…)",
+        "description_i18n": {
+          "de": "Festival für Musik, Kunst oder andere Darbietungen.",
+          "en": "Festival of music, arts or other performances.",
+          "es": "Festival de música, artes u otras artes escénicas.",
+          "fr": "Festival (musique, arts…)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1063aa87-d65a-440e-9cc6-0b599462b1b0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1063aa87-d65a-440e-9cc6-0b599462b1b0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Manifestation réunissant plusieurs propositions artistiques ou culturelles autour d’un programme, pendant une période donnée. La fiche décrit son édition plutôt qu’un lieu permanent.",
+        "description_i18n": {
+          "de": "Veranstaltung mit mehreren künstlerischen oder kulturellen Angeboten in einem Programm über einen bestimmten Zeitraum. Der Eintrag bezeichnet eine Ausgabe und keinen dauerhaften Ort.",
+          "en": "Event bringing together several artistic or cultural offerings in a programme over a given period. The listing describes an edition rather than a permanent place.",
+          "es": "Evento que reúne varias propuestas artísticas o culturales en un programa durante un período determinado. La ficha describe una edición, no un lugar permanente.",
+          "fr": "Manifestation réunissant plusieurs propositions artistiques ou culturelles autour d’un programme, pendant une période donnée. La fiche décrit son édition plutôt qu’un lieu permanent."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1063aa87-d65a-440e-9cc6-0b599462b1b0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1063aa87-d65a-440e-9cc6-0b599462b1b0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cf85e377-eacb-4094-9639-395dbde4a73b",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "religious_celebration",
+      "base": {
+        "description": "Fête ou pèlerinage religieux ouvert au public",
+        "description_i18n": {
+          "de": "Religiöses Fest oder öffentlich zugängliche Wallfahrt.",
+          "en": "Religious festival or pilgrimage open to the public.",
+          "es": "Fiesta o peregrinación religiosa abierta al público.",
+          "fr": "Fête ou pèlerinage religieux ouvert au public"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cf85e377-eacb-4094-9639-395dbde4a73b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cf85e377-eacb-4094-9639-395dbde4a73b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Fête, cérémonie ou pèlerinage religieux présenté comme événement ouvert au public. Il se distingue de l’édifice religieux et de ses horaires habituels d’accueil.",
+        "description_i18n": {
+          "de": "Religiöses Fest, eine Zeremonie oder Wallfahrt als öffentlich zugängliches Ereignis. Es unterscheidet sich vom religiösen Gebäude und dessen üblichen Besuchszeiten.",
+          "en": "Religious festival, ceremony or pilgrimage presented as an event open to the public. It differs from a religious building and its usual visiting hours.",
+          "es": "Fiesta, ceremonia o peregrinación religiosa presentada como evento abierto al público. Se distingue del edificio religioso y de sus horarios habituales de visita.",
+          "fr": "Fête, cérémonie ou pèlerinage religieux présenté comme événement ouvert au public. Il se distingue de l’édifice religieux et de ses horaires habituels d’accueil."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cf85e377-eacb-4094-9639-395dbde4a73b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cf85e377-eacb-4094-9639-395dbde4a73b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f444f2b2-a8a7-4451-9a38-4001cde16315",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Fête / manifestation",
+        "description_i18n": {
+          "de": "Technische Wurzel für Feste und Veranstaltungen; nicht direkt zuweisbar.",
+          "en": "Technical root for festivals and events; not directly assignable.",
+          "es": "Raíz técnica de fiestas y eventos; no asignable directamente.",
+          "fr": "Racine technique — Fête / manifestation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f444f2b2-a8a7-4451-9a38-4001cde16315. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f444f2b2-a8a7-4451-9a38-4001cde16315"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des fêtes et manifestations présentées pour une édition ou une période donnée. Elle décrit un événement, distinct du lieu permanent où il se déroule.",
+        "description_i18n": {
+          "de": "Oberkategorie für Feste und Veranstaltungen zu einem bestimmten Termin oder Zeitraum. Sie beschreibt das Ereignis und nicht dessen dauerhaften Veranstaltungsort.",
+          "en": "General category for celebrations and events presented for a particular edition or period. It describes an event rather than its permanent venue.",
+          "es": "Categoría general de fiestas y eventos presentados para una edición o período determinado. Describe el evento, no el lugar permanente que lo acoge.",
+          "fr": "Catégorie générale des fêtes et manifestations présentées pour une édition ou une période donnée. Elle décrit un événement, distinct du lieu permanent où il se déroule."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f444f2b2-a8a7-4451-9a38-4001cde16315. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f444f2b2-a8a7-4451-9a38-4001cde16315"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d668cb79-1c6c-45e8-ac1d-57fbe41c9d8e",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "seasonal_market",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d668cb79-1c6c-45e8-ac1d-57fbe41c9d8e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d668cb79-1c6c-45e8-ac1d-57fbe41c9d8e"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d668cb79-1c6c-45e8-ac1d-57fbe41c9d8e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d668cb79-1c6c-45e8-ac1d-57fbe41c9d8e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4adb7e79-1fd7-4195-b7e3-b4ec813ecfdb",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "sports_event",
+      "base": {
+        "description": "Compétition ou événement sportif ouvert au public",
+        "description_i18n": {
+          "de": "Wettkampf oder Sportveranstaltung, öffentlich zugänglich.",
+          "en": "Competition or sports event open to the public.",
+          "es": "Competición o evento deportivo abierto al público.",
+          "fr": "Compétition ou événement sportif ouvert au public"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4adb7e79-1fd7-4195-b7e3-b4ec813ecfdb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4adb7e79-1fd7-4195-b7e3-b4ec813ecfdb"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Öffentliches Sportereignis"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Wettkampf"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Public sports event"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "race"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "carrera"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Manifestación deportiva abierta al público"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "compétition"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Manifestation sportive ouverte au public"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Compétition, rencontre ou manifestation sportive présentée pour une date ou une période, notamment une course de trail. Elle se distingue de l’itinéraire pratiqué ou de l’équipement sportif permanent.",
+        "description_i18n": {
+          "de": "Wettkampf, Treffen oder Sportveranstaltung zu einem Termin oder Zeitraum, etwa ein Traillauf. Sie unterscheidet sich von der genutzten Strecke oder einer dauerhaften Sportanlage.",
+          "en": "Competition, meeting or sports event presented for a date or period, including a trail race. It differs from the route used or a permanent sports facility.",
+          "es": "Competición, encuentro o evento deportivo presentado para una fecha o período, incluida una carrera de trail. Se distingue del itinerario utilizado o de la instalación deportiva permanente.",
+          "fr": "Compétition, rencontre ou manifestation sportive présentée pour une date ou une période, notamment une course de trail. Elle se distingue de l’itinéraire pratiqué ou de l’équipement sportif permanent."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4adb7e79-1fd7-4195-b7e3-b4ec813ecfdb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4adb7e79-1fd7-4195-b7e3-b4ec813ecfdb"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Öffentliches Sportereignis"
+          },
+          {
+            "kind": "hidden",
+            "lang": "de",
+            "value": "Wettkampf"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Public sports event"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "race"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "carrera"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Manifestación deportiva abierta al público"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "compétition"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Manifestation sportive ouverte au public"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "807905ad-70b9-42f1-a5dc-1f4096de069b",
+      "domain": "taxonomy_fma",
+      "context_key": "",
+      "code": "terroir_festival",
+      "base": {
+        "description": "Fête d'un produit ou du terroir (miel, vacoa, choca…)",
+        "description_i18n": {
+          "de": "Fest eines Produkts oder einer Region, z. B. Honig, Vacoa oder Choca.",
+          "en": "Festival celebrating a local product or region, such as honey, vacoa or choca.",
+          "es": "Fiesta de un producto o del terruño, como la miel, el vacoa o el choca.",
+          "fr": "Fête d'un produit ou du terroir (miel, vacoa, choca…)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/807905ad-70b9-42f1-a5dc-1f4096de069b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/807905ad-70b9-42f1-a5dc-1f4096de069b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Manifestation consacrée à un produit local ou aux savoir-faire d’un territoire, par exemple le miel ou le vacoa. Elle décrit une fête datée, distincte de la fiche du producteur ou du commerce.",
+        "description_i18n": {
+          "de": "Veranstaltung zu einem regionalen Produkt oder den Fertigkeiten einer Region, etwa Honig oder Vacoa. Sie beschreibt ein terminiertes Fest und keinen Erzeuger- oder Geschäftseintrag.",
+          "en": "Event devoted to a local product or an area’s skills, such as honey or vacoa. It describes a dated festival rather than a producer or shop listing.",
+          "es": "Evento dedicado a un producto local o a los saberes de un territorio, como la miel o el vacoa. Describe una fiesta con fecha, no la ficha del productor o comercio.",
+          "fr": "Manifestation consacrée à un produit local ou aux savoir-faire d’un territoire, par exemple le miel ou le vacoa. Elle décrit une fête datée, distincte de la fiche du producteur ou du commerce."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/807905ad-70b9-42f1-a5dc-1f4096de069b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/807905ad-70b9-42f1-a5dc-1f4096de069b"
+          }
+        ]
+      }
+    }
+  ]
+}

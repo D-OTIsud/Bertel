@@ -1,0 +1,206 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-opening_schedule_type-1",
+  "proposals": [
+    {
+      "concept_id": "07abb8e4-d975-4a07-bf55-1a6108576c38",
+      "domain": "opening_schedule_type",
+      "context_key": "",
+      "code": "by_appointment",
+      "base": {
+        "description": "Ouverture uniquement sur rendez-vous",
+        "description_i18n": {
+          "de": "Nur nach Terminvereinbarung geöffnet",
+          "en": "Open only by appointment",
+          "es": "Apertura solo con cita previa",
+          "fr": "Ouverture uniquement sur rendez-vous"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/07abb8e4-d975-4a07-bf55-1a6108576c38. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/07abb8e4-d975-4a07-bf55-1a6108576c38"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mode d’ouverture pour lequel la venue nécessite un rendez-vous préalable. Il se distingue des horaires permettant une visite spontanée pendant une plage annoncée.",
+        "description_i18n": {
+          "de": "Öffnungsregelung, bei der vor dem Besuch ein Termin erforderlich ist. Sie unterscheidet sich von Zeiten für spontane Besuche innerhalb eines angegebenen Zeitfensters.",
+          "en": "Opening arrangement requiring an appointment before visiting. It differs from hours allowing walk-in visits during an advertised time slot.",
+          "es": "Modalidad de apertura que requiere una cita antes de la visita. Se distingue de los horarios que permiten acudir sin cita dentro de una franja anunciada.",
+          "fr": "Mode d’ouverture pour lequel la venue nécessite un rendez-vous préalable. Il se distingue des horaires permettant une visite spontanée pendant une plage annoncée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/07abb8e4-d975-4a07-bf55-1a6108576c38. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/07abb8e4-d975-4a07-bf55-1a6108576c38"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "98978865-a5cb-4d04-8cdd-c46fee2e6535",
+      "domain": "opening_schedule_type",
+      "context_key": "",
+      "code": "continuous_service",
+      "base": {
+        "description": "Service assuré sans interruption pendant la plage de service annoncée.",
+        "description_i18n": {
+          "de": "Durchgehender Service innerhalb der angegebenen Servicezeiten.",
+          "en": "Service provided without interruption during the stated service hours.",
+          "es": "Servicio prestado sin interrupción durante el horario de servicio anunciado.",
+          "fr": "Service assuré sans interruption pendant la plage de service annoncée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/98978865-a5cb-4d04-8cdd-c46fee2e6535. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/98978865-a5cb-4d04-8cdd-c46fee2e6535"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Service assuré sans interruption au cours de la plage annoncée. Il décrit l’absence de coupure à l’intérieur de cette plage, sans signifier une ouverture permanente.",
+        "description_i18n": {
+          "de": "Ohne Unterbrechung innerhalb der angegebenen Servicezeit erbrachte Leistung. Gemeint ist keine Pause in diesem Zeitraum und keine dauerhafte Öffnung.",
+          "en": "Service provided without interruption throughout the advertised service period. It means no break within that period, not permanent opening.",
+          "es": "Servicio prestado sin interrupción durante la franja anunciada. Indica ausencia de pausas dentro de esa franja, no una apertura permanente.",
+          "fr": "Service assuré sans interruption au cours de la plage annoncée. Il décrit l’absence de coupure à l’intérieur de cette plage, sans signifier une ouverture permanente."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/98978865-a5cb-4d04-8cdd-c46fee2e6535. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/98978865-a5cb-4d04-8cdd-c46fee2e6535"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0ba490b2-8322-4723-a56e-c2efdc385c7c",
+      "domain": "opening_schedule_type",
+      "context_key": "",
+      "code": "exceptional",
+      "base": {
+        "description": "Horaire exceptionnel ou spécial, hors horaire habituel",
+        "description_i18n": {
+          "de": "Außergewöhnlicher oder besonderer Öffnungszeitplan",
+          "en": "Exceptional or special opening schedule",
+          "es": "Horario excepcional o especial",
+          "fr": "Horaire exceptionnel ou spécial, hors horaire habituel"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0ba490b2-8322-4723-a56e-c2efdc385c7c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0ba490b2-8322-4723-a56e-c2efdc385c7c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Horaire particulier qui s’écarte de l’horaire habituel pour une occasion ou une période déterminée. Il permet de distinguer cette exception de la règle récurrente.",
+        "description_i18n": {
+          "de": "Besondere Öffnungszeiten, die für einen Anlass oder Zeitraum von den üblichen Zeiten abweichen. Sie unterscheiden die Ausnahme von der wiederkehrenden Regel.",
+          "en": "Special schedule departing from usual hours for a particular occasion or period. It distinguishes an exception from the recurring rule.",
+          "es": "Horario especial que se aparta del habitual para una ocasión o período determinado. Distingue esa excepción de la regla recurrente.",
+          "fr": "Horaire particulier qui s’écarte de l’horaire habituel pour une occasion ou une période déterminée. Il permet de distinguer cette exception de la règle récurrente."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0ba490b2-8322-4723-a56e-c2efdc385c7c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0ba490b2-8322-4723-a56e-c2efdc385c7c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "126dc939-d320-47a4-8f51-e1bd5fe8de29",
+      "domain": "opening_schedule_type",
+      "context_key": "",
+      "code": "regular",
+      "base": {
+        "description": "Horaire habituel récurrent",
+        "description_i18n": {
+          "de": "Üblicher wiederkehrender Zeitplan",
+          "en": "Standard recurring schedule",
+          "es": "Horario recurrente estándar",
+          "fr": "Horaire habituel récurrent"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/126dc939-d320-47a4-8f51-e1bd5fe8de29. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/126dc939-d320-47a4-8f51-e1bd5fe8de29"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Horaire habituel qui se répète selon les jours et plages définis. Il constitue la règle courante, distincte des ouvertures exceptionnelles.",
+        "description_i18n": {
+          "de": "Übliche, nach festgelegten Tagen und Zeitfenstern wiederkehrende Öffnungszeiten. Sie bilden die normale Regel im Unterschied zu Sonderöffnungen.",
+          "en": "Usual schedule recurring according to specified days and time slots. It forms the ordinary rule, distinct from exceptional openings.",
+          "es": "Horario habitual que se repite según los días y franjas definidos. Constituye la regla ordinaria, distinta de las aperturas excepcionales.",
+          "fr": "Horaire habituel qui se répète selon les jours et plages définis. Il constitue la règle courante, distincte des ouvertures exceptionnelles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/126dc939-d320-47a4-8f51-e1bd5fe8de29. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/126dc939-d320-47a4-8f51-e1bd5fe8de29"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "743d2cd4-d491-4794-be27-c92c8cec0478",
+      "domain": "opening_schedule_type",
+      "context_key": "",
+      "code": "seasonal",
+      "base": {
+        "description": "Horaire applicable à une période saisonnière",
+        "description_i18n": {
+          "de": "Zeitplan für saisonale Zeiträume",
+          "en": "Schedule for seasonal periods",
+          "es": "Horario para períodos estacionales",
+          "fr": "Horaire applicable à une période saisonnière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/743d2cd4-d491-4794-be27-c92c8cec0478. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/743d2cd4-d491-4794-be27-c92c8cec0478"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Horaire valable pendant une saison ou une période de l’année précisée dans la fiche. Ce mode se distingue d’un horaire identique toute l’année.",
+        "description_i18n": {
+          "de": "Öffnungszeiten für eine im Eintrag angegebene Saison oder Jahreszeit. Sie unterscheiden sich von ganzjährig unveränderten Zeiten.",
+          "en": "Schedule applying during a season or part of the year specified in the listing. It differs from hours that remain the same year-round.",
+          "es": "Horario válido durante una temporada o parte del año indicada en la ficha. Se distingue de un horario idéntico durante todo el año.",
+          "fr": "Horaire valable pendant une saison ou une période de l’année précisée dans la fiche. Ce mode se distingue d’un horaire identique toute l’année."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/743d2cd4-d491-4794-be27-c92c8cec0478. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/743d2cd4-d491-4794-be27-c92c8cec0478"
+          }
+        ]
+      }
+    }
+  ]
+}

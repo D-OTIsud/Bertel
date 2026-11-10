@@ -1,0 +1,266 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-event_type-1",
+  "proposals": [
+    {
+      "concept_id": "e5fb2c45-8746-4c36-ad97-a6f7b5a10cb8",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "concert",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e5fb2c45-8746-4c36-ad97-a6f7b5a10cb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e5fb2c45-8746-4c36-ad97-a6f7b5a10cb8"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e5fb2c45-8746-4c36-ad97-a6f7b5a10cb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e5fb2c45-8746-4c36-ad97-a6f7b5a10cb8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a98685a1-4874-48f4-a9ad-47138b2eddb5",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "conference",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a98685a1-4874-48f4-a9ad-47138b2eddb5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a98685a1-4874-48f4-a9ad-47138b2eddb5"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a98685a1-4874-48f4-a9ad-47138b2eddb5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a98685a1-4874-48f4-a9ad-47138b2eddb5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d369c49f-5947-4dbf-9ab8-81af2ffa7ae0",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "corporate_event",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d369c49f-5947-4dbf-9ab8-81af2ffa7ae0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d369c49f-5947-4dbf-9ab8-81af2ffa7ae0"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d369c49f-5947-4dbf-9ab8-81af2ffa7ae0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d369c49f-5947-4dbf-9ab8-81af2ffa7ae0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "306c2c9b-8acf-485e-b3af-05fa44bcd88b",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "cultural_event",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/306c2c9b-8acf-485e-b3af-05fa44bcd88b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/306c2c9b-8acf-485e-b3af-05fa44bcd88b"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/306c2c9b-8acf-485e-b3af-05fa44bcd88b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/306c2c9b-8acf-485e-b3af-05fa44bcd88b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "95e84c90-d1f7-400a-b3c5-1370e6b2b04d",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "exhibition",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95e84c90-d1f7-400a-b3c5-1370e6b2b04d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95e84c90-d1f7-400a-b3c5-1370e6b2b04d"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95e84c90-d1f7-400a-b3c5-1370e6b2b04d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95e84c90-d1f7-400a-b3c5-1370e6b2b04d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "747cb43e-5b2b-4ef5-bab5-9e921bb8fc61",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "festival",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/747cb43e-5b2b-4ef5-bab5-9e921bb8fc61. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/747cb43e-5b2b-4ef5-bab5-9e921bb8fc61"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/747cb43e-5b2b-4ef5-bab5-9e921bb8fc61. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/747cb43e-5b2b-4ef5-bab5-9e921bb8fc61"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d1319962-0a02-4c9a-8941-b2068a5a1bf6",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "seminar",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d1319962-0a02-4c9a-8941-b2068a5a1bf6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d1319962-0a02-4c9a-8941-b2068a5a1bf6"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d1319962-0a02-4c9a-8941-b2068a5a1bf6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d1319962-0a02-4c9a-8941-b2068a5a1bf6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "437d7333-a63a-4cf7-8840-c4555cae5b34",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "sporting_event",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/437d7333-a63a-4cf7-8840-c4555cae5b34. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/437d7333-a63a-4cf7-8840-c4555cae5b34"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/437d7333-a63a-4cf7-8840-c4555cae5b34. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/437d7333-a63a-4cf7-8840-c4555cae5b34"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "17bd2a91-13aa-4f00-8ec0-f1faab24b845",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "wedding",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/17bd2a91-13aa-4f00-8ec0-f1faab24b845. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/17bd2a91-13aa-4f00-8ec0-f1faab24b845"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/17bd2a91-13aa-4f00-8ec0-f1faab24b845. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/17bd2a91-13aa-4f00-8ec0-f1faab24b845"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0f5877d9-6763-4562-ab42-0c59d53cdd73",
+      "domain": "event_type",
+      "context_key": "",
+      "code": "workshop",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0f5877d9-6763-4562-ab42-0c59d53cdd73. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0f5877d9-6763-4562-ab42-0c59d53cdd73"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0f5877d9-6763-4562-ab42-0c59d53cdd73. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0f5877d9-6763-4562-ab42-0c59d53cdd73"
+          }
+        ]
+      }
+    }
+  ]
+}

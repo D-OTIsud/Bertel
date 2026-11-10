@@ -825,6 +825,26 @@ COMMIT;
 \ir thesaurus_business_domain_names.sql
 \ir tests/test_thesaurus_business_domain_names.sql
 
+\echo '== Thesaurus mandatory contextual definitions, every vocabulary =='
+\ir thesaurus_required_definitions.sql
+\ir tests/test_thesaurus_required_definitions.sql
+
+\echo '== Thesaurus complete FR/EN/ES/DE editorial policy =='
+\ir thesaurus_complete_editorial_definitions.sql
+\ir tests/test_thesaurus_complete_editorial_definitions.sql
+
+\echo '== Complete private admin workspace and atomic editorial batches =='
+\ir thesaurus_complete_admin_batches.sql
+\ir tests/test_thesaurus_complete_admin_batches.sql
+
+\echo '== Short French business names for every thesaurus domain =='
+\ir thesaurus_simple_business_names.sql
+\ir tests/test_thesaurus_simple_business_names.sql
+
+\echo '== Private legacy search terms: complete editorial roundtrip =='
+\ir thesaurus_legacy_search_term_roundtrip.sql
+\ir tests/test_thesaurus_legacy_search_term_roundtrip.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -21,7 +21,7 @@ assert.equal(publicText, expectedText, 'preserve every instruction, table, list 
 assert.equal((body.match(/<h2\b/g) || []).length, 15, 'all fourteen numbered chapters and the quick path');
 assert.equal((body.match(/<table\b/g) || []).length, 10, 'all comparison, domain-context and preparation tables remain readable');
 assert.ok(body.includes('<th>Rubrique</th><th>La choisir pour…</th><th>À distinguer de…</th>'), 'include the business-domain distinctions table');
-for (const label of ['Labels et classements', 'Niveaux et mentions des labels et classements', 'Types de forfait', 'Catégories de menu', 'Publics tarifaires', 'Types de tarif', 'Unités tarifaires']) {
+for (const label of ['Labels et classements', 'Valeurs des labels et classements', 'Types de forfait', 'Catégories de menu', 'Publics tarifaires', 'Types de tarif', 'Unités tarifaires']) {
   assert.ok(body.includes(label), 'the domain-context table includes ' + label);
 }
 

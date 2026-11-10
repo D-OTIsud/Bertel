@@ -1,0 +1,360 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-booking_status-1",
+  "proposals": [
+    {
+      "concept_id": "ee923295-6c63-4a90-b050-cedaac216987",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "cancelled",
+      "base": {
+        "description": "Réservation annulée",
+        "description_i18n": {
+          "en": "Reservation cancelled",
+          "es": "Reserva cancelada",
+          "fr": "Réservation annulée"
+        },
+        "name_i18n": {
+          "en": "Cancelled",
+          "es": "Cancelada",
+          "fr": "Annulée"
+        }
+      },
+      "changes": {
+        "description": "Réservation dont l’annulation a été enregistrée. Cet état se distingue d’un client attendu qui ne s’est pas présenté.",
+        "description_i18n": {
+          "en": "Reservation for which a cancellation has been recorded. This differs from an expected guest failing to arrive.",
+          "es": "Reserva cuya cancelación ha quedado registrada. Se distingue de la ausencia de un cliente esperado.",
+          "fr": "Réservation dont l’annulation a été enregistrée. Cet état se distingue d’un client attendu qui ne s’est pas présenté.",
+          "de": "Reservierung, deren Stornierung erfasst wurde. Dieser Status unterscheidet sich vom Nichterscheinen eines erwarteten Gastes."
+        },
+        "name_i18n": {
+          "en": "Cancelled",
+          "es": "Cancelada",
+          "fr": "Annulée",
+          "de": "Storniert"
+        }
+      }
+    },
+    {
+      "concept_id": "269dbc86-2852-4f60-8a38-b5d1bda287bd",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "checked_in",
+      "base": {
+        "description": "Client enregistré",
+        "description_i18n": {
+          "en": "Guest checked in",
+          "es": "Cliente registrado",
+          "fr": "Client enregistré"
+        },
+        "name_i18n": {
+          "en": "Checked in",
+          "es": "Registrado",
+          "fr": "Enregistré"
+        },
+        "name": "Enregistré"
+      },
+      "changes": {
+        "description": "Arrivée du client enregistrée pour la réservation. Cet état décrit l’accueil effectué, sans signifier que le séjour est terminé.",
+        "description_i18n": {
+          "en": "Guest arrival recorded against the reservation. This records check-in rather than completion of the stay.",
+          "es": "Llegada del cliente registrada en la reserva. Describe la recepción realizada, no la finalización de la estancia.",
+          "fr": "Arrivée du client enregistrée pour la réservation. Cet état décrit l’accueil effectué, sans signifier que le séjour est terminé.",
+          "de": "Erfasste Ankunft des Gastes zur Reservierung. Der Status bezeichnet den Check-in und nicht den Abschluss des Aufenthalts."
+        },
+        "name_i18n": {
+          "en": "Checked in",
+          "es": "Registrado",
+          "fr": "Arrivée enregistrée",
+          "de": "Ankunft erfasst"
+        },
+        "name": "Arrivée enregistrée"
+      }
+    },
+    {
+      "concept_id": "d1b41869-eea4-4e13-b1b3-978e4caa1127",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "checked_out",
+      "base": {
+        "description": "Client parti",
+        "description_i18n": {
+          "en": "Guest checked out",
+          "es": "Cliente salió",
+          "fr": "Client parti"
+        },
+        "name_i18n": {
+          "en": "Checked out",
+          "es": "Salida",
+          "fr": "Départ"
+        },
+        "name": "Départ"
+      },
+      "changes": {
+        "description": "Départ du client enregistré à l’issue de sa présence. Cet état décrit la sortie, indépendamment du suivi du paiement.",
+        "description_i18n": {
+          "en": "Guest departure recorded at the end of their stay. This records check-out separately from payment tracking.",
+          "es": "Salida del cliente registrada al terminar su estancia. Describe la salida con independencia del seguimiento del pago.",
+          "fr": "Départ du client enregistré à l’issue de sa présence. Cet état décrit la sortie, indépendamment du suivi du paiement.",
+          "de": "Erfasste Abreise des Gastes am Ende seines Aufenthalts. Der Check-out wird unabhängig vom Zahlungsstatus beschrieben."
+        },
+        "name_i18n": {
+          "en": "Checked out",
+          "es": "Salida",
+          "fr": "Départ enregistré",
+          "de": "Abreise erfasst"
+        },
+        "name": "Départ enregistré"
+      }
+    },
+    {
+      "concept_id": "c303ca4f-601c-45d5-8a63-e6fd22abd81f",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "completed",
+      "base": {
+        "description": "Réservation terminée",
+        "description_i18n": {
+          "en": "Reservation completed",
+          "es": "Reserva finalizada",
+          "fr": "Réservation terminée"
+        },
+        "name_i18n": {
+          "en": "Completed",
+          "es": "Terminada",
+          "fr": "Terminée"
+        }
+      },
+      "changes": {
+        "description": "Réservation dont le traitement ou la prestation est indiqué comme terminé. Elle se distingue d’une réservation seulement confirmée ou encore en cours.",
+        "description_i18n": {
+          "en": "Reservation whose processing or service is marked as completed. This differs from a reservation that is merely confirmed or still in progress.",
+          "es": "Reserva cuya tramitación o prestación se indica como finalizada. Se distingue de una reserva solo confirmada o todavía en curso.",
+          "fr": "Réservation dont le traitement ou la prestation est indiqué comme terminé. Elle se distingue d’une réservation seulement confirmée ou encore en cours.",
+          "de": "Reservierung, deren Bearbeitung oder Leistung als abgeschlossen gekennzeichnet ist. Sie unterscheidet sich von einer lediglich bestätigten oder laufenden Reservierung."
+        },
+        "name_i18n": {
+          "en": "Completed",
+          "es": "Terminada",
+          "fr": "Terminée",
+          "de": "Abgeschlossen"
+        }
+      }
+    },
+    {
+      "concept_id": "28436eb1-ba0b-4124-9c9b-58692e35e029",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "confirmed",
+      "base": {
+        "description": "Réservation confirmée",
+        "description_i18n": {
+          "en": "Reservation confirmed",
+          "es": "Reserva confirmada",
+          "fr": "Réservation confirmée"
+        },
+        "name_i18n": {
+          "en": "Confirmed",
+          "es": "Confirmada",
+          "fr": "Confirmée"
+        }
+      },
+      "changes": {
+        "description": "Réservation acceptée et confirmée. La confirmation ne renseigne pas à elle seule l’encaissement ni l’arrivée du client.",
+        "description_i18n": {
+          "en": "Reservation that has been accepted and confirmed. Confirmation alone does not establish payment receipt or guest arrival.",
+          "es": "Reserva aceptada y confirmada. La confirmación por sí sola no indica el cobro ni la llegada del cliente.",
+          "fr": "Réservation acceptée et confirmée. La confirmation ne renseigne pas à elle seule l’encaissement ni l’arrivée du client.",
+          "de": "Angenommene und bestätigte Reservierung. Die Bestätigung allein sagt nichts über Zahlungseingang oder Ankunft des Gastes aus."
+        },
+        "name_i18n": {
+          "en": "Confirmed",
+          "es": "Confirmada",
+          "fr": "Confirmée",
+          "de": "Bestätigt"
+        }
+      }
+    },
+    {
+      "concept_id": "869da002-aa37-4e15-abae-6efc0fca8c80",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "modified",
+      "base": {
+        "description": "Réservation modifiée",
+        "description_i18n": {
+          "en": "Reservation modified",
+          "es": "Reserva modificada",
+          "fr": "Réservation modifiée"
+        },
+        "name_i18n": {
+          "en": "Modified",
+          "es": "Modificada",
+          "fr": "Modifiée"
+        }
+      },
+      "changes": {
+        "description": "Réservation dont les informations ont été modifiées après leur enregistrement. Cet état signale une révision du dossier, sans préciser les champs changés.",
+        "description_i18n": {
+          "en": "Reservation whose details have changed after being recorded. This status indicates a revision without specifying which fields changed.",
+          "es": "Reserva cuyos datos se han modificado después de registrarse. Este estado señala una revisión sin precisar los campos cambiados.",
+          "fr": "Réservation dont les informations ont été modifiées après leur enregistrement. Cet état signale une révision du dossier, sans préciser les champs changés.",
+          "de": "Reservierung, deren Angaben nach der Erfassung geändert wurden. Der Status kennzeichnet eine Überarbeitung, ohne die geänderten Felder festzulegen."
+        },
+        "name_i18n": {
+          "en": "Modified",
+          "es": "Modificada",
+          "fr": "Modifiée",
+          "de": "Geändert"
+        }
+      }
+    },
+    {
+      "concept_id": "1dbc75ce-18e4-43f6-9d8c-159fbc22c5e5",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "no_show",
+      "base": {
+        "description": "Client ne s'est pas présenté",
+        "description_i18n": {
+          "en": "Guest did not show up",
+          "es": "Cliente no se presentó",
+          "fr": "Client ne s'est pas présenté"
+        },
+        "name_i18n": {
+          "en": "No-show",
+          "es": "No presentado",
+          "fr": "No-show"
+        },
+        "name": "No-show",
+        "labels": []
+      },
+      "changes": {
+        "description": "Réservation pour laquelle le client attendu ne s’est pas présenté. À distinguer d’une annulation explicitement enregistrée.",
+        "description_i18n": {
+          "en": "Reservation for which the expected guest did not arrive. This differs from a recorded cancellation.",
+          "es": "Reserva en la que el cliente esperado no se ha presentado. Se distingue de una cancelación registrada expresamente.",
+          "fr": "Réservation pour laquelle le client attendu ne s’est pas présenté. À distinguer d’une annulation explicitement enregistrée.",
+          "de": "Reservierung, zu der der erwartete Gast nicht erschienen ist. Dies unterscheidet sich von einer ausdrücklich erfassten Stornierung."
+        },
+        "name_i18n": {
+          "en": "No-show",
+          "es": "Cliente no presentado",
+          "fr": "Client non présenté",
+          "de": "Nicht erschienen"
+        },
+        "name": "Client non présenté",
+        "labels": [
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "No-show"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "00ef2e1f-ec5c-43a8-86c1-9b7face4b04a",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "payment_confirmed",
+      "base": {
+        "description": "Paiement confirmé",
+        "description_i18n": {
+          "en": "Payment received",
+          "es": "Pago recibido",
+          "fr": "Paiement confirmé"
+        },
+        "name_i18n": {
+          "en": "Payment confirmed",
+          "es": "Pago confirmado",
+          "fr": "Paiement confirmé"
+        }
+      },
+      "changes": {
+        "description": "Paiement associé à la réservation indiqué comme reçu ou confirmé. Ce suivi financier ne renseigne pas l’arrivée du client.",
+        "description_i18n": {
+          "en": "Payment associated with the reservation marked as received or confirmed. This financial status does not indicate guest arrival.",
+          "es": "Pago asociado a la reserva indicado como recibido o confirmado. Este seguimiento financiero no informa de la llegada del cliente.",
+          "fr": "Paiement associé à la réservation indiqué comme reçu ou confirmé. Ce suivi financier ne renseigne pas l’arrivée du client.",
+          "de": "Zur Reservierung gehörende Zahlung, die als eingegangen oder bestätigt gekennzeichnet ist. Dieser Zahlungsstatus beschreibt nicht die Ankunft des Gastes."
+        },
+        "name_i18n": {
+          "en": "Payment confirmed",
+          "es": "Pago confirmado",
+          "fr": "Paiement confirmé",
+          "de": "Zahlung bestätigt"
+        }
+      }
+    },
+    {
+      "concept_id": "cd54b94c-4556-49a1-be7f-0d6668e58655",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "payment_pending",
+      "base": {
+        "description": "En attente de paiement",
+        "description_i18n": {
+          "en": "Awaiting payment",
+          "es": "Pago en espera",
+          "fr": "En attente de paiement"
+        },
+        "name_i18n": {
+          "en": "Payment pending",
+          "es": "Pago pendiente",
+          "fr": "Paiement en attente"
+        }
+      },
+      "changes": {
+        "description": "Paiement de la réservation encore attendu ou non confirmé. Cet état financier se distingue de l’attente de confirmation de la réservation elle-même.",
+        "description_i18n": {
+          "en": "Reservation payment still awaited or unconfirmed. This financial status differs from awaiting confirmation of the reservation itself.",
+          "es": "Pago de la reserva todavía pendiente o sin confirmar. Este estado financiero se distingue de la espera de confirmación de la propia reserva.",
+          "fr": "Paiement de la réservation encore attendu ou non confirmé. Cet état financier se distingue de l’attente de confirmation de la réservation elle-même.",
+          "de": "Noch ausstehende oder unbestätigte Zahlung zur Reservierung. Dieser Zahlungsstatus unterscheidet sich von einer noch unbestätigten Reservierung."
+        },
+        "name_i18n": {
+          "en": "Payment pending",
+          "es": "Pago pendiente",
+          "fr": "Paiement en attente",
+          "de": "Zahlung ausstehend"
+        }
+      }
+    },
+    {
+      "concept_id": "9c8f211e-56aa-46cf-be13-744e15e06a92",
+      "domain": "booking_status",
+      "context_key": "",
+      "code": "pending",
+      "base": {
+        "description": "Réservation en attente",
+        "description_i18n": {
+          "en": "Reservation pending",
+          "es": "Reserva pendiente",
+          "fr": "Réservation en attente"
+        },
+        "name_i18n": {
+          "en": "Pending",
+          "es": "Pendiente",
+          "fr": "En attente"
+        }
+      },
+      "changes": {
+        "description": "Réservation en attente de traitement ou de confirmation. Cet état ne doit pas être interprété comme une réservation acceptée.",
+        "description_i18n": {
+          "en": "Reservation awaiting processing or confirmation. This status must not be interpreted as an accepted reservation.",
+          "es": "Reserva pendiente de tramitación o confirmación. Este estado no debe interpretarse como una reserva aceptada.",
+          "fr": "Réservation en attente de traitement ou de confirmation. Cet état ne doit pas être interprété comme une réservation acceptée.",
+          "de": "Reservierung, deren Bearbeitung oder Bestätigung noch aussteht. Dieser Status bedeutet nicht, dass die Reservierung bereits angenommen wurde."
+        },
+        "name_i18n": {
+          "en": "Pending",
+          "es": "Pendiente",
+          "fr": "En attente",
+          "de": "Ausstehend"
+        }
+      }
+    }
+  ]
+}

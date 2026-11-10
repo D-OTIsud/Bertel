@@ -51,7 +51,7 @@ beforeEach(() => jest.clearAllMocks());
 it('loads inactive selected taxonomy, units and positionings from the same release snapshot', async () => {
   const { from } = mockDatabase();
   const loaded = await getObjectWorkspaceTaxonomyModule('o1', empty(), catalogs, 'HOT');
-  expect(loaded.domains[0]).toMatchObject({ domain: 'taxonomy_hot', label: 'Hôtels', objectType: 'HOT' });
+  expect(loaded.domains[0]).toMatchObject({ domain: 'taxonomy_hot', label: 'Hôtellerie', objectType: 'HOT' });
   expect(loaded.domains[0].assignment).toMatchObject({ nodeId: nature.id, label: nature.name });
   expect(loaded.domains[0].nodes[0]).toMatchObject({ isAssignable: false, isActive: false });
   expect(loaded.unitTypes.selectedCodes).toEqual([unit.code]);

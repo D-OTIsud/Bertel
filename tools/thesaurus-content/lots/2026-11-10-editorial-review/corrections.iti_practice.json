@@ -1,0 +1,646 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-iti_practice-1",
+  "proposals": [
+    {
+      "concept_id": "a92db462-4abc-422e-9931-b3cd3f3118e5",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "canyoning",
+      "base": {
+        "description": "Descente de canyons",
+        "description_i18n": {
+          "de": "Canyoning-Route (Schluchtenabstieg)",
+          "en": "Canyon descent itinerary",
+          "es": "Itinerario de descenso de barrancos",
+          "fr": "Descente de canyons"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a92db462-4abc-422e-9931-b3cd3f3118e5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a92db462-4abc-422e-9931-b3cd3f3118e5"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’itinéraire consistant à progresser dans un canyon ou un cours d’eau encaissé. Elle qualifie le parcours de descente et se distingue d’une simple randonnée pédestre.",
+        "description_i18n": {
+          "de": "Routenaktivität, bei der eine Schlucht oder ein eng eingeschnittenes Gewässer durchquert wird. Sie bezeichnet einen Schluchtenabstieg und keine gewöhnliche Wanderung.",
+          "en": "Itinerary activity involving progress through a canyon or a confined watercourse. It identifies a canyon descent rather than an ordinary walk.",
+          "es": "Práctica de itinerario que consiste en avanzar por un cañón o un curso de agua encajonado. Identifica un descenso de barrancos, no una simple caminata.",
+          "fr": "Pratique d’itinéraire consistant à progresser dans un canyon ou un cours d’eau encaissé. Elle qualifie le parcours de descente et se distingue d’une simple randonnée pédestre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a92db462-4abc-422e-9931-b3cd3f3118e5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a92db462-4abc-422e-9931-b3cd3f3118e5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d2022a10-f3d3-45af-85a8-c77028c23152",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "cyclotourisme",
+      "base": {
+        "description": "Balade à vélo touristique",
+        "description_i18n": {
+          "de": "Touristische Radtour",
+          "en": "Leisure cycling tour",
+          "es": "Paseo cicloturista",
+          "fr": "Balade à vélo touristique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2022a10-f3d3-45af-85a8-c77028c23152. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2022a10-f3d3-45af-85a8-c77028c23152"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique du vélo pour découvrir un territoire au fil d’un itinéraire touristique. Elle décrit l’usage de découverte du parcours, distinct d’une qualification de compétition.",
+        "description_i18n": {
+          "de": "Radfahren zur Erkundung einer Region entlang einer touristischen Route. Die Angabe beschreibt die Entdeckungsfahrt und keine Wettkampfklassifizierung.",
+          "en": "Cycling to discover an area along a touring itinerary. It describes the route’s sightseeing use rather than classifying a competition.",
+          "es": "Uso de la bicicleta para descubrir un territorio mediante un itinerario turístico. Describe el uso de descubrimiento, no una clasificación competitiva.",
+          "fr": "Pratique du vélo pour découvrir un territoire au fil d’un itinéraire touristique. Elle décrit l’usage de découverte du parcours, distinct d’une qualification de compétition."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2022a10-f3d3-45af-85a8-c77028c23152. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2022a10-f3d3-45af-85a8-c77028c23152"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5b431464-a5f7-4715-98e2-91c9af4cbc2f",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "equestre",
+      "base": {
+        "description": "Parcours à cheval",
+        "description_i18n": {
+          "de": "Reitstrecke",
+          "en": "Horse riding route",
+          "es": "Recorrido a caballo",
+          "fr": "Parcours à cheval"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b431464-a5f7-4715-98e2-91c9af4cbc2f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b431464-a5f7-4715-98e2-91c9af4cbc2f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’un itinéraire à cheval. Cette valeur indique l’usage équestre du parcours, distinct de son usage à pied ou à vélo.",
+        "description_i18n": {
+          "de": "Zurücklegen einer Route zu Pferd. Die Angabe bezeichnet die Reitnutzung im Unterschied zum Wandern oder Radfahren.",
+          "en": "Following an itinerary on horseback. This identifies equestrian use, distinct from walking or cycling.",
+          "es": "Recorrido de un itinerario a caballo. Esta opción indica su uso ecuestre, distinto del uso a pie o en bicicleta.",
+          "fr": "Pratique d’un itinéraire à cheval. Cette valeur indique l’usage équestre du parcours, distinct de son usage à pied ou à vélo."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b431464-a5f7-4715-98e2-91c9af4cbc2f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b431464-a5f7-4715-98e2-91c9af4cbc2f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a7f9cde5-0806-42a2-b3be-cb353b679a95",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "escalade",
+      "base": {
+        "description": "Site d'escalade",
+        "description_i18n": {
+          "de": "Kletterstelle",
+          "en": "Climbing site",
+          "es": "Zona de escalada",
+          "fr": "Site d'escalade"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a7f9cde5-0806-42a2-b3be-cb353b679a95. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a7f9cde5-0806-42a2-b3be-cb353b679a95"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique consistant à gravir une paroi ou un relief par des mouvements d’escalade. Dans l’itinéraire, elle identifie un parcours ou un site consacré à cette pratique.",
+        "description_i18n": {
+          "de": "Aktivität, bei der eine Wand oder Felsformation kletternd überwunden wird. Im Routenkontext bezeichnet sie eine Kletterstrecke oder einen Kletterort.",
+          "en": "Activity involving climbing a wall or rock feature. Within an itinerary, it identifies a route or site used for climbing.",
+          "es": "Práctica de ascender por una pared o un relieve mediante movimientos de escalada. En el itinerario identifica un recorrido o lugar dedicado a esta actividad.",
+          "fr": "Pratique consistant à gravir une paroi ou un relief par des mouvements d’escalade. Dans l’itinéraire, elle identifie un parcours ou un site consacré à cette pratique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a7f9cde5-0806-42a2-b3be-cb353b679a95. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a7f9cde5-0806-42a2-b3be-cb353b679a95"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "814f7f48-5da7-45e5-9581-599327cca42f",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "kayak",
+      "base": {
+        "description": "Parcours nautique",
+        "description_i18n": {
+          "de": "Wasserroute mit Kajak oder Kanu",
+          "en": "Water itinerary by kayak or canoe",
+          "es": "Recorrido acuático en kayak o canoa",
+          "fr": "Parcours nautique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/814f7f48-5da7-45e5-9581-599327cca42f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/814f7f48-5da7-45e5-9581-599327cca42f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’un itinéraire nautique en kayak ou en canoë. Elle décrit le mode de progression sur l’eau, sans qualifier à elle seule le niveau technique du parcours.",
+        "description_i18n": {
+          "de": "Zurücklegen einer Wasserroute mit Kajak oder Kanu. Die Angabe beschreibt die Fortbewegung auf dem Wasser, ohne allein den technischen Schwierigkeitsgrad festzulegen.",
+          "en": "Following a water route by kayak or canoe. This describes travel on the water without determining the route’s technical difficulty.",
+          "es": "Recorrido de un itinerario acuático en kayak o canoa. Describe la forma de avanzar por el agua sin determinar por sí sola la dificultad técnica.",
+          "fr": "Pratique d’un itinéraire nautique en kayak ou en canoë. Elle décrit le mode de progression sur l’eau, sans qualifier à elle seule le niveau technique du parcours."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/814f7f48-5da7-45e5-9581-599327cca42f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/814f7f48-5da7-45e5-9581-599327cca42f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dc79e4af-fd99-4323-9fdb-ad6a76ea9c75",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "parapente",
+      "base": {
+        "description": "Zone de vol libre",
+        "description_i18n": {
+          "de": "Gleitschirm-Fluggelände",
+          "en": "Free-flight zone",
+          "es": "Zona de vuelo libre",
+          "fr": "Zone de vol libre"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dc79e4af-fd99-4323-9fdb-ad6a76ea9c75. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dc79e4af-fd99-4323-9fdb-ad6a76ea9c75"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique de vol libre avec une voile de parapente. Cette valeur rattache l’itinéraire ou le site à cette activité aérienne, sans le confondre avec une randonnée terrestre.",
+        "description_i18n": {
+          "de": "Freies Fliegen mit einem Gleitschirm. Die Angabe ordnet die Route oder den Ort dieser Luftsportaktivität zu und nicht einer Wanderung am Boden.",
+          "en": "Free flight using a paraglider wing. This associates the itinerary or site with that aerial activity rather than a ground route.",
+          "es": "Práctica de vuelo libre con una vela de parapente. Vincula el itinerario o el lugar a esta actividad aérea y no a una caminata terrestre.",
+          "fr": "Pratique de vol libre avec une voile de parapente. Cette valeur rattache l’itinéraire ou le site à cette activité aérienne, sans le confondre avec une randonnée terrestre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dc79e4af-fd99-4323-9fdb-ad6a76ea9c75. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dc79e4af-fd99-4323-9fdb-ad6a76ea9c75"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "52f3c8ca-2ebd-412e-8dd5-0aa88d1d88e1",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "patrimoine",
+      "base": {
+        "description": "Circuit patrimoine & culture",
+        "description_i18n": {
+          "de": "Rundgang zu Kulturerbe und Kultur",
+          "en": "Heritage and culture circuit",
+          "es": "Circuito de patrimonio y cultura",
+          "fr": "Circuit patrimoine & culture"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/52f3c8ca-2ebd-412e-8dd5-0aa88d1d88e1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/52f3c8ca-2ebd-412e-8dd5-0aa88d1d88e1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Découverte des lieux, éléments culturels et traces de l’histoire au fil d’un circuit. Cette pratique indique le thème patrimonial de l’itinéraire sans exiger une inscription à l’UNESCO.",
+        "description_i18n": {
+          "de": "Erkundung von Orten, kulturellen Merkmalen und historischen Spuren entlang eines Rundgangs. Die Angabe bezeichnet ein Kulturerbethema, ohne eine UNESCO-Eintragung vorauszusetzen.",
+          "en": "Discovering places, cultural features and historical traces along a circuit. This indicates a heritage theme without requiring UNESCO inscription.",
+          "es": "Descubrimiento de lugares, elementos culturales y huellas de la historia a lo largo de un circuito. Indica una temática patrimonial sin exigir inscripción en la UNESCO.",
+          "fr": "Découverte des lieux, éléments culturels et traces de l’histoire au fil d’un circuit. Cette pratique indique le thème patrimonial de l’itinéraire sans exiger une inscription à l’UNESCO."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/52f3c8ca-2ebd-412e-8dd5-0aa88d1d88e1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/52f3c8ca-2ebd-412e-8dd5-0aa88d1d88e1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "38b319d8-dd6f-4063-8042-2c3e22912551",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "plongee",
+      "base": {
+        "description": "Site de plongée sous-marine",
+        "description_i18n": {
+          "de": "Tauchplatz",
+          "en": "Scuba diving site",
+          "es": "Sitio de buceo",
+          "fr": "Site de plongée sous-marine"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/38b319d8-dd6f-4063-8042-2c3e22912551. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/38b319d8-dd6f-4063-8042-2c3e22912551"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’exploration sous-marine en plongée, associée à un site ou un parcours. Elle se distingue de la randonnée palmée réalisée à la surface.",
+        "description_i18n": {
+          "de": "Unterwassererkundung durch Tauchen an einem Ort oder entlang einer Strecke. Sie unterscheidet sich vom Schnorcheln an der Oberfläche.",
+          "en": "Underwater exploration by diving, associated with a site or route. It differs from snorkelling at the surface.",
+          "es": "Exploración submarina mediante buceo, asociada a un lugar o recorrido. Se distingue del recorrido con tubo realizado en superficie.",
+          "fr": "Pratique d’exploration sous-marine en plongée, associée à un site ou un parcours. Elle se distingue de la randonnée palmée réalisée à la surface."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/38b319d8-dd6f-4063-8042-2c3e22912551. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/38b319d8-dd6f-4063-8042-2c3e22912551"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "60035684-614d-4f58-bd8f-b979ba406604",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "randonnee_pedestre",
+      "base": {
+        "description": "Itinéraire de randonnée classique",
+        "description_i18n": {
+          "de": "Klassische Wanderroute",
+          "en": "Classic hiking route",
+          "es": "Itinerario de senderismo clásico",
+          "fr": "Itinéraire de randonnée classique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/60035684-614d-4f58-bd8f-b979ba406604. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/60035684-614d-4f58-bd8f-b979ba406604"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’un parcours de découverte à pied. Cette valeur décrit la randonnée et se distingue du trail, dont la progression s’effectue en courant.",
+        "description_i18n": {
+          "de": "Erkundung einer Strecke zu Fuß. Die Angabe beschreibt Wandern im Unterschied zum laufend betriebenen Trailrunning.",
+          "en": "Following a discovery route on foot. This describes hiking rather than trail running.",
+          "es": "Recorrido de descubrimiento a pie. Describe el senderismo y se distingue del trail, que se realiza corriendo.",
+          "fr": "Pratique d’un parcours de découverte à pied. Cette valeur décrit la randonnée et se distingue du trail, dont la progression s’effectue en courant."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/60035684-614d-4f58-bd8f-b979ba406604. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/60035684-614d-4f58-bd8f-b979ba406604"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aeaec3f8-b6e9-4414-ba7c-c52cda581cdc",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "raquette",
+      "base": {
+        "description": "Itinéraire hivernal en raquettes",
+        "description_i18n": {
+          "de": "Winterliche Schneeschuhroute",
+          "en": "Winter snowshoe route",
+          "es": "Ruta invernal con raquetas",
+          "fr": "Itinéraire hivernal en raquettes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aeaec3f8-b6e9-4414-ba7c-c52cda581cdc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aeaec3f8-b6e9-4414-ba7c-c52cda581cdc"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’un itinéraire enneigé à l’aide de raquettes aux pieds. Elle permet d’identifier ce mode de déplacement hivernal sans affirmer sa disponibilité locale.",
+        "description_i18n": {
+          "de": "Zurücklegen einer verschneiten Route mit Schneeschuhen. Die Angabe bezeichnet diese winterliche Fortbewegung, ohne lokale Verfügbarkeit zu behaupten.",
+          "en": "Following a snow-covered route using snowshoes. It identifies this winter travel mode without asserting local availability.",
+          "es": "Recorrido de un itinerario nevado con raquetas en los pies. Identifica este desplazamiento invernal sin afirmar su disponibilidad local.",
+          "fr": "Pratique d’un itinéraire enneigé à l’aide de raquettes aux pieds. Elle permet d’identifier ce mode de déplacement hivernal sans affirmer sa disponibilité locale."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aeaec3f8-b6e9-4414-ba7c-c52cda581cdc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aeaec3f8-b6e9-4414-ba7c-c52cda581cdc"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "651e3a00-7c32-4cb6-b796-cf6c44546f37",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "ski",
+      "base": {
+        "description": "Domaine skiable",
+        "description_i18n": {
+          "de": "Skigebiet",
+          "en": "Ski area",
+          "es": "Dominio esquiable",
+          "fr": "Domaine skiable"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/651e3a00-7c32-4cb6-b796-cf6c44546f37. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/651e3a00-7c32-4cb6-b796-cf6c44546f37"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’un itinéraire ou d’un espace consacré au déplacement à skis sur neige. Sa présence dans le catalogue ne signifie pas qu’une offre existe sur chaque territoire.",
+        "description_i18n": {
+          "de": "Aktivität auf einer Route oder Fläche zur Fortbewegung auf Schnee mit Skiern. Der Katalogeintrag bedeutet nicht, dass überall ein entsprechendes Angebot besteht.",
+          "en": "Activity on an itinerary or area used for travel on skis over snow. Inclusion in the catalogue does not imply availability in every area.",
+          "es": "Práctica de un itinerario o espacio destinado al desplazamiento sobre nieve con esquís. Su presencia en el catálogo no implica una oferta en todos los territorios.",
+          "fr": "Pratique d’un itinéraire ou d’un espace consacré au déplacement à skis sur neige. Sa présence dans le catalogue ne signifie pas qu’une offre existe sur chaque territoire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/651e3a00-7c32-4cb6-b796-cf6c44546f37. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/651e3a00-7c32-4cb6-b796-cf6c44546f37"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5bfb5e39-0369-46fb-9060-e7586dbd507b",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "snorkeling",
+      "base": {
+        "description": "Randonnée palmée",
+        "description_i18n": {
+          "de": "Schnorchelroute",
+          "en": "Snorkelling route",
+          "es": "Recorrido de snorkel",
+          "fr": "Randonnée palmée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Découverte du milieu aquatique en nageant à la surface avec palmes, masque et tuba. Cette pratique se distingue de la plongée sous-marine en profondeur.",
+        "description_i18n": {
+          "de": "Erkundung der Wasserwelt durch Schwimmen an der Oberfläche mit Flossen, Maske und Schnorchel. Diese Aktivität unterscheidet sich vom Tauchen in der Tiefe.",
+          "en": "Exploring an aquatic environment by swimming at the surface with fins, mask and snorkel. This differs from diving below the surface.",
+          "es": "Descubrimiento del medio acuático nadando en superficie con aletas, máscara y tubo. Se distingue del buceo a mayor profundidad.",
+          "fr": "Découverte du milieu aquatique en nageant à la surface avec palmes, masque et tuba. Cette pratique se distingue de la plongée sous-marine en profondeur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f923d89a-ce9f-4302-a857-d49fa47b6fa4",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "trail",
+      "base": {
+        "description": "Parcours de trail running",
+        "description_i18n": {
+          "de": "Trailrunning-Strecke",
+          "en": "Trail running course",
+          "es": "Recorrido de trail running",
+          "fr": "Parcours de trail running"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique de la course à pied sur un itinéraire de sentiers ou de terrain naturel. Elle qualifie l’usage du parcours pour courir et se distingue de la randonnée marchée.",
+        "description_i18n": {
+          "de": "Laufen auf einer Route über Wege oder natürliches Gelände. Die Angabe beschreibt die Laufnutzung im Unterschied zum Wandern.",
+          "en": "Running along an itinerary of trails or natural terrain. It identifies the route’s running use rather than walking.",
+          "es": "Carrera a pie por un itinerario de senderos o terreno natural. Identifica su uso para correr, distinto del senderismo a paso de marcha.",
+          "fr": "Pratique de la course à pied sur un itinéraire de sentiers ou de terrain naturel. Elle qualifie l’usage du parcours pour courir et se distingue de la randonnée marchée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "89335ebe-1e47-4bd3-bbe6-93e09e7e22c2",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "velo_route",
+      "base": {
+        "description": "Itinéraire cyclable sur route",
+        "description_i18n": {
+          "de": "Straßenradroute",
+          "en": "Road cycling itinerary",
+          "es": "Itinerario de ciclismo en carretera",
+          "fr": "Itinéraire cyclable sur route"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/89335ebe-1e47-4bd3-bbe6-93e09e7e22c2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/89335ebe-1e47-4bd3-bbe6-93e09e7e22c2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique du vélo sur un itinéraire empruntant la route. Elle se distingue du VTT, orienté vers les chemins et terrains non routiers.",
+        "description_i18n": {
+          "de": "Radfahren auf einer Route über Straßen. Dies unterscheidet sich vom Mountainbiken auf Wegen und Gelände abseits der Straße.",
+          "en": "Cycling along an itinerary using roads. This differs from mountain biking on tracks and off-road terrain.",
+          "es": "Ciclismo por un itinerario que utiliza carreteras. Se distingue de la bicicleta de montaña, orientada a caminos y terrenos no viales.",
+          "fr": "Pratique du vélo sur un itinéraire empruntant la route. Elle se distingue du VTT, orienté vers les chemins et terrains non routiers."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/89335ebe-1e47-4bd3-bbe6-93e09e7e22c2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/89335ebe-1e47-4bd3-bbe6-93e09e7e22c2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "645c8709-2d23-4891-ba29-7d26514889a7",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "velo_vtt",
+      "base": {
+        "description": "Itinéraire VTT",
+        "description_i18n": {
+          "de": "Mountainbike-Strecke",
+          "en": "Mountain bike trail",
+          "es": "Ruta de bicicleta de montaña",
+          "fr": "Itinéraire VTT"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/645c8709-2d23-4891-ba29-7d26514889a7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/645c8709-2d23-4891-ba29-7d26514889a7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique du vélo tout terrain sur des chemins et sentiers. Elle décrit l’usage de l’itinéraire et ne détermine pas à elle seule son niveau de difficulté.",
+        "description_i18n": {
+          "de": "Mountainbiken auf Wegen und Pfaden. Die Angabe beschreibt die Routennutzung, ohne allein deren Schwierigkeitsgrad festzulegen.",
+          "en": "Mountain biking on tracks and trails. This describes itinerary use without independently determining its difficulty.",
+          "es": "Práctica de bicicleta de montaña por caminos y senderos. Describe el uso del itinerario sin determinar por sí sola su dificultad.",
+          "fr": "Pratique du vélo tout terrain sur des chemins et sentiers. Elle décrit l’usage de l’itinéraire et ne détermine pas à elle seule son niveau de difficulté."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/645c8709-2d23-4891-ba29-7d26514889a7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/645c8709-2d23-4891-ba29-7d26514889a7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1358f97d-dbb2-46e1-84db-7a50462652d5",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "voile",
+      "base": {
+        "description": "Navigation à la voile",
+        "description_i18n": {
+          "de": "Segelroute",
+          "en": "Sailing itinerary",
+          "es": "Itinerario de navegación a vela",
+          "fr": "Navigation à la voile"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1358f97d-dbb2-46e1-84db-7a50462652d5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1358f97d-dbb2-46e1-84db-7a50462652d5"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pratique d’un itinéraire nautique à bord d’une embarcation propulsée par une voile. Elle distingue cette navigation des parcours à pagaie ou à moteur.",
+        "description_i18n": {
+          "de": "Zurücklegen einer Wasserroute in einem durch Segel angetriebenen Boot. Dies unterscheidet Segeln von Paddel- oder Motorfahrten.",
+          "en": "Following a water itinerary in a vessel propelled by a sail. This distinguishes sailing from paddling or motor-powered travel.",
+          "es": "Recorrido de un itinerario acuático en una embarcación propulsada por una vela. Distingue esta navegación de los recorridos a remo o a motor.",
+          "fr": "Pratique d’un itinéraire nautique à bord d’une embarcation propulsée par une voile. Elle distingue cette navigation des parcours à pagaie ou à moteur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1358f97d-dbb2-46e1-84db-7a50462652d5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1358f97d-dbb2-46e1-84db-7a50462652d5"
+          }
+        ]
+      }
+    }
+  ]
+}

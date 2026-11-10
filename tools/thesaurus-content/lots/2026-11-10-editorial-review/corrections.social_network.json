@@ -1,0 +1,446 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-social_network-1",
+  "proposals": [
+    {
+      "concept_id": "151fc896-711d-4bbd-b9ee-c69d0c5ad2de",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "facebook",
+      "base": {
+        "description": "Page officielle Facebook",
+        "description_i18n": {
+          "de": "Offizielle Facebook-Seite",
+          "en": "Official Facebook page",
+          "es": "Página oficial de Facebook",
+          "fr": "Page officielle Facebook"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/151fc896-711d-4bbd-b9ee-c69d0c5ad2de. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/151fc896-711d-4bbd-b9ee-c69d0c5ad2de"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Type de présence correspondant à la page ou au profil Facebook de la structure. Il classe le lien social renseigné dans la fiche, distinct d’une adresse de réservation.",
+        "description_i18n": {
+          "de": "Präsenztyp für die Facebook-Seite oder das Facebook-Profil einer Organisation. Er ordnet den Social-Media-Link im Eintrag ein und keine Buchungsadresse.",
+          "en": "Presence type corresponding to the organisation’s Facebook page or profile. It classifies the social link in the listing rather than a booking address.",
+          "es": "Tipo de presencia correspondiente a la página o perfil de Facebook de la entidad. Clasifica el enlace social de la ficha, distinto de una dirección de reserva.",
+          "fr": "Type de présence correspondant à la page ou au profil Facebook de la structure. Il classe le lien social renseigné dans la fiche, distinct d’une adresse de réservation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/151fc896-711d-4bbd-b9ee-c69d0c5ad2de. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/151fc896-711d-4bbd-b9ee-c69d0c5ad2de"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8ab3fb6d-40e1-4e8a-b190-583a34fc360a",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "google_business",
+      "base": {
+        "description": "Fiche Google Business Profile",
+        "description_i18n": {
+          "de": "Eintrag bei Google Business Profile",
+          "en": "Google Business Profile listing",
+          "es": "Ficha de Google Business Profile",
+          "fr": "Fiche Google Business Profile"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3fb6d-40e1-4e8a-b190-583a34fc360a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3fb6d-40e1-4e8a-b190-583a34fc360a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence correspondant à la fiche d’établissement Google Business Profile. Elle permet d’identifier ce lien de visibilité locale parmi les autres profils externes.",
+        "description_i18n": {
+          "de": "Präsenz über einen Google-Business-Profile-Eintrag. Sie kennzeichnet diesen Link zur lokalen Sichtbarkeit unter den übrigen externen Profilen.",
+          "en": "Presence corresponding to a Google Business Profile listing. It identifies this local-visibility link among other external profiles.",
+          "es": "Presencia correspondiente a la ficha de empresa de Google Business Profile. Identifica este enlace de visibilidad local entre otros perfiles externos.",
+          "fr": "Présence correspondant à la fiche d’établissement Google Business Profile. Elle permet d’identifier ce lien de visibilité locale parmi les autres profils externes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3fb6d-40e1-4e8a-b190-583a34fc360a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8ab3fb6d-40e1-4e8a-b190-583a34fc360a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6e3a1b3f-6757-4caa-86fc-1ef47a766825",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "instagram",
+      "base": {
+        "description": "Profil Instagram",
+        "description_i18n": {
+          "de": "Profil auf Instagram",
+          "en": "Instagram profile",
+          "es": "Perfil de Instagram",
+          "fr": "Profil Instagram"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6e3a1b3f-6757-4caa-86fc-1ef47a766825. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6e3a1b3f-6757-4caa-86fc-1ef47a766825"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Type de présence correspondant au compte Instagram de la structure. Il sert à classer l’adresse de ce profil social dans les coordonnées de la fiche.",
+        "description_i18n": {
+          "de": "Präsenztyp für das Instagram-Konto der Organisation. Er ordnet die Adresse dieses sozialen Profils in den Kontaktdaten des Eintrags ein.",
+          "en": "Presence type corresponding to the organisation’s Instagram account. It classifies that social profile’s address in the listing’s contact details.",
+          "es": "Tipo de presencia correspondiente a la cuenta de Instagram de la entidad. Clasifica la dirección de ese perfil social en los datos de contacto de la ficha.",
+          "fr": "Type de présence correspondant au compte Instagram de la structure. Il sert à classer l’adresse de ce profil social dans les coordonnées de la fiche."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6e3a1b3f-6757-4caa-86fc-1ef47a766825. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6e3a1b3f-6757-4caa-86fc-1ef47a766825"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "447be3c4-28e6-453a-9180-050a1db1b76c",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "line",
+      "base": {
+        "description": "Service de messagerie et réseau social LINE.",
+        "description_i18n": {
+          "de": "Messaging-Dienst und soziales Netzwerk LINE.",
+          "en": "LINE messaging and social networking service.",
+          "es": "Servicio de mensajería y red social LINE.",
+          "fr": "Service de messagerie et réseau social LINE."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/447be3c4-28e6-453a-9180-050a1db1b76c. Sources externes réellement consultées : https://www.line.me/en/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/447be3c4-28e6-453a-9180-050a1db1b76c ; https://www.line.me/en/"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence de la structure sur le service de messagerie et réseau social LINE. Cette valeur identifie le service associé au lien, sans créer un canal de contact automatiquement.",
+        "description_i18n": {
+          "de": "Präsenz der Organisation beim Nachrichten- und sozialen Netzwerkdienst LINE. Die Angabe bezeichnet den Dienst eines Links, ohne automatisch einen Kontaktkanal einzurichten.",
+          "en": "Organisation presence on the LINE messaging and social networking service. This identifies the service associated with a link without automatically creating a contact channel.",
+          "es": "Presencia de la entidad en el servicio de mensajería y red social LINE. Identifica el servicio asociado a un enlace sin crear automáticamente un canal de contacto.",
+          "fr": "Présence de la structure sur le service de messagerie et réseau social LINE. Cette valeur identifie le service associé au lien, sans créer un canal de contact automatiquement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/447be3c4-28e6-453a-9180-050a1db1b76c. Sources externes réellement consultées : https://www.line.me/en/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/447be3c4-28e6-453a-9180-050a1db1b76c ; https://www.line.me/en/"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "401fa1e6-583a-48b8-8495-bfceea25ad95",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "linkedin",
+      "base": {
+        "description": "Page professionnelle LinkedIn",
+        "description_i18n": {
+          "de": "Berufliche LinkedIn-Seite",
+          "en": "Professional LinkedIn page",
+          "es": "Página profesional de LinkedIn",
+          "fr": "Page professionnelle LinkedIn"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/401fa1e6-583a-48b8-8495-bfceea25ad95. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/401fa1e6-583a-48b8-8495-bfceea25ad95"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence professionnelle de la structure sur LinkedIn. Elle classe le lien vers sa page ou son profil, distinct du nom d’une personne de contact.",
+        "description_i18n": {
+          "de": "Berufliche Präsenz der Organisation auf LinkedIn. Sie ordnet den Link zur Seite oder zum Profil ein und nicht den Namen einer Kontaktperson.",
+          "en": "Professional presence of an organisation on LinkedIn. It classifies the link to its page or profile rather than a contact person’s name.",
+          "es": "Presencia profesional de la entidad en LinkedIn. Clasifica el enlace a su página o perfil y no el nombre de una persona de contacto.",
+          "fr": "Présence professionnelle de la structure sur LinkedIn. Elle classe le lien vers sa page ou son profil, distinct du nom d’une personne de contact."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/401fa1e6-583a-48b8-8495-bfceea25ad95. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/401fa1e6-583a-48b8-8495-bfceea25ad95"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3dc09308-ea02-47e4-a4fe-eed5164b9873",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "pinterest",
+      "base": {
+        "description": "Tableaux d'inspiration Pinterest",
+        "description_i18n": {
+          "de": "Inspirations-Pinnwände auf Pinterest",
+          "en": "Pinterest inspiration boards",
+          "es": "Tableros de inspiración en Pinterest",
+          "fr": "Tableaux d'inspiration Pinterest"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3dc09308-ea02-47e4-a4fe-eed5164b9873. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3dc09308-ea02-47e4-a4fe-eed5164b9873"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence correspondant à un compte ou à des tableaux d’inspiration sur Pinterest. Elle permet d’identifier ce lien de contenus visuels dans la fiche.",
+        "description_i18n": {
+          "de": "Präsenz über ein Pinterest-Konto oder Inspirations-Pinnwände. Sie kennzeichnet diesen Link zu visuellen Inhalten im Eintrag.",
+          "en": "Presence corresponding to a Pinterest account or inspiration boards. It identifies that visual-content link within a listing.",
+          "es": "Presencia correspondiente a una cuenta o tableros de inspiración en Pinterest. Identifica ese enlace de contenidos visuales en la ficha.",
+          "fr": "Présence correspondant à un compte ou à des tableaux d’inspiration sur Pinterest. Elle permet d’identifier ce lien de contenus visuels dans la fiche."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3dc09308-ea02-47e4-a4fe-eed5164b9873. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3dc09308-ea02-47e4-a4fe-eed5164b9873"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a264e034-fc96-4f5e-b7b1-0d51e0d20453",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "tiktok",
+      "base": {
+        "description": "Compte TikTok pour contenus courts",
+        "description_i18n": {
+          "de": "TikTok-Konto für kurze Inhalte",
+          "en": "TikTok account for short-form content",
+          "es": "Cuenta de TikTok para contenidos cortos",
+          "fr": "Compte TikTok pour contenus courts"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a264e034-fc96-4f5e-b7b1-0d51e0d20453. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a264e034-fc96-4f5e-b7b1-0d51e0d20453"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence correspondant au compte TikTok de la structure et à ses contenus vidéo. Elle sert à classer le lien vers ce profil social.",
+        "description_i18n": {
+          "de": "Präsenz über das TikTok-Konto der Organisation und dessen Videoinhalte. Sie ordnet den Link zu diesem sozialen Profil ein.",
+          "en": "Presence corresponding to the organisation’s TikTok account and video content. It classifies the link to that social profile.",
+          "es": "Presencia correspondiente a la cuenta de TikTok de la entidad y sus contenidos de vídeo. Clasifica el enlace a ese perfil social.",
+          "fr": "Présence correspondant au compte TikTok de la structure et à ses contenus vidéo. Elle sert à classer le lien vers ce profil social."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a264e034-fc96-4f5e-b7b1-0d51e0d20453. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a264e034-fc96-4f5e-b7b1-0d51e0d20453"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "71a9fd4b-2320-4c9f-b2fc-0129d8f1e5c3",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "tripadvisor",
+      "base": {
+        "description": "Fiche Tripadvisor",
+        "description_i18n": {
+          "de": "Eintrag auf Tripadvisor",
+          "en": "Tripadvisor listing",
+          "es": "Ficha de Tripadvisor",
+          "fr": "Fiche Tripadvisor"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/71a9fd4b-2320-4c9f-b2fc-0129d8f1e5c3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/71a9fd4b-2320-4c9f-b2fc-0129d8f1e5c3"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence correspondant à une fiche Tripadvisor liée à la structure ou à l’offre. Elle désigne le profil externe et ne constitue pas un label ou une note attribuée par Bertel.",
+        "description_i18n": {
+          "de": "Präsenz über einen Tripadvisor-Eintrag zur Organisation oder zum Angebot. Sie bezeichnet ein externes Profil und kein von Bertel vergebenes Label oder Urteil.",
+          "en": "Presence corresponding to a Tripadvisor listing for the organisation or offer. It identifies an external profile rather than a label or rating awarded by Bertel.",
+          "es": "Presencia correspondiente a una ficha de Tripadvisor vinculada a la entidad u oferta. Identifica el perfil externo, no un sello ni una valoración otorgada por Bertel.",
+          "fr": "Présence correspondant à une fiche Tripadvisor liée à la structure ou à l’offre. Elle désigne le profil externe et ne constitue pas un label ou une note attribuée par Bertel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/71a9fd4b-2320-4c9f-b2fc-0129d8f1e5c3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/71a9fd4b-2320-4c9f-b2fc-0129d8f1e5c3"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3c46b20f-25ab-4eca-8a14-cc3d90bb5701",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "twitter",
+      "base": {
+        "description": "Compte X / Twitter",
+        "description_i18n": {
+          "de": "Konto auf X / Twitter",
+          "en": "X / Twitter account",
+          "es": "Cuenta de X / Twitter",
+          "fr": "Compte X / Twitter"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c46b20f-25ab-4eca-8a14-cc3d90bb5701. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c46b20f-25ab-4eca-8a14-cc3d90bb5701"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence correspondant au compte sur le réseau nommé X, également identifié par son ancien nom Twitter. Les deux noms renvoient ici au même type de profil externe.",
+        "description_i18n": {
+          "de": "Präsenz über ein Konto beim Netzwerk X, das auch unter seinem früheren Namen Twitter geführt wird. Beide Namen bezeichnen hier denselben externen Profiltyp.",
+          "en": "Presence corresponding to an account on the network named X, also identified by its former name Twitter. Both names refer here to the same external profile type.",
+          "es": "Presencia correspondiente a una cuenta en la red llamada X, también identificada por su antiguo nombre Twitter. Ambos nombres designan aquí el mismo tipo de perfil externo.",
+          "fr": "Présence correspondant au compte sur le réseau nommé X, également identifié par son ancien nom Twitter. Les deux noms renvoient ici au même type de profil externe."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c46b20f-25ab-4eca-8a14-cc3d90bb5701. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c46b20f-25ab-4eca-8a14-cc3d90bb5701"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "61f31299-c134-4d0d-b4c2-6542978ee117",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "wechat",
+      "base": {
+        "description": "Messagerie et réseau social",
+        "description_i18n": {
+          "de": "Messaging-Dienst und soziales Netzwerk",
+          "en": "Messaging and social network",
+          "es": "Mensajería y red social",
+          "fr": "Messagerie et réseau social"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/61f31299-c134-4d0d-b4c2-6542978ee117. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/61f31299-c134-4d0d-b4c2-6542978ee117"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence de la structure sur le service de messagerie et réseau social WeChat. Cette valeur distingue le lien WeChat des profils sur d’autres services.",
+        "description_i18n": {
+          "de": "Präsenz der Organisation beim Nachrichten- und sozialen Netzwerkdienst WeChat. Sie unterscheidet den WeChat-Link von Profilen bei anderen Diensten.",
+          "en": "Organisation presence on the WeChat messaging and social networking service. It distinguishes a WeChat link from profiles on other services.",
+          "es": "Presencia de la entidad en el servicio de mensajería y red social WeChat. Distingue el enlace de WeChat de los perfiles en otros servicios.",
+          "fr": "Présence de la structure sur le service de messagerie et réseau social WeChat. Cette valeur distingue le lien WeChat des profils sur d’autres services."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/61f31299-c134-4d0d-b4c2-6542978ee117. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/61f31299-c134-4d0d-b4c2-6542978ee117"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8e312527-5337-4e87-82d6-f66c5c524c67",
+      "domain": "social_network",
+      "context_key": "",
+      "code": "youtube",
+      "base": {
+        "description": "Chaîne YouTube de destination",
+        "description_i18n": {
+          "de": "YouTube-Kanal des Reiseziels",
+          "en": "Destination YouTube channel",
+          "es": "Canal de YouTube del destino",
+          "fr": "Chaîne YouTube de destination"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8e312527-5337-4e87-82d6-f66c5c524c67. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8e312527-5337-4e87-82d6-f66c5c524c67"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence correspondant à une chaîne YouTube de la structure ou de la destination. Elle classe le lien vers l’ensemble des contenus de la chaîne, distinct d’un fichier vidéo isolé.",
+        "description_i18n": {
+          "de": "Präsenz über einen YouTube-Kanal der Organisation oder Destination. Sie ordnet den Link zu den Kanalinhalten ein und keine einzelne Videodatei.",
+          "en": "Presence corresponding to the organisation’s or destination’s YouTube channel. It classifies a link to channel content rather than a single video file.",
+          "es": "Presencia correspondiente al canal de YouTube de la entidad o del destino. Clasifica el enlace a los contenidos del canal, distinto de un archivo de vídeo aislado.",
+          "fr": "Présence correspondant à une chaîne YouTube de la structure ou de la destination. Elle classe le lien vers l’ensemble des contenus de la chaîne, distinct d’un fichier vidéo isolé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8e312527-5337-4e87-82d6-f66c5c524c67. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8e312527-5337-4e87-82d6-f66c5c524c67"
+          }
+        ]
+      }
+    }
+  ]
+}

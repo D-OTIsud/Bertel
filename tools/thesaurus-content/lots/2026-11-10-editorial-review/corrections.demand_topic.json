@@ -1,0 +1,684 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-demand_topic-1",
+  "proposals": [
+    {
+      "concept_id": "d4dd99c3-a764-4574-85d8-91fb4961667b",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "accompagnement_taxe_sejour",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Accompagnement Taxe de séjour",
+        "name_i18n": {
+          "fr": "Accompagnement Taxe de séjour"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Sujet d'échange portant sur l'accompagnement d'un prestataire pour comprendre ou accomplir ses démarches relatives à la taxe de séjour.",
+        "description_i18n": {
+          "fr": "Sujet d'échange portant sur l'accompagnement d'un prestataire pour comprendre ou accomplir ses démarches relatives à la taxe de séjour.",
+          "en": "Enquiry topic concerning support for a provider in understanding or completing visitor-tax procedures.",
+          "es": "Tema de consulta sobre el acompañamiento a un prestador para comprender o realizar trámites relativos a la tasa turística.",
+          "de": "Anfragethema zur Unterstützung eines Anbieters beim Verständnis oder bei der Erledigung von Vorgängen zur Aufenthaltsabgabe."
+        },
+        "name": "Accompagnement à la taxe de séjour",
+        "name_i18n": {
+          "fr": "Accompagnement à la taxe de séjour",
+          "en": "Visitor-tax support",
+          "es": "Acompañamiento sobre la tasa turística",
+          "de": "Unterstützung zur Aufenthaltsabgabe"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Accompagnement Taxe de séjour"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "541b0964-1703-4410-9cb0-6dd88393f359",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "autres",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Autres"
+        }
+      },
+      "changes": {
+        "description": "Sujet de demande qui ne correspond à aucune des rubriques CRM disponibles ; le contenu de l'échange doit préciser son objet réel.",
+        "description_i18n": {
+          "fr": "Sujet de demande qui ne correspond à aucune des rubriques CRM disponibles ; le contenu de l'échange doit préciser son objet réel.",
+          "en": "Enquiry topic that does not match any available CRM category; the interaction content should identify its actual subject.",
+          "es": "Tema de consulta que no corresponde a ninguna categoría disponible del CRM; el contenido del intercambio debe precisar su objeto real.",
+          "de": "Anfragethema, das keiner verfügbaren CRM-Rubrik entspricht; der Gesprächsinhalt soll das tatsächliche Anliegen benennen."
+        },
+        "name_i18n": {
+          "fr": "Autres",
+          "en": "Other",
+          "es": "Otros",
+          "de": "Sonstige"
+        }
+      }
+    },
+    {
+      "concept_id": "36eb59bc-808b-4fda-bf03-96b4794fdfec",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "boutique",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Boutique"
+        }
+      },
+      "changes": {
+        "description": "Sujet d'échange concernant la boutique de l'office, ses produits ou les demandes liées à leur vente, distinct d'une catégorie de commerce touristique.",
+        "description_i18n": {
+          "fr": "Sujet d'échange concernant la boutique de l'office, ses produits ou les demandes liées à leur vente, distinct d'une catégorie de commerce touristique.",
+          "en": "Enquiry topic concerning the tourist office's shop, its products or requests related to their sale, distinct from a tourism retail category.",
+          "es": "Tema de consulta sobre la tienda de la oficina de turismo, sus productos o solicitudes relacionadas con su venta, distinto de una categoría de comercio turístico.",
+          "de": "Anfragethema zum Laden des Tourismusbüros, seinen Produkten oder verkaufsbezogenen Anliegen, im Unterschied zu einer touristischen Einzelhandelskategorie."
+        },
+        "name_i18n": {
+          "fr": "Boutique",
+          "en": "Shop",
+          "es": "Tienda",
+          "de": "Laden"
+        }
+      }
+    },
+    {
+      "concept_id": "cef25c6f-3c72-42af-b9d3-e02967a14bea",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "demande_attestation_oti",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Demande d'attestation OTI",
+        "name_i18n": {
+          "fr": "Demande d'attestation OTI"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Demande adressée à l'office de tourisme pour obtenir une attestation ; la nature et la portée de la pièce restent celles précisées dans la demande.",
+        "description_i18n": {
+          "fr": "Demande adressée à l'office de tourisme pour obtenir une attestation ; la nature et la portée de la pièce restent celles précisées dans la demande.",
+          "en": "Request submitted to the tourist office for an attestation; the document's nature and scope are those specified in the enquiry.",
+          "es": "Solicitud dirigida a la oficina de turismo para obtener una constancia; la naturaleza y el alcance del documento son los precisados en la solicitud.",
+          "de": "An das Tourismusbüro gerichtete Bitte um eine Bescheinigung; Art und Aussageumfang des Dokuments ergeben sich aus der Anfrage."
+        },
+        "name": "Demande d'attestation à l'OTI",
+        "name_i18n": {
+          "fr": "Demande d'attestation à l'OTI",
+          "en": "Request for an OTI attestation",
+          "es": "Solicitud de constancia a OTI",
+          "de": "Anfrage nach einer OTI-Bescheinigung"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Demande d'attestation OTI"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "525e78da-9aac-4eec-b01a-3b23a2efa3c3",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "demande_de_visite",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Demande de visite"
+        }
+      },
+      "changes": {
+        "description": "Demande d'organisation ou de réalisation d'une visite auprès d'un prestataire, suivie dans la relation professionnelle de l'office.",
+        "description_i18n": {
+          "fr": "Demande d'organisation ou de réalisation d'une visite auprès d'un prestataire, suivie dans la relation professionnelle de l'office.",
+          "en": "Request to arrange or carry out a visit to a provider, tracked as part of the tourist office's professional relations.",
+          "es": "Solicitud para organizar o realizar una visita a un prestador, registrada en la relación profesional de la oficina de turismo.",
+          "de": "Anfrage zur Organisation oder Durchführung eines Besuchs bei einem Anbieter im Rahmen der professionellen Betreuung durch das Tourismusbüro."
+        },
+        "name_i18n": {
+          "fr": "Demande de visite",
+          "en": "Visit request",
+          "es": "Solicitud de visita",
+          "de": "Besuchsanfrage"
+        }
+      }
+    },
+    {
+      "concept_id": "2c064221-4ea0-42b2-b993-769d26c414f2",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "demande_signaletique",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Demande signalétique",
+        "name_i18n": {
+          "fr": "Demande signalétique"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Demande d'un prestataire relative à la signalétique permettant de repérer ou d'atteindre son activité, distincte d'une demande de promotion publicitaire.",
+        "description_i18n": {
+          "fr": "Demande d'un prestataire relative à la signalétique permettant de repérer ou d'atteindre son activité, distincte d'une demande de promotion publicitaire.",
+          "en": "Provider request about signage helping visitors locate or reach their activity, distinct from an advertising promotion request.",
+          "es": "Solicitud de un prestador sobre la señalización que permite localizar o llegar a su actividad, distinta de una solicitud de promoción publicitaria.",
+          "de": "Anfrage eines Anbieters zur Beschilderung, die das Auffinden oder Erreichen seines Angebots erleichtert, im Unterschied zu einer Werbeanfrage."
+        },
+        "name": "Demande de signalétique",
+        "name_i18n": {
+          "fr": "Demande de signalétique",
+          "en": "Signage request",
+          "es": "Solicitud de señalización",
+          "de": "Anfrage zur Beschilderung"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Demande signalétique"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "67f0631f-0889-45f4-b9cb-04f401253e5f",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "dispositifs_financiers",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Dispositifs financiers"
+        }
+      },
+      "changes": {
+        "description": "Sujet d'échange concernant des aides, financements ou dispositifs de soutien mobilisables pour une activité ou un projet touristique, sans valoir décision d'attribution.",
+        "description_i18n": {
+          "fr": "Sujet d'échange concernant des aides, financements ou dispositifs de soutien mobilisables pour une activité ou un projet touristique, sans valoir décision d'attribution.",
+          "en": "Enquiry topic concerning aid, funding or support schemes relevant to a tourism activity or project, without constituting an award decision.",
+          "es": "Tema de consulta sobre ayudas, financiación o programas de apoyo para una actividad o proyecto turístico, sin constituir una decisión de concesión.",
+          "de": "Anfragethema zu Hilfen, Finanzierungen oder Förderangeboten für eine touristische Tätigkeit oder ein Projekt, ohne eine Bewilligungsentscheidung darzustellen."
+        },
+        "name_i18n": {
+          "fr": "Dispositifs financiers",
+          "en": "Funding schemes",
+          "es": "Programas de financiación",
+          "de": "Finanzierungsangebote"
+        }
+      }
+    },
+    {
+      "concept_id": "adb29156-1b36-4fa0-aa99-7b63c55c1fd4",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "fermeture_definitive",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Fermeture définitive"
+        }
+      },
+      "changes": {
+        "description": "Échange signalant ou préparant l'arrêt définitif d'une activité ou d'un établissement, à distinguer d'une interruption temporaire.",
+        "description_i18n": {
+          "fr": "Échange signalant ou préparant l'arrêt définitif d'une activité ou d'un établissement, à distinguer d'une interruption temporaire.",
+          "en": "Interaction reporting or preparing the permanent closure of an activity or establishment, distinct from a temporary interruption.",
+          "es": "Intercambio que comunica o prepara el cierre definitivo de una actividad o establecimiento, distinto de una interrupción temporal.",
+          "de": "Austausch über die angekündigte oder vorbereitete endgültige Einstellung einer Tätigkeit oder eines Betriebs, im Unterschied zu einer vorübergehenden Unterbrechung."
+        },
+        "name_i18n": {
+          "fr": "Fermeture définitive",
+          "en": "Permanent closure",
+          "es": "Cierre definitivo",
+          "de": "Endgültige Schließung"
+        }
+      }
+    },
+    {
+      "concept_id": "b3b8e36e-f0a2-480b-89d3-2848c2e36447",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "fermeture_provisoire",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Fermeture provisoire"
+        }
+      },
+      "changes": {
+        "description": "Échange concernant une interruption temporaire de l'activité ou de l'accueil, sans présumer d'une cessation définitive ni d'une date de réouverture.",
+        "description_i18n": {
+          "fr": "Échange concernant une interruption temporaire de l'activité ou de l'accueil, sans présumer d'une cessation définitive ni d'une date de réouverture.",
+          "en": "Interaction concerning a temporary interruption of activity or reception, without assuming permanent closure or a reopening date.",
+          "es": "Intercambio sobre una interrupción temporal de la actividad o de la acogida, sin presuponer un cierre definitivo ni una fecha de reapertura.",
+          "de": "Austausch über eine vorübergehende Unterbrechung der Tätigkeit oder des Empfangs, ohne eine endgültige Schließung oder einen Wiedereröffnungstermin vorauszusetzen."
+        },
+        "name_i18n": {
+          "fr": "Fermeture provisoire",
+          "en": "Temporary closure",
+          "es": "Cierre temporal",
+          "de": "Vorübergehende Schließung"
+        }
+      }
+    },
+    {
+      "concept_id": "e64e26fb-4233-4ff7-b131-f73b2ab11215",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "labels_classements_etoiles",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Labels et classements étoiles",
+        "name_i18n": {
+          "fr": "Labels et classements étoiles"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Sujet d'échange sur les démarches de label ou de classement en étoiles d'une offre touristique ; la qualification du sujet ne vaut pas obtention de la distinction.",
+        "description_i18n": {
+          "fr": "Sujet d'échange sur les démarches de label ou de classement en étoiles d'une offre touristique ; la qualification du sujet ne vaut pas obtention de la distinction.",
+          "en": "Enquiry topic about tourism labelling or star-classification procedures; recording the topic does not indicate that the distinction has been awarded.",
+          "es": "Tema de consulta sobre trámites de sellos o clasificación por estrellas de una oferta turística; registrar el tema no implica obtener la distinción.",
+          "de": "Anfragethema zu touristischen Gütesiegeln oder Sterneklassifizierungen; die Erfassung dieses Themas bedeutet nicht, dass die Auszeichnung verliehen wurde."
+        },
+        "name": "Labels et classements en étoiles",
+        "name_i18n": {
+          "fr": "Labels et classements en étoiles",
+          "en": "Labels and star classifications",
+          "es": "Sellos y clasificaciones por estrellas",
+          "de": "Gütesiegel und Sterneklassifizierungen"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Labels et classements étoiles"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2e5a8def-b9f1-4b2a-85ee-364dda441623",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "modification_infos_bdd",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Modification infos BDD",
+        "name_i18n": {
+          "fr": "Modification infos BDD"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Demande de correction ou de mise à jour des informations enregistrées dans la base touristique concernant une fiche ou un prestataire.",
+        "description_i18n": {
+          "fr": "Demande de correction ou de mise à jour des informations enregistrées dans la base touristique concernant une fiche ou un prestataire.",
+          "en": "Request to correct or update information held in the tourism database about a listing or provider.",
+          "es": "Solicitud para corregir o actualizar los datos registrados en la base turística sobre una ficha o un prestador.",
+          "de": "Anfrage zur Berichtigung oder Aktualisierung der in der Tourismusdatenbank gespeicherten Angaben zu einem Eintrag oder Anbieter."
+        },
+        "name": "Modification des informations en base",
+        "name_i18n": {
+          "fr": "Modification des informations en base",
+          "en": "Database information update",
+          "es": "Actualización de datos en la base",
+          "de": "Aktualisierung der Datenbankangaben"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Modification infos BDD"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "09ef7ff7-cc74-452b-860d-3228f3305de8",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "ousaile",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Ousailé"
+        },
+        "notes": []
+      },
+      "changes": {
+        "description": "Sujet d'échange concernant Ousailé, le service de signalétique numérique de l'OTI du Sud qui facilite l'accès aux prestataires à l'aide de liens ou de QR codes vers un itinéraire.",
+        "description_i18n": {
+          "fr": "Sujet d'échange concernant Ousailé, le service de signalétique numérique de l'OTI du Sud qui facilite l'accès aux prestataires à l'aide de liens ou de QR codes vers un itinéraire.",
+          "en": "Enquiry topic concerning Ousailé, the OTI du Sud digital wayfinding service that helps visitors reach providers through links or QR codes leading to directions.",
+          "es": "Tema de consulta sobre Ousailé, el servicio de señalización digital de OTI du Sud que facilita el acceso a los prestadores mediante enlaces o códigos QR hacia un itinerario.",
+          "de": "Anfragethema zu Ousailé, dem digitalen Wegweisungsdienst von OTI du Sud, der über Links oder QR-Codes zu einer Wegbeschreibung das Erreichen der Anbieter erleichtert."
+        },
+        "name_i18n": {
+          "fr": "Ousailé",
+          "en": "Ousailé",
+          "es": "Ousailé",
+          "de": "Ousailé"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Procès-verbal du conseil communautaire de la CASUD du 31 octobre 2024, présentation de l'application de signalétique numérique Ousailé, pages 100–103 ; copie du document public consultée pour identifier le service, sans présumer de son état de déploiement actuel.",
+            "source": "https://politique.pappers.fr/commune/document/226cf92a14566a96092b9eb8da557790"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aad56646-18f1-4177-b6e9-8662162cd7e3",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "partenaire_b2c",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Partenaire d'une action B To C",
+        "name_i18n": {
+          "fr": "Partenaire d'une action B To C"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Sujet d'échange relatif à la participation d'un prestataire à une action de l'office destinée directement au grand public, et non à une opération réservée aux professionnels.",
+        "description_i18n": {
+          "fr": "Sujet d'échange relatif à la participation d'un prestataire à une action de l'office destinée directement au grand public, et non à une opération réservée aux professionnels.",
+          "en": "Enquiry topic about a provider's participation in a tourist-office initiative aimed directly at the public rather than exclusively at professionals.",
+          "es": "Tema de consulta sobre la participación de un prestador en una acción de la oficina dirigida directamente al público, no exclusivamente a profesionales.",
+          "de": "Anfragethema zur Teilnahme eines Anbieters an einer Maßnahme des Tourismusbüros, die sich unmittelbar an die Öffentlichkeit und nicht ausschließlich an Fachleute richtet."
+        },
+        "name": "Partenaire d'une action grand public",
+        "name_i18n": {
+          "fr": "Partenaire d'une action grand public",
+          "en": "Partner in a public-facing initiative",
+          "es": "Colaborador en una acción dirigida al público",
+          "de": "Partner einer Maßnahme für die Öffentlichkeit"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Partenaire d'une action B To C"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0dad9ebe-0b79-42ea-8e0e-6f8d575d69e6",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "participants_atelier_presta",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Participants d'un atelier presta",
+        "name_i18n": {
+          "fr": "Participants d'un atelier presta"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Suivi des échanges relatifs à la participation d'un prestataire à un atelier professionnel organisé ou accompagné par l'office.",
+        "description_i18n": {
+          "fr": "Suivi des échanges relatifs à la participation d'un prestataire à un atelier professionnel organisé ou accompagné par l'office.",
+          "en": "Tracking interactions about a provider's participation in a professional workshop organised or supported by the tourist office.",
+          "es": "Seguimiento de los intercambios sobre la participación de un prestador en un taller profesional organizado o acompañado por la oficina de turismo.",
+          "de": "Dokumentation von Kontakten zur Teilnahme eines Anbieters an einem vom Tourismusbüro organisierten oder begleiteten Fachworkshop."
+        },
+        "name": "Participation à un atelier de prestataires",
+        "name_i18n": {
+          "fr": "Participation à un atelier de prestataires",
+          "en": "Provider workshop participation",
+          "es": "Participación en un taller de prestadores",
+          "de": "Teilnahme an einem Anbieterworkshop"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Participants d'un atelier presta"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f4595e1c-e94c-4115-a539-fa735903d147",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "plainte_client",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Plainte client"
+        }
+      },
+      "changes": {
+        "description": "Sujet d'échange concernant la plainte d'un client au sujet d'une expérience ou d'une prestation ; il décrit le motif du contact, pas sa résolution.",
+        "description_i18n": {
+          "fr": "Sujet d'échange concernant la plainte d'un client au sujet d'une expérience ou d'une prestation ; il décrit le motif du contact, pas sa résolution.",
+          "en": "Enquiry topic concerning a customer's complaint about an experience or service; it describes the reason for contact rather than its resolution.",
+          "es": "Tema de consulta sobre la queja de un cliente por una experiencia o prestación; describe el motivo del contacto, no su resolución.",
+          "de": "Anfragethema zu einer Kundenbeschwerde über ein Erlebnis oder eine Leistung; es beschreibt den Kontaktanlass und nicht dessen Erledigung."
+        },
+        "name_i18n": {
+          "fr": "Plainte client",
+          "en": "Customer complaint",
+          "es": "Queja de un cliente",
+          "de": "Kundenbeschwerde"
+        }
+      }
+    },
+    {
+      "concept_id": "39c34bc8-8da1-4739-a804-1e7c5e26a855",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "porteur_de_projet",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Porteur de projet(s)",
+        "name_i18n": {
+          "fr": "Porteur de projet(s)"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Sujet de suivi d'une personne ou d'une structure portant un projet touristique et sollicitant une information, une orientation ou un accompagnement.",
+        "description_i18n": {
+          "fr": "Sujet de suivi d'une personne ou d'une structure portant un projet touristique et sollicitant une information, une orientation ou un accompagnement.",
+          "en": "Topic for following a person or organisation developing a tourism project and seeking information, guidance or support.",
+          "es": "Tema de seguimiento de una persona o entidad que desarrolla un proyecto turístico y solicita información, orientación o acompañamiento.",
+          "de": "Thema zur Betreuung einer Person oder Organisation, die ein touristisches Vorhaben entwickelt und Informationen, Orientierung oder Unterstützung sucht."
+        },
+        "name": "Porteur de projet",
+        "name_i18n": {
+          "fr": "Porteur de projet",
+          "en": "Project developer",
+          "es": "Promotor de proyecto",
+          "de": "Projektträger"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Porteur de projet(s)"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a98f3d31-9b20-4a72-8568-5ab3d7d34df4",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "probleme_juridique_sirene",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Problème juridique, Sirene",
+        "name_i18n": {
+          "fr": "Problème juridique, Sirene"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Sujet d'échange concernant la situation juridique ou l'identification d'une entreprise dans Sirene, sans confondre cette demande avec une prestation de conseil juridique.",
+        "description_i18n": {
+          "fr": "Sujet d'échange concernant la situation juridique ou l'identification d'une entreprise dans Sirene, sans confondre cette demande avec une prestation de conseil juridique.",
+          "en": "Enquiry topic concerning a business's legal situation or identification in Sirene, distinct from the provision of legal advice.",
+          "es": "Tema de consulta sobre la situación jurídica o la identificación de una empresa en Sirene, distinto de una prestación de asesoramiento jurídico.",
+          "de": "Anfragethema zur rechtlichen Situation oder Identifizierung eines Unternehmens in Sirene, im Unterschied zu einer Rechtsberatungsleistung."
+        },
+        "name": "Situation juridique et Sirene",
+        "name_i18n": {
+          "fr": "Situation juridique et Sirene",
+          "en": "Legal situation and Sirene",
+          "es": "Situación jurídica y Sirene",
+          "de": "Rechtliche Situation und Sirene"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Problème juridique, Sirene"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3440a7cf-f3ba-4147-92f3-3c5d35a09a95",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "promotion_explore",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Promotion Explore"
+        },
+        "notes": []
+      },
+      "changes": {
+        "description": "Sujet de suivi d'une demande de mise en avant d'un prestataire ou d'une offre dans les actions de promotion locale Explore La Réunion.",
+        "description_i18n": {
+          "fr": "Sujet de suivi d'une demande de mise en avant d'un prestataire ou d'une offre dans les actions de promotion locale Explore La Réunion.",
+          "en": "Topic for tracking a request to feature a provider or offer in Explore La Réunion local promotional activities.",
+          "es": "Tema de seguimiento de una solicitud para destacar a un prestador o una oferta en las acciones de promoción local Explore La Réunion.",
+          "de": "Thema zur Bearbeitung einer Anfrage, einen Anbieter oder ein Angebot in den lokalen Werbemaßnahmen von Explore La Réunion hervorzuheben."
+        },
+        "name_i18n": {
+          "fr": "Promotion Explore",
+          "en": "Explore promotion",
+          "es": "Promoción Explore",
+          "de": "Explore-Werbung"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Rapport d'activités 2024 de la CASUD : promotion des prestataires sur les réseaux de l'OTI Sud et d'Explore La Réunion ; contexte de la rubrique CRM, sans engagement de publication.",
+            "source": "https://www.casud.re/sites/default/files/2025-09/aff02_annexe01_rapport_dactivites_2024-tampon.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7b3e128c-f1dc-43de-a498-d58f18d6fe25",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "promotion_facebook",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Promotion Facebook"
+        }
+      },
+      "changes": {
+        "description": "Sujet de suivi d'une demande de visibilité ou de publication concernant un prestataire ou une offre sur Facebook.",
+        "description_i18n": {
+          "fr": "Sujet de suivi d'une demande de visibilité ou de publication concernant un prestataire ou une offre sur Facebook.",
+          "en": "Topic for tracking a request for visibility or a post concerning a provider or offer on Facebook.",
+          "es": "Tema de seguimiento de una solicitud de visibilidad o publicación sobre un prestador o una oferta en Facebook.",
+          "de": "Thema zur Bearbeitung einer Anfrage nach Sichtbarkeit oder einem Beitrag zu einem Anbieter oder Angebot auf Facebook."
+        },
+        "name_i18n": {
+          "fr": "Promotion Facebook",
+          "en": "Facebook promotion",
+          "es": "Promoción en Facebook",
+          "de": "Facebook-Werbung"
+        }
+      }
+    },
+    {
+      "concept_id": "14b015f1-0270-4632-ab92-9582f0f32674",
+      "domain": "demand_topic",
+      "context_key": "",
+      "code": "promotion_sit",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name": "Promotion SIT (reunion.fr)",
+        "name_i18n": {
+          "fr": "Promotion SIT (reunion.fr)"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Sujet de suivi de la diffusion ou de la mise en avant d'une offre par le système d'information touristique et sur reunion.fr, distinct d'une simple correction de ses données.",
+        "description_i18n": {
+          "fr": "Sujet de suivi de la diffusion ou de la mise en avant d'une offre par le système d'information touristique et sur reunion.fr, distinct d'une simple correction de ses données.",
+          "en": "Topic for tracking the distribution or promotion of an offer through the tourism information system and on reunion.fr, distinct from simply correcting its data.",
+          "es": "Tema de seguimiento de la difusión o promoción de una oferta mediante el sistema de información turística y en reunion.fr, distinto de una simple corrección de sus datos.",
+          "de": "Thema zur Bearbeitung der Verbreitung oder Hervorhebung eines Angebots über das touristische Informationssystem und auf reunion.fr, im Unterschied zu einer bloßen Datenkorrektur."
+        },
+        "name": "Promotion touristique sur reunion.fr",
+        "name_i18n": {
+          "fr": "Promotion touristique sur reunion.fr",
+          "en": "Tourism promotion on reunion.fr",
+          "es": "Promoción turística en reunion.fr",
+          "de": "Tourismuswerbung auf reunion.fr"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Promotion SIT (reunion.fr)"
+          }
+        ]
+      }
+    }
+  ]
+}

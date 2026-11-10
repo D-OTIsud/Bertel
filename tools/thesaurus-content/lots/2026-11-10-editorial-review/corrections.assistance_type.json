@@ -1,0 +1,588 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-assistance_type-1",
+  "proposals": [
+    {
+      "concept_id": "b1309ca4-0980-4951-b761-2e94cc3b1a30",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "customer_service",
+      "base": {
+        "description": "Assistance assurée par le service client du prestataire",
+        "description_i18n": {
+          "de": "Unterstützung durch den Kundenservice",
+          "en": "Customer service assistance",
+          "es": "Asistencia de atención al cliente",
+          "fr": "Assistance assurée par le service client du prestataire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b1309ca4-0980-4951-b761-2e94cc3b1a30. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b1309ca4-0980-4951-b761-2e94cc3b1a30"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Aide apportée par le service client du prestataire pour traiter les demandes ou difficultés liées à ses prestations.",
+        "description_i18n": {
+          "de": "Hilfe des Kundendienstes des Anbieters bei Anliegen oder Schwierigkeiten im Zusammenhang mit seinen Leistungen.",
+          "en": "Help from the provider's customer service team with requests or difficulties relating to its services.",
+          "es": "Ayuda del servicio de atención al cliente del prestador para atender solicitudes o dificultades relacionadas con sus prestaciones.",
+          "fr": "Aide apportée par le service client du prestataire pour traiter les demandes ou difficultés liées à ses prestations."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b1309ca4-0980-4951-b761-2e94cc3b1a30. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b1309ca4-0980-4951-b761-2e94cc3b1a30"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c3609e63-4513-448e-82e0-d140c0bd85e5",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "emergency",
+      "base": {
+        "description": "Assistance d'urgence",
+        "description_i18n": {
+          "de": "Notfallassistenz",
+          "en": "Emergency assistance",
+          "es": "Asistencia de emergencia",
+          "fr": "Assistance d'urgence"
+        },
+        "name_i18n": {
+          "de": "Notfall",
+          "en": "Emergency",
+          "es": "Emergencia",
+          "fr": "Urgence"
+        },
+        "name": "Urgence",
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Notfallhilfe"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Emergency assistance"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Asistencia de emergencia"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assistance d’urgence"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3609e63-4513-448e-82e0-d140c0bd85e5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3609e63-4513-448e-82e0-d140c0bd85e5"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Assistance destinée à orienter ou aider une personne confrontée à une situation urgente, sans définir à elle seule les moyens ni délais d'intervention.",
+        "description_i18n": {
+          "de": "Unterstützung zur Orientierung oder Hilfe für eine Person in einer dringenden Situation, ohne damit Einsatzmittel oder Reaktionszeiten festzulegen.",
+          "en": "Assistance intended to guide or help someone facing an urgent situation, without itself specifying response resources or times.",
+          "es": "Asistencia destinada a orientar o ayudar a una persona ante una situación urgente, sin fijar por sí sola los medios ni los plazos de intervención.",
+          "fr": "Assistance destinée à orienter ou aider une personne confrontée à une situation urgente, sans définir à elle seule les moyens ni délais d'intervention."
+        },
+        "name_i18n": {
+          "de": "Notfallhilfe",
+          "en": "Emergency assistance",
+          "es": "Asistencia de emergencia",
+          "fr": "Assistance d'urgence"
+        },
+        "name": "Assistance d'urgence",
+        "labels": [
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Notfall"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Emergency"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Emergencia"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Urgence"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3609e63-4513-448e-82e0-d140c0bd85e5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3609e63-4513-448e-82e0-d140c0bd85e5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "67d6dac8-1e4b-49bf-b15e-94b7a441dca4",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "language",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/67d6dac8-1e4b-49bf-b15e-94b7a441dca4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/67d6dac8-1e4b-49bf-b15e-94b7a441dca4"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/67d6dac8-1e4b-49bf-b15e-94b7a441dca4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/67d6dac8-1e4b-49bf-b15e-94b7a441dca4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2e00d1ab-d342-4c7c-bf0d-d28fda6495eb",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "legal",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2e00d1ab-d342-4c7c-bf0d-d28fda6495eb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2e00d1ab-d342-4c7c-bf0d-d28fda6495eb"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2e00d1ab-d342-4c7c-bf0d-d28fda6495eb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2e00d1ab-d342-4c7c-bf0d-d28fda6495eb"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8853a84b-7cb6-4143-b192-0d1edc1e8ec0",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "lost_documents",
+      "base": {
+        "description": "Assistance en cas de perte de documents",
+        "description_i18n": {
+          "de": "Unterstützung bei verlorenen Dokumenten",
+          "en": "Lost documents assistance",
+          "es": "Asistencia por documentos perdidos",
+          "fr": "Assistance en cas de perte de documents"
+        },
+        "name_i18n": {
+          "de": "Verlorene Dokumente",
+          "en": "Lost documents",
+          "es": "Documentos perdidos",
+          "fr": "Documents perdus"
+        },
+        "name": "Documents perdus",
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Hilfe bei Dokumentenverlust"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Lost-document assistance"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Ayuda por pérdida de documentos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assistance perte de papiers"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8853a84b-7cb6-4143-b192-0d1edc1e8ec0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8853a84b-7cb6-4143-b192-0d1edc1e8ec0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Aide liée à la perte de papiers ou de documents pendant le déplacement, notamment pour orienter la personne dans ses démarches.",
+        "description_i18n": {
+          "de": "Hilfe bei auf Reisen verlorenen Papieren oder Dokumenten, insbesondere zur Orientierung bei den erforderlichen Schritten.",
+          "en": "Help with papers or documents lost while travelling, including guidance on the steps to take.",
+          "es": "Ayuda relacionada con la pérdida de papeles o documentos durante el viaje, incluida la orientación sobre las gestiones que realizar.",
+          "fr": "Aide liée à la perte de papiers ou de documents pendant le déplacement, notamment pour orienter la personne dans ses démarches."
+        },
+        "name_i18n": {
+          "de": "Hilfe bei Dokumentenverlust",
+          "en": "Lost-document assistance",
+          "es": "Asistencia por pérdida de documentos",
+          "fr": "Assistance en cas de perte de documents"
+        },
+        "name": "Assistance en cas de perte de documents",
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Ayuda por pérdida de documentos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assistance perte de papiers"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Verlorene Dokumente"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Lost documents"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Documentos perdidos"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Documents perdus"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8853a84b-7cb6-4143-b192-0d1edc1e8ec0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8853a84b-7cb6-4143-b192-0d1edc1e8ec0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4cb9560f-87c3-474f-9c12-2f715668aa74",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "medical",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4cb9560f-87c3-474f-9c12-2f715668aa74. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4cb9560f-87c3-474f-9c12-2f715668aa74"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4cb9560f-87c3-474f-9c12-2f715668aa74. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4cb9560f-87c3-474f-9c12-2f715668aa74"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0baae187-6811-4734-bc3c-7d35d154f99f",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "natural_disaster",
+      "base": {
+        "description": "Assistance en cas de catastrophe naturelle",
+        "description_i18n": {
+          "de": "Unterstützung bei Naturkatastrophen",
+          "en": "Assistance for natural disasters",
+          "es": "Asistencia ante catástrofes naturales",
+          "fr": "Assistance en cas de catastrophe naturelle"
+        },
+        "name_i18n": {
+          "de": "Naturkatastrophe",
+          "en": "Natural disaster",
+          "es": "Desastre natural",
+          "fr": "Catastrophe naturelle"
+        },
+        "name": "Catastrophe naturelle",
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Hilfe bei Naturkatastrophen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Natural-disaster assistance"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Asistencia por desastre natural"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assistance catastrophe naturelle"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0baae187-6811-4734-bc3c-7d35d154f99f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0baae187-6811-4734-bc3c-7d35d154f99f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Aide aux personnes touchées par une catastrophe naturelle pendant leur déplacement ; cette forme d'assistance ne désigne pas à elle seule une indemnisation d'assurance.",
+        "description_i18n": {
+          "de": "Hilfe für Menschen, die während einer Reise von einer Naturkatastrophe betroffen sind; diese Unterstützung bezeichnet für sich allein keine Versicherungsentschädigung.",
+          "en": "Help for people affected by a natural disaster while travelling; this form of assistance does not itself denote insurance compensation.",
+          "es": "Ayuda a personas afectadas por una catástrofe natural durante su viaje; esta asistencia no designa por sí sola una indemnización de seguro.",
+          "fr": "Aide aux personnes touchées par une catastrophe naturelle pendant leur déplacement ; cette forme d'assistance ne désigne pas à elle seule une indemnisation d'assurance."
+        },
+        "name_i18n": {
+          "de": "Hilfe bei Naturkatastrophen",
+          "en": "Natural-disaster assistance",
+          "es": "Asistencia por catástrofe natural",
+          "fr": "Assistance en cas de catastrophe naturelle"
+        },
+        "name": "Assistance en cas de catastrophe naturelle",
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Asistencia por desastre natural"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assistance catastrophe naturelle"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Naturkatastrophe"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Natural disaster"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Desastre natural"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Catastrophe naturelle"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0baae187-6811-4734-bc3c-7d35d154f99f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0baae187-6811-4734-bc3c-7d35d154f99f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6f58b9b4-4ac0-4adf-84dd-90b1ed466a25",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "technical",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f58b9b4-4ac0-4adf-84dd-90b1ed466a25. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f58b9b4-4ac0-4adf-84dd-90b1ed466a25"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f58b9b4-4ac0-4adf-84dd-90b1ed466a25. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f58b9b4-4ac0-4adf-84dd-90b1ed466a25"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "87fe4ebb-1808-40b9-bc7c-c099b39827f9",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "theft",
+      "base": {
+        "description": "Assistance en cas de vol",
+        "description_i18n": {
+          "de": "Unterstützung bei Diebstahl",
+          "en": "Theft assistance",
+          "es": "Asistencia en caso de robo",
+          "fr": "Assistance en cas de vol"
+        },
+        "name_i18n": {
+          "de": "Diebstahl",
+          "en": "Theft",
+          "es": "Robo",
+          "fr": "Vol"
+        },
+        "name": "Vol",
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Hilfe bei Diebstahl"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Theft assistance"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Asistencia por robo"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Assistance en cas de vol"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/87fe4ebb-1808-40b9-bc7c-c099b39827f9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/87fe4ebb-1808-40b9-bc7c-c099b39827f9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Aide à une personne victime d'un vol pendant son déplacement, distincte de la garantie éventuelle de remboursement des biens volés.",
+        "description_i18n": {
+          "de": "Hilfe für eine Person, die auf einer Reise bestohlen wurde; von einer möglichen Erstattung gestohlener Gegenstände durch eine Versicherung zu unterscheiden.",
+          "en": "Help for someone whose belongings are stolen while travelling, distinct from any insurance cover reimbursing the stolen items.",
+          "es": "Ayuda a una persona víctima de un robo durante su viaje, distinta de una eventual garantía de reembolso de los bienes robados.",
+          "fr": "Aide à une personne victime d'un vol pendant son déplacement, distincte de la garantie éventuelle de remboursement des biens volés."
+        },
+        "name_i18n": {
+          "de": "Hilfe bei Diebstahl",
+          "en": "Theft assistance",
+          "es": "Asistencia por robo",
+          "fr": "Assistance en cas de vol"
+        },
+        "name": "Assistance en cas de vol",
+        "labels": [
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Diebstahl"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Theft"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Robo"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Vol"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/87fe4ebb-1808-40b9-bc7c-c099b39827f9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/87fe4ebb-1808-40b9-bc7c-c099b39827f9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "24177e54-fdaf-4abc-95fb-d5ec1855781f",
+      "domain": "assistance_type",
+      "context_key": "",
+      "code": "travel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/24177e54-fdaf-4abc-95fb-d5ec1855781f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/24177e54-fdaf-4abc-95fb-d5ec1855781f"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/24177e54-fdaf-4abc-95fb-d5ec1855781f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/24177e54-fdaf-4abc-95fb-d5ec1855781f"
+          }
+        ]
+      }
+    }
+  ]
+}

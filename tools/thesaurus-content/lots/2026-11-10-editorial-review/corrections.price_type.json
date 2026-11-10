@@ -1,0 +1,404 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-price_type-1",
+  "proposals": [
+    {
+      "concept_id": "b4747e35-0262-46bc-95c8-6d30a8b94411",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "abonnement",
+      "base": {
+        "description": "Abonnement, carte ou pass multi-entrées",
+        "description_i18n": {
+          "de": "Abo, Karte oder Mehrfacheintrittspass",
+          "en": "Subscription, card or multi-entry pass",
+          "es": "Abono, tarjeta o pase de varias entradas",
+          "fr": "Abonnement, carte ou pass multi-entrées"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b4747e35-0262-46bc-95c8-6d30a8b94411. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b4747e35-0262-46bc-95c8-6d30a8b94411"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ligne tarifaire pour un abonnement, une carte ou un pass donnant accès à plusieurs utilisations ou à une période de prestation définie dans l'offre.",
+        "description_i18n": {
+          "de": "Preisposition für ein Abonnement, eine Karte oder einen Pass mit mehrfacher Nutzung oder Zugang während eines im Angebot bestimmten Leistungszeitraums.",
+          "en": "Price line for a subscription, card or pass providing repeated use or access over a service period defined in the offer.",
+          "es": "Línea de precio para un abono, una tarjeta o un pase que permite varios usos o acceso durante un periodo definido en la oferta.",
+          "fr": "Ligne tarifaire pour un abonnement, une carte ou un pass donnant accès à plusieurs utilisations ou à une période de prestation définie dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b4747e35-0262-46bc-95c8-6d30a8b94411. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b4747e35-0262-46bc-95c8-6d30a8b94411"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d2a3399f-bb6c-48cc-981a-562e8700f2cb",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "caution",
+      "base": {
+        "description": "Caution ou dépôt de garantie",
+        "description_i18n": {
+          "de": "Sicherheitsleistung oder Kaution",
+          "en": "Security deposit",
+          "es": "Depósito de garantía",
+          "fr": "Caution ou dépôt de garantie"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2a3399f-bb6c-48cc-981a-562e8700f2cb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2a3399f-bb6c-48cc-981a-562e8700f2cb"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Somme demandée à titre de dépôt de garantie pour une location ou une prestation ; elle est identifiée séparément du prix payé pour la prestation elle-même.",
+        "description_i18n": {
+          "de": "Als Sicherheitsleistung für eine Miete oder Leistung verlangter Betrag, der getrennt vom eigentlichen Leistungspreis ausgewiesen wird.",
+          "en": "Amount requested as a security deposit for a rental or service, identified separately from the price of the service itself.",
+          "es": "Importe solicitado como depósito de garantía para un alquiler o una prestación, identificado por separado del precio de la propia prestación.",
+          "fr": "Somme demandée à titre de dépôt de garantie pour une location ou une prestation ; elle est identifiée séparément du prix payé pour la prestation elle-même."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2a3399f-bb6c-48cc-981a-562e8700f2cb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2a3399f-bb6c-48cc-981a-562e8700f2cb"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "49831a61-c4c1-4b8f-882b-6c508f96f731",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "devis",
+      "base": {
+        "description": "Tarif communiqué sur devis",
+        "description_i18n": {
+          "de": "Preis auf Angebotsbasis mitgeteilt",
+          "en": "Price given on quotation",
+          "es": "Precio comunicado mediante presupuesto",
+          "fr": "Tarif communiqué sur devis"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/49831a61-c4c1-4b8f-882b-6c508f96f731. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/49831a61-c4c1-4b8f-882b-6c508f96f731"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ligne indiquant que le montant de la prestation est établi sur devis en fonction de la demande, plutôt que fourni comme prix fixe dans la fiche.",
+        "description_i18n": {
+          "de": "Preisposition, bei der der Leistungsbetrag auf Anfrage angeboten und nicht als fester Preis im Eintrag angegeben wird.",
+          "en": "Price line indicating that the service amount is quoted according to the request rather than given as a fixed price on the listing.",
+          "es": "Línea que indica que el importe de la prestación se establece mediante presupuesto según la solicitud, en lugar de figurar como precio fijo en la ficha.",
+          "fr": "Ligne indiquant que le montant de la prestation est établi sur devis en fonction de la demande, plutôt que fourni comme prix fixe dans la fiche."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/49831a61-c4c1-4b8f-882b-6c508f96f731. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/49831a61-c4c1-4b8f-882b-6c508f96f731"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9337ea46-46dc-48bd-88f1-3454faf0dfb7",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "menu",
+      "base": {
+        "description": "Menu, formule ou plat",
+        "description_i18n": {
+          "de": "Menü, Angebotspaket oder Gericht",
+          "en": "Menu, set option or dish",
+          "es": "Menú, fórmula o plato",
+          "fr": "Menu, formule ou plat"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9337ea46-46dc-48bd-88f1-3454faf0dfb7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9337ea46-46dc-48bd-88f1-3454faf0dfb7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ligne tarifaire concernant un menu, une formule ou un plat de restauration ; elle qualifie le type de prix, indépendamment de la rubrique du menu.",
+        "description_i18n": {
+          "de": "Preisposition für ein Restaurantmenü, ein Menüangebot oder ein Gericht; sie beschreibt die Preisart unabhängig von der Rubrik der Speisekarte.",
+          "en": "Price line relating to a restaurant menu, set meal or dish; it identifies the kind of price independently of the menu category.",
+          "es": "Línea de precio de un menú, una fórmula o un plato de restauración; identifica el tipo de precio con independencia de la categoría del menú.",
+          "fr": "Ligne tarifaire concernant un menu, une formule ou un plat de restauration ; elle qualifie le type de prix, indépendamment de la rubrique du menu."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9337ea46-46dc-48bd-88f1-3454faf0dfb7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9337ea46-46dc-48bd-88f1-3454faf0dfb7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4be61c2e-c402-460c-becd-b1106c653383",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "option",
+      "base": {
+        "description": "Supplément ou prestation optionnelle",
+        "description_i18n": {
+          "de": "Zuschlag oder optionale Leistung",
+          "en": "Add-on or optional service",
+          "es": "Suplemento o servicio opcional",
+          "fr": "Supplément ou prestation optionnelle"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4be61c2e-c402-460c-becd-b1106c653383. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4be61c2e-c402-460c-becd-b1106c653383"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ligne tarifaire pour une prestation ou un supplément proposé en complément du service principal, dont l'inclusion dépend du choix effectué dans l'offre.",
+        "description_i18n": {
+          "de": "Preisposition für eine zusätzliche Leistung oder einen Aufpreis zum Hauptangebot, deren Einbeziehung von der gewählten Angebotsvariante abhängt.",
+          "en": "Price line for a service or supplement offered in addition to the main service, included according to the choice made in the offer.",
+          "es": "Línea de precio de una prestación o suplemento ofrecido además del servicio principal, cuya inclusión depende de la elección dentro de la oferta.",
+          "fr": "Ligne tarifaire pour une prestation ou un supplément proposé en complément du service principal, dont l'inclusion dépend du choix effectué dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4be61c2e-c402-460c-becd-b1106c653383. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4be61c2e-c402-460c-becd-b1106c653383"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "582de9b6-d6be-4429-a327-1334d4dc5005",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "pack",
+      "base": {
+        "description": "Offre groupée ou forfait packagé",
+        "description_i18n": {
+          "de": "Gebündeltes Angebot oder Pauschalpaket",
+          "en": "Bundled offer or packaged deal",
+          "es": "Oferta agrupada o paquete cerrado",
+          "fr": "Offre groupée ou forfait packagé"
+        },
+        "name": "Pack / forfait",
+        "name_i18n": {
+          "de": "Pack / Paket",
+          "en": "Pack / package",
+          "es": "Pack / paquete",
+          "fr": "Pack / forfait"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gebündeltes Leistungspaket"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Bundled service offer"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Oferta agrupada de prestaciones"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Forfait de prestations"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/582de9b6-d6be-4429-a327-1334d4dc5005. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/582de9b6-d6be-4429-a327-1334d4dc5005"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ligne tarifaire correspondant à une offre réunissant plusieurs prestations et/ou proposée pour un prix global ; le contenu est celui décrit dans l'offre.",
+        "description_i18n": {
+          "de": "Preisposition für ein Angebot, das mehrere Leistungen bündelt und/oder zu einem Gesamtpreis angeboten wird; maßgeblich ist der im Angebot beschriebene Inhalt.",
+          "en": "Price line for an offer combining several services and/or sold for a global price; its contents are those described in the offer.",
+          "es": "Línea de precio de una oferta que reúne varias prestaciones y/o se propone por un precio global; su contenido es el descrito en la oferta.",
+          "fr": "Ligne tarifaire correspondant à une offre réunissant plusieurs prestations et/ou proposée pour un prix global ; le contenu est celui décrit dans l'offre."
+        },
+        "name": "Forfait / offre groupée",
+        "name_i18n": {
+          "de": "Pauschal- / Bündelangebot",
+          "en": "Package / bundled offer",
+          "es": "Paquete / oferta agrupada",
+          "fr": "Forfait / offre groupée"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gebündeltes Leistungspaket"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Bundled service offer"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Oferta agrupada de prestaciones"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Forfait de prestations"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Pack / Paket"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Pack / package"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Pack / paquete"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Pack / forfait"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/582de9b6-d6be-4429-a327-1334d4dc5005. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/582de9b6-d6be-4429-a327-1334d4dc5005"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6ca6ac52-c891-4603-9916-af1c6dd0c5c4",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "principal",
+      "base": {
+        "description": "Tarif de base de la prestation",
+        "description_i18n": {
+          "de": "Grundtarif der Leistung",
+          "en": "Base rate for the service",
+          "es": "Tarifa base del servicio",
+          "fr": "Tarif de base de la prestation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6ca6ac52-c891-4603-9916-af1c6dd0c5c4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6ca6ac52-c891-4603-9916-af1c6dd0c5c4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ligne portant le prix de base de la prestation présentée, à laquelle peuvent s'ajouter des options, taxes ou garanties indiquées séparément.",
+        "description_i18n": {
+          "de": "Preisposition mit dem Grundpreis der dargestellten Leistung, zu dem gesondert ausgewiesene Optionen, Abgaben oder Sicherheitsleistungen hinzukommen können.",
+          "en": "Price line carrying the base price of the presented service, to which separately identified options, taxes or deposits may be added.",
+          "es": "Línea que contiene el precio base de la prestación presentada, al que pueden añadirse opciones, tasas o garantías indicadas por separado.",
+          "fr": "Ligne portant le prix de base de la prestation présentée, à laquelle peuvent s'ajouter des options, taxes ou garanties indiquées séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6ca6ac52-c891-4603-9916-af1c6dd0c5c4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6ca6ac52-c891-4603-9916-af1c6dd0c5c4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7e1c62d7-7a03-4128-a137-658ba07d1338",
+      "domain": "price_type",
+      "context_key": "",
+      "code": "taxe",
+      "base": {
+        "description": "Taxe de séjour, redevance ou collecte",
+        "description_i18n": {
+          "de": "Kurtaxe, Gebühr oder Abgabe",
+          "en": "Visitor tax, fee or levy",
+          "es": "Tasa turística, tasa o recaudación",
+          "fr": "Taxe de séjour, redevance ou collecte"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7e1c62d7-7a03-4128-a137-658ba07d1338. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7e1c62d7-7a03-4128-a137-658ba07d1338"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ligne identifiant une taxe ou une redevance liée à la prestation, telle qu'une taxe de séjour ; son inclusion dans le prix est précisée par l'offre.",
+        "description_i18n": {
+          "de": "Preisposition für eine leistungsbezogene Steuer oder Abgabe, etwa eine Aufenthaltsabgabe; das Angebot gibt an, ob sie im Preis enthalten ist.",
+          "en": "Price line identifying a tax or levy related to the service, such as a visitor tax; whether it is included in the price is specified in the offer.",
+          "es": "Línea que identifica una tasa o un gravamen vinculado a la prestación, como una tasa turística; la oferta precisa si está incluido en el precio.",
+          "fr": "Ligne identifiant une taxe ou une redevance liée à la prestation, telle qu'une taxe de séjour ; son inclusion dans le prix est précisée par l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7e1c62d7-7a03-4128-a137-658ba07d1338. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7e1c62d7-7a03-4128-a137-658ba07d1338"
+          }
+        ]
+      }
+    }
+  ]
+}

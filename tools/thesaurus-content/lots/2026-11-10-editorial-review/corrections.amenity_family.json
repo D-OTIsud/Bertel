@@ -1,0 +1,884 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-amenity_family-1",
+  "proposals": [
+    {
+      "concept_id": "87abb128-a556-4d47-8a9e-c028a5624444",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "accessibility",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/87abb128-a556-4d47-8a9e-c028a5624444. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/87abb128-a556-4d47-8a9e-c028a5624444"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/87abb128-a556-4d47-8a9e-c028a5624444. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/87abb128-a556-4d47-8a9e-c028a5624444"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2139f599-d8f0-4e14-aa96-d8cd97cff655",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "bathroom",
+      "base": {
+        "description": "Équipements de salle de bain",
+        "description_i18n": {
+          "de": "Ausstattung des Badezimmers.",
+          "en": "Bathroom fittings and facilities.",
+          "es": "Equipamiento del baño.",
+          "fr": "Équipements de salle de bain"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2139f599-d8f0-4e14-aa96-d8cd97cff655. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2139f599-d8f0-4e14-aa96-d8cd97cff655"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les installations sanitaires et les accessoires de toilette mis à disposition des clients, comme la baignoire, la douche ou le linge de toilette.",
+        "description_i18n": {
+          "de": "Gruppe der sanitären Einrichtungen und Körperpflegeartikel für Gäste, etwa Badewanne, Dusche oder Handtücher.",
+          "en": "Family grouping sanitary facilities and personal washing accessories provided for guests, such as a bath, shower or towels.",
+          "es": "Familia que agrupa las instalaciones sanitarias y los accesorios de aseo a disposición de los clientes, como bañera, ducha o toallas.",
+          "fr": "Famille regroupant les installations sanitaires et les accessoires de toilette mis à disposition des clients, comme la baignoire, la douche ou le linge de toilette."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2139f599-d8f0-4e14-aa96-d8cd97cff655. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2139f599-d8f0-4e14-aa96-d8cd97cff655"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "20052c8d-ea47-4fa2-ab11-4641222b531b",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "bedroom",
+      "base": {
+        "description": "Équipements et mobilier de chambre",
+        "description_i18n": {
+          "de": "Ausstattung und Mobiliar des Schlafzimmers.",
+          "en": "Bedroom furnishings and equipment.",
+          "es": "Mobiliario y equipamiento del dormitorio.",
+          "fr": "Équipements et mobilier de chambre"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20052c8d-ea47-4fa2-ab11-4641222b531b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20052c8d-ea47-4fa2-ab11-4641222b531b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant le mobilier, le linge et les aménagements associés à la chambre, comme les rideaux occultants, le bureau ou le balcon.",
+        "description_i18n": {
+          "de": "Gruppe für Möbel, Wäsche und Ausstattungsmerkmale des Gästezimmers, etwa Verdunkelungsvorhänge, Schreibtisch oder Balkon.",
+          "en": "Family grouping furnishings, linen and features associated with a guest bedroom, such as blackout curtains, a desk or a balcony.",
+          "es": "Familia que agrupa el mobiliario, la ropa de hogar y las instalaciones asociadas al dormitorio, como cortinas opacas, escritorio o balcón.",
+          "fr": "Famille regroupant le mobilier, le linge et les aménagements associés à la chambre, comme les rideaux occultants, le bureau ou le balcon."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20052c8d-ea47-4fa2-ab11-4641222b531b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20052c8d-ea47-4fa2-ab11-4641222b531b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "19e6602d-6102-4933-9350-a34f89f8bbc9",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "business",
+      "base": {
+        "description": "Services dédiés à la clientèle affaires",
+        "description_i18n": {
+          "de": "Dienstleistungen für Geschäftskunden.",
+          "en": "Business-oriented services",
+          "es": "Servicios para clientes corporativos",
+          "fr": "Services dédiés à la clientèle affaires"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/19e6602d-6102-4933-9350-a34f89f8bbc9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/19e6602d-6102-4933-9350-a34f89f8bbc9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les espaces et équipements de travail proposés à la clientèle d'affaires, notamment les salles de réunion, espaces de coworking et imprimantes.",
+        "description_i18n": {
+          "de": "Gruppe für Arbeitsräume und Ausstattung für Geschäftsreisende, insbesondere Besprechungsräume, Coworking-Bereiche und Drucker.",
+          "en": "Family grouping workspaces and equipment offered to business guests, including meeting rooms, coworking spaces and printers.",
+          "es": "Familia que agrupa los espacios y equipos de trabajo ofrecidos a la clientela de negocios, como salas de reunión, espacios de cotrabajo e impresoras.",
+          "fr": "Famille regroupant les espaces et équipements de travail proposés à la clientèle d'affaires, notamment les salles de réunion, espaces de coworking et imprimantes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/19e6602d-6102-4933-9350-a34f89f8bbc9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/19e6602d-6102-4933-9350-a34f89f8bbc9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2d90eab3-005d-47d0-aa45-c9c1142e25b6",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "climate_control",
+      "base": {
+        "description": "Systèmes de régulation thermique",
+        "description_i18n": {
+          "de": "Systeme zur Temperaturregelung.",
+          "en": "Temperature control systems.",
+          "es": "Sistemas de regulación térmica.",
+          "fr": "Systèmes de régulation thermique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2d90eab3-005d-47d0-aa45-c9c1142e25b6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2d90eab3-005d-47d0-aa45-c9c1142e25b6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les appareils qui permettent de chauffer, rafraîchir ou ventiler les espaces accueillant les clients : chauffage, climatisation et ventilateur.",
+        "description_i18n": {
+          "de": "Gruppe für Geräte zum Heizen, Kühlen oder Belüften von Gästebereichen: Heizung, Klimaanlage und Ventilatoren.",
+          "en": "Family grouping devices used to heat, cool or ventilate guest spaces: heating, air conditioning and fans.",
+          "es": "Familia que agrupa los aparatos para calentar, enfriar o ventilar los espacios destinados a los clientes: calefacción, aire acondicionado y ventiladores.",
+          "fr": "Famille regroupant les appareils qui permettent de chauffer, rafraîchir ou ventiler les espaces accueillant les clients : chauffage, climatisation et ventilateur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2d90eab3-005d-47d0-aa45-c9c1142e25b6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2d90eab3-005d-47d0-aa45-c9c1142e25b6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5467107f-2d86-43c4-9d39-2b57b8b30d45",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "comforts",
+      "base": {
+        "description": "Éléments de confort dans les chambres et parties communes",
+        "description_i18n": {
+          "de": "Komfortausstattung in Zimmern und Gemeinschaftsbereichen.",
+          "en": "Comfort items in rooms and shared areas",
+          "es": "Elementos de confort en habitaciones y zonas comunes",
+          "fr": "Éléments de confort dans les chambres et parties communes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5467107f-2d86-43c4-9d39-2b57b8b30d45. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5467107f-2d86-43c4-9d39-2b57b8b30d45"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les attentions et prestations qui améliorent le confort du séjour, comme les chaussons, le ménage quotidien ou les produits de bienvenue.",
+        "description_i18n": {
+          "de": "Gruppe für Aufmerksamkeiten und Leistungen, die den Aufenthalt angenehmer machen, etwa Hausschuhe, tägliche Reinigung oder Willkommensgeschenke.",
+          "en": "Family grouping amenities and services that enhance comfort during a stay, such as slippers, daily housekeeping or welcome gifts.",
+          "es": "Familia que agrupa las atenciones y servicios que mejoran el confort de la estancia, como zapatillas, limpieza diaria o detalles de bienvenida.",
+          "fr": "Famille regroupant les attentions et prestations qui améliorent le confort du séjour, comme les chaussons, le ménage quotidien ou les produits de bienvenue."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5467107f-2d86-43c4-9d39-2b57b8b30d45. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5467107f-2d86-43c4-9d39-2b57b8b30d45"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "40ddea24-d15e-4290-aa4f-afb130c954d8",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "entertainment",
+      "base": {
+        "description": "Équipements de loisirs et divertissement",
+        "description_i18n": {
+          "de": "Freizeit- und Unterhaltungsangebote.",
+          "en": "Leisure and entertainment facilities.",
+          "es": "Instalaciones de ocio y entretenimiento.",
+          "fr": "Équipements de loisirs et divertissement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/40ddea24-d15e-4290-aa4f-afb130c954d8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/40ddea24-d15e-4290-aa4f-afb130c954d8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les supports et espaces de divertissement disponibles sur place, comme les jeux de société, la bibliothèque ou le billard.",
+        "description_i18n": {
+          "de": "Gruppe für vor Ort verfügbare Unterhaltungsmöglichkeiten und Räume, etwa Gesellschaftsspiele, Bibliothek oder Billard.",
+          "en": "Family grouping entertainment resources and spaces available on site, such as board games, a library or a pool table.",
+          "es": "Familia que agrupa los recursos y espacios de entretenimiento disponibles en el lugar, como juegos de mesa, biblioteca o billar.",
+          "fr": "Famille regroupant les supports et espaces de divertissement disponibles sur place, comme les jeux de société, la bibliothèque ou le billard."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/40ddea24-d15e-4290-aa4f-afb130c954d8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/40ddea24-d15e-4290-aa4f-afb130c954d8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c5aa7de7-ccdb-4792-9566-dbc4479f7829",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "equipment",
+      "base": {
+        "description": "Équipements matériels disponibles",
+        "description_i18n": {
+          "de": "Verfügbare Geräte und Ausstattung.",
+          "en": "Available equipment and appliances",
+          "es": "Equipos y dispositivos disponibles",
+          "fr": "Équipements matériels disponibles"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c5aa7de7-ccdb-4792-9566-dbc4479f7829. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c5aa7de7-ccdb-4792-9566-dbc4479f7829"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant le matériel domestique mis à disposition pour l'entretien du logement et du linge, notamment lave-linge, sèche-linge, étendoir et aspirateur.",
+        "description_i18n": {
+          "de": "Gruppe für Haushaltsgeräte zur Reinigung der Unterkunft und Wäschepflege, insbesondere Waschmaschine, Wäschetrockner, Wäscheständer und Staubsauger.",
+          "en": "Family grouping household equipment provided for accommodation cleaning and laundry, including a washing machine, tumble dryer, drying rack and vacuum cleaner.",
+          "es": "Familia que agrupa los aparatos domésticos para limpiar el alojamiento y cuidar la ropa, como lavadora, secadora, tendedero y aspiradora.",
+          "fr": "Famille regroupant le matériel domestique mis à disposition pour l'entretien du logement et du linge, notamment lave-linge, sèche-linge, étendoir et aspirateur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c5aa7de7-ccdb-4792-9566-dbc4479f7829. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c5aa7de7-ccdb-4792-9566-dbc4479f7829"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "20e62ff2-6a7b-412a-b4ea-bb8b2865e29c",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "family",
+      "base": {
+        "description": "Services et équipements famille & enfants",
+        "description_i18n": {
+          "de": "Angebote für Familien und Kinder.",
+          "en": "Family and children services",
+          "es": "Servicios y equipamientos para familias y niños",
+          "fr": "Services et équipements famille & enfants"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20e62ff2-6a7b-412a-b4ea-bb8b2865e29c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20e62ff2-6a7b-412a-b4ea-bb8b2865e29c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les équipements facilitant le séjour avec de jeunes enfants, notamment pour le bain, les repas, le change et la sécurité dans le logement.",
+        "description_i18n": {
+          "de": "Gruppe für Ausstattung, die Aufenthalte mit kleinen Kindern erleichtert, insbesondere zum Baden, Essen, Wickeln und zur Sicherheit in der Unterkunft.",
+          "en": "Family grouping equipment that facilitates stays with young children, particularly bathing, feeding, changing and safety in the accommodation.",
+          "es": "Familia que agrupa los equipos que facilitan las estancias con niños pequeños, especialmente para el baño, las comidas, el cambio de pañales y la seguridad en el alojamiento.",
+          "fr": "Famille regroupant les équipements facilitant le séjour avec de jeunes enfants, notamment pour le bain, les repas, le change et la sécurité dans le logement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20e62ff2-6a7b-412a-b4ea-bb8b2865e29c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20e62ff2-6a7b-412a-b4ea-bb8b2865e29c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ef2f5f26-e112-443b-ac85-58a91cc9e1ae",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "gastronomy",
+      "base": {
+        "description": "Prestations de restauration et bar",
+        "description_i18n": {
+          "de": "Speisen- und Getränkeangebote.",
+          "en": "Food and beverage offerings",
+          "es": "Prestaciones de restauración y bar",
+          "fr": "Prestations de restauration et bar"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ef2f5f26-e112-443b-ac85-58a91cc9e1ae. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ef2f5f26-e112-443b-ac85-58a91cc9e1ae"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille destinée aux équipements et prestations liés à la restauration et aux boissons ; elle regroupe notamment les espaces où les clients peuvent prendre leurs repas.",
+        "description_i18n": {
+          "de": "Gruppe für Ausstattung und Leistungen rund um Speisen und Getränke, einschließlich der Bereiche, in denen Gäste ihre Mahlzeiten einnehmen können.",
+          "en": "Family for food and drink facilities and services, including areas where guests can have their meals.",
+          "es": "Familia destinada a las instalaciones y servicios de comidas y bebidas, incluidos los espacios donde los clientes pueden comer.",
+          "fr": "Famille destinée aux équipements et prestations liés à la restauration et aux boissons ; elle regroupe notamment les espaces où les clients peuvent prendre leurs repas."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ef2f5f26-e112-443b-ac85-58a91cc9e1ae. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ef2f5f26-e112-443b-ac85-58a91cc9e1ae"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "669886e4-556d-4d87-a24c-aebf3edbbeb4",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "general",
+      "base": {
+        "description": "Équipements généraux transversaux (WiFi, TV, coffre-fort, etc.)",
+        "description_i18n": {
+          "de": "Übergreifende Allgemeinausstattung (WLAN, TV, Safe usw.).",
+          "en": "Cross-cutting general facilities (Wi-Fi, TV, safe, etc.).",
+          "es": "Equipamientos generales transversales (Wi-Fi, TV, caja fuerte, etc.).",
+          "fr": "Équipements généraux transversaux (WiFi, TV, coffre-fort, etc.)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/669886e4-556d-4d87-a24c-aebf3edbbeb4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/669886e4-556d-4d87-a24c-aebf3edbbeb4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les équipements et prestations généraux de l'établissement, tels que le Wi-Fi, la télévision, le coffre-fort, l'ascenseur ou le petit-déjeuner.",
+        "description_i18n": {
+          "de": "Gruppe für allgemeine Ausstattung und Leistungen des Betriebs, etwa WLAN, Fernseher, Safe, Aufzug oder Frühstück.",
+          "en": "Family grouping general establishment facilities and services, such as Wi-Fi, television, a safe, a lift or breakfast.",
+          "es": "Familia que agrupa los equipos y servicios generales del establecimiento, como Wi-Fi, televisión, caja fuerte, ascensor o desayuno.",
+          "fr": "Famille regroupant les équipements et prestations généraux de l'établissement, tels que le Wi-Fi, la télévision, le coffre-fort, l'ascenseur ou le petit-déjeuner."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/669886e4-556d-4d87-a24c-aebf3edbbeb4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/669886e4-556d-4d87-a24c-aebf3edbbeb4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a6f58266-24af-4796-bbac-da2976cf2abf",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "kids",
+      "base": {
+        "description": "Équipements et services dédiés aux enfants",
+        "description_i18n": {
+          "de": "Einrichtungen und Dienstleistungen für Kinder.",
+          "en": "Facilities and services dedicated to children.",
+          "es": "Equipamientos y servicios dedicados a los niños.",
+          "fr": "Équipements et services dédiés aux enfants"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a6f58266-24af-4796-bbac-da2976cf2abf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a6f58266-24af-4796-bbac-da2976cf2abf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les équipements et services destinés aux enfants, du couchage et des repas aux jeux et aux activités encadrées.",
+        "description_i18n": {
+          "de": "Gruppe für Kinderausstattung und Kinderangebote, von Schlaf- und Essmöglichkeiten bis zu Spielbereichen und betreuten Aktivitäten.",
+          "en": "Family grouping children's facilities and services, from sleeping and dining equipment to play areas and supervised activities.",
+          "es": "Familia que agrupa los equipos y servicios para niños, desde el descanso y las comidas hasta el juego y las actividades supervisadas.",
+          "fr": "Famille regroupant les équipements et services destinés aux enfants, du couchage et des repas aux jeux et aux activités encadrées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a6f58266-24af-4796-bbac-da2976cf2abf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a6f58266-24af-4796-bbac-da2976cf2abf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ee498187-f687-4369-95c0-57586bb93b4b",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "kitchen",
+      "base": {
+        "description": "Équipements de cuisine et coin repas",
+        "description_i18n": {
+          "de": "Küchenausstattung und Essbereich.",
+          "en": "Kitchen equipment and dining area.",
+          "es": "Equipamiento de cocina y zona de comedor.",
+          "fr": "Équipements de cuisine et coin repas"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ee498187-f687-4369-95c0-57586bb93b4b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ee498187-f687-4369-95c0-57586bb93b4b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les espaces, appareils et ustensiles permettant aux clients de conserver les aliments et de préparer ou prendre leurs repas.",
+        "description_i18n": {
+          "de": "Gruppe für Bereiche, Geräte und Utensilien, mit denen Gäste Lebensmittel aufbewahren sowie Mahlzeiten zubereiten oder einnehmen können.",
+          "en": "Family grouping spaces, appliances and utensils that allow guests to store food and prepare or eat meals.",
+          "es": "Familia que agrupa los espacios, aparatos y utensilios que permiten a los clientes conservar alimentos y preparar o tomar sus comidas.",
+          "fr": "Famille regroupant les espaces, appareils et ustensiles permettant aux clients de conserver les aliments et de préparer ou prendre leurs repas."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ee498187-f687-4369-95c0-57586bb93b4b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ee498187-f687-4369-95c0-57586bb93b4b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d8bdc5b0-1450-4d72-a89c-1f61536821f4",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "outdoor",
+      "base": {
+        "description": "Équipements et activités extérieurs",
+        "description_i18n": {
+          "de": "Ausstattung und Aktivitäten im Freien.",
+          "en": "Outdoor equipment and activities",
+          "es": "Equipamientos y actividades al aire libre",
+          "fr": "Équipements et activités extérieurs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d8bdc5b0-1450-4d72-a89c-1f61536821f4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d8bdc5b0-1450-4d72-a89c-1f61536821f4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les espaces et installations de plein air accessibles aux clients, comme le jardin, la terrasse, la piscine ou le barbecue.",
+        "description_i18n": {
+          "de": "Gruppe für Außenbereiche und Einrichtungen, die Gästen zur Verfügung stehen, etwa Garten, Terrasse, Schwimmbad oder Grill.",
+          "en": "Family grouping outdoor spaces and facilities available to guests, such as a garden, terrace, swimming pool or barbecue.",
+          "es": "Familia que agrupa los espacios e instalaciones al aire libre a disposición de los clientes, como jardín, terraza, piscina o barbacoa.",
+          "fr": "Famille regroupant les espaces et installations de plein air accessibles aux clients, comme le jardin, la terrasse, la piscine ou le barbecue."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d8bdc5b0-1450-4d72-a89c-1f61536821f4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d8bdc5b0-1450-4d72-a89c-1f61536821f4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1ae3851f-b74c-4c43-a47f-dce411c74323",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "parking",
+      "base": {
+        "description": "Équipements de stationnement",
+        "description_i18n": {
+          "de": "Parkmöglichkeiten.",
+          "en": "Parking facilities.",
+          "es": "Instalaciones de aparcamiento.",
+          "fr": "Équipements de stationnement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1ae3851f-b74c-4c43-a47f-dce411c74323. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1ae3851f-b74c-4c43-a47f-dce411c74323"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les possibilités de stationnement des véhicules et les services associés, notamment garage, voiturier et recharge électrique.",
+        "description_i18n": {
+          "de": "Gruppe für Möglichkeiten zum Abstellen von Fahrzeugen und zugehörige Leistungen, insbesondere Garage, Parkservice und elektrisches Laden.",
+          "en": "Family grouping vehicle parking options and associated services, including garages, valet parking and electric charging.",
+          "es": "Familia que agrupa las posibilidades de estacionamiento de vehículos y los servicios asociados, como garaje, aparcacoches y recarga eléctrica.",
+          "fr": "Famille regroupant les possibilités de stationnement des véhicules et les services associés, notamment garage, voiturier et recharge électrique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1ae3851f-b74c-4c43-a47f-dce411c74323. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1ae3851f-b74c-4c43-a47f-dce411c74323"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7e3966aa-d77e-4d87-a551-240e8049b3bf",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "pets",
+      "base": {
+        "description": "Services et équipements pour animaux de compagnie",
+        "description_i18n": {
+          "de": "Services und Ausstattung für Haustiere.",
+          "en": "Services and equipment for pets.",
+          "es": "Servicios y equipamiento para animales de compañía.",
+          "fr": "Services et équipements pour animaux de compagnie"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7e3966aa-d77e-4d87-a551-240e8049b3bf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7e3966aa-d77e-4d87-a551-240e8049b3bf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les équipements et services proposés aux animaux de compagnie qui accompagnent les clients, tels que paniers et gamelles.",
+        "description_i18n": {
+          "de": "Gruppe für Ausstattung und Leistungen für mitreisende Haustiere, etwa Tierbetten und Futternäpfe.",
+          "en": "Family grouping facilities and services for pets accompanying guests, such as pet beds and bowls.",
+          "es": "Familia que agrupa los equipos y servicios para los animales de compañía que acompañan a los clientes, como camas y comederos.",
+          "fr": "Famille regroupant les équipements et services proposés aux animaux de compagnie qui accompagnent les clients, tels que paniers et gamelles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7e3966aa-d77e-4d87-a551-240e8049b3bf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7e3966aa-d77e-4d87-a551-240e8049b3bf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "884c1460-9283-4791-9418-46aa5b899058",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "security",
+      "base": {
+        "description": "Dispositifs de sécurité et surveillance",
+        "description_i18n": {
+          "de": "Sicherheits- und Überwachungseinrichtungen.",
+          "en": "Safety and surveillance systems.",
+          "es": "Dispositivos de seguridad y vigilancia.",
+          "fr": "Dispositifs de sécurité et surveillance"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/884c1460-9283-4791-9418-46aa5b899058. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/884c1460-9283-4791-9418-46aa5b899058"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les dispositifs de surveillance, de prévention et de protection des personnes sur le site, dont la sécurité incendie et les sorties de secours.",
+        "description_i18n": {
+          "de": "Gruppe für Überwachung, Vorbeugung und Personenschutz vor Ort, einschließlich Brandschutz und Notausgängen.",
+          "en": "Family grouping on-site surveillance, prevention and personal safety measures, including fire safety and emergency exits.",
+          "es": "Familia que agrupa los dispositivos de vigilancia, prevención y protección de las personas en el lugar, incluida la seguridad contra incendios y las salidas de emergencia.",
+          "fr": "Famille regroupant les dispositifs de surveillance, de prévention et de protection des personnes sur le site, dont la sécurité incendie et les sorties de secours."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/884c1460-9283-4791-9418-46aa5b899058. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/884c1460-9283-4791-9418-46aa5b899058"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "282ebf91-9643-48cd-be5f-ca66d8dfd55d",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "services",
+      "base": {
+        "description": "Services généraux offerts aux clients",
+        "description_i18n": {
+          "de": "Allgemeine Dienstleistungen für Gäste.",
+          "en": "General services offered to guests",
+          "es": "Servicios generales ofrecidos a los clientes",
+          "fr": "Services généraux offerts aux clients"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/282ebf91-9643-48cd-be5f-ca66d8dfd55d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/282ebf91-9643-48cd-be5f-ca66d8dfd55d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les prestations d'accueil et les services pratiques proposés aux clients, comme la réception, la consigne à bagages, la navette ou la laverie.",
+        "description_i18n": {
+          "de": "Gruppe für Empfangsleistungen und praktische Gästeservices, etwa Rezeption, Gepäckaufbewahrung, Shuttleverkehr oder Waschmöglichkeiten.",
+          "en": "Family grouping reception and practical guest services, such as a reception desk, luggage storage, shuttle transport or laundry facilities.",
+          "es": "Familia que agrupa los servicios de acogida y los servicios prácticos para los clientes, como recepción, consigna de equipaje, transporte de enlace o lavandería.",
+          "fr": "Famille regroupant les prestations d'accueil et les services pratiques proposés aux clients, comme la réception, la consigne à bagages, la navette ou la laverie."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/282ebf91-9643-48cd-be5f-ca66d8dfd55d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/282ebf91-9643-48cd-be5f-ca66d8dfd55d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1912a216-0adf-4291-a35b-6ad9086d2616",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "sports",
+      "base": {
+        "description": "Équipements sportifs et de loisirs extérieurs",
+        "description_i18n": {
+          "de": "Sport- und Freizeitausstattung im Freien.",
+          "en": "Sports and outdoor leisure equipment.",
+          "es": "Equipamiento deportivo y de ocio al aire libre.",
+          "fr": "Équipements sportifs et de loisirs extérieurs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1912a216-0adf-4291-a35b-6ad9086d2616. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1912a216-0adf-4291-a35b-6ad9086d2616"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les installations, le matériel et les locations permettant aux clients de pratiquer des activités physiques ou de loisirs, sur terre ou dans l'eau.",
+        "description_i18n": {
+          "de": "Gruppe für Anlagen, Ausrüstung und Verleihangebote, mit denen Gäste Sport- oder Freizeitaktivitäten an Land oder im Wasser ausüben können.",
+          "en": "Family grouping facilities, equipment and rentals that enable guests to take part in physical or leisure activities on land or in the water.",
+          "es": "Familia que agrupa las instalaciones, el material y los alquileres que permiten a los clientes practicar actividades físicas o de ocio, en tierra o en el agua.",
+          "fr": "Famille regroupant les installations, le matériel et les locations permettant aux clients de pratiquer des activités physiques ou de loisirs, sur terre ou dans l'eau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1912a216-0adf-4291-a35b-6ad9086d2616. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1912a216-0adf-4291-a35b-6ad9086d2616"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d939d8ad-67ce-43a7-ba36-58a3743b4a1f",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "sustainable",
+      "base": {
+        "description": "Initiatives et équipements responsables",
+        "description_i18n": {
+          "de": "Verantwortungsvolle Initiativen und Ausstattung.",
+          "en": "Responsible initiatives and equipment",
+          "es": "Iniciativas y equipamientos responsables",
+          "fr": "Initiatives et équipements responsables"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d939d8ad-67ce-43a7-ba36-58a3743b4a1f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d939d8ad-67ce-43a7-ba36-58a3743b4a1f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille destinée à regrouper les initiatives et équipements proposés aux clients pour réduire l'impact environnemental de leur séjour ; ce regroupement ne vaut pas attribution d'un label.",
+        "description_i18n": {
+          "de": "Gruppe für Initiativen und Ausstattung, mit denen Gäste die Umweltauswirkungen ihres Aufenthalts verringern können; die Zuordnung verleiht kein Gütesiegel.",
+          "en": "Family intended to group guest initiatives and facilities that reduce the environmental impact of a stay; membership of this group does not award a label.",
+          "es": "Familia destinada a agrupar iniciativas y equipos para que los clientes reduzcan el impacto ambiental de su estancia; pertenecer a este grupo no supone la concesión de un sello.",
+          "fr": "Famille destinée à regrouper les initiatives et équipements proposés aux clients pour réduire l'impact environnemental de leur séjour ; ce regroupement ne vaut pas attribution d'un label."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d939d8ad-67ce-43a7-ba36-58a3743b4a1f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d939d8ad-67ce-43a7-ba36-58a3743b4a1f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1e86d32f-1b3f-4fa4-a639-4e7f014fefc0",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "visit_mediation",
+      "base": {
+        "description": "Modes de visite et dispositifs de médiation proposés aux visiteurs d'un site (visite libre, visite guidée, audioguide...) — distincte des AIDES d'accessibilité (famille accessibility).",
+        "description_i18n": {
+          "de": "Besuchsformen und Vermittlungsangebote für Besucher (Selbstbesuch, Führung, Audioguide …), getrennt von Barrierefreiheitshilfen (Familie Barrierefreiheit).",
+          "en": "Visit formats and mediation tools offered to site visitors (self-guided visit, guided tour, audio guide...), distinct from accessibility aids (accessibility family).",
+          "es": "Formatos de visita y dispositivos de mediación ofrecidos a los visitantes de un lugar (visita libre, visita guiada, audioguía...), distintos de las ayudas de accesibilidad (familia accesibilidad).",
+          "fr": "Modes de visite et dispositifs de médiation proposés aux visiteurs d'un site (visite libre, visite guidée, audioguide...) — distincte des AIDES d'accessibilité (famille accessibility)."
+        },
+        "name_i18n": {
+          "de": "Besuchsvermittlung",
+          "en": "Visit mediation",
+          "es": "Mediación de la visita",
+          "fr": "Médiation de visite"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e86d32f-1b3f-4fa4-a639-4e7f014fefc0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e86d32f-1b3f-4fa4-a639-4e7f014fefc0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Modes de visite et supports permettant aux visiteurs de découvrir et comprendre un site, notamment visite libre, visite guidée et audioguide ; à distinguer des aides destinées à l'accessibilité.",
+        "description_i18n": {
+          "de": "Besuchsformen und Vermittlungsangebote, mit denen Gäste einen Ort entdecken und verstehen können, etwa selbstständiger Besuch, Führung und Audioguide; von Hilfen zur Barrierefreiheit zu unterscheiden.",
+          "en": "Visit formats and interpretation resources that help visitors discover and understand a site, including self-guided visits, guided tours and audio guides; distinct from accessibility aids.",
+          "es": "Formatos de visita y recursos de interpretación que permiten descubrir y comprender un lugar, como visita libre, visita guiada y audioguía; se distinguen de las ayudas de accesibilidad.",
+          "fr": "Modes de visite et supports permettant aux visiteurs de découvrir et comprendre un site, notamment visite libre, visite guidée et audioguide ; à distinguer des aides destinées à l'accessibilité."
+        },
+        "name_i18n": {
+          "de": "Besuchsformen und Vermittlung",
+          "en": "Visitor interpretation",
+          "es": "Interpretación de la visita",
+          "fr": "Médiation de visite"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e86d32f-1b3f-4fa4-a639-4e7f014fefc0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e86d32f-1b3f-4fa4-a639-4e7f014fefc0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a5686cf8-0292-41ac-9ba2-e5299e2a912d",
+      "domain": "amenity_family",
+      "context_key": "",
+      "code": "wellness",
+      "base": {
+        "description": "Installations de bien-être et spa",
+        "description_i18n": {
+          "de": "Wellness- und Spa-Einrichtungen.",
+          "en": "Wellness and spa facilities",
+          "es": "Instalaciones de bienestar y spa",
+          "fr": "Installations de bien-être et spa"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a5686cf8-0292-41ac-9ba2-e5299e2a912d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a5686cf8-0292-41ac-9ba2-e5299e2a912d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille regroupant les installations et prestations dédiées à la détente et au bien-être des clients, dont les massages et les espaces de spa.",
+        "description_i18n": {
+          "de": "Gruppe für Einrichtungen und Leistungen zur Entspannung und zum Wohlbefinden der Gäste, einschließlich Massagen und Spa-Bereichen.",
+          "en": "Family grouping facilities and services dedicated to guest relaxation and wellbeing, including massages and spa areas.",
+          "es": "Familia que agrupa las instalaciones y servicios dedicados a la relajación y el bienestar de los clientes, incluidos masajes y espacios de spa.",
+          "fr": "Famille regroupant les installations et prestations dédiées à la détente et au bien-être des clients, dont les massages et les espaces de spa."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a5686cf8-0292-41ac-9ba2-e5299e2a912d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a5686cf8-0292-41ac-9ba2-e5299e2a912d"
+          }
+        ]
+      }
+    }
+  ]
+}

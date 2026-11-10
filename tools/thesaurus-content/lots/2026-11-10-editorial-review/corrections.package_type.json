@@ -1,0 +1,469 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-package_type-1",
+  "proposals": [
+    {
+      "concept_id": "5c6d0497-7dde-4b80-81bd-bd3ff8e30f76",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "adventure",
+      "base": {
+        "description": "Forfait aventure",
+        "description_i18n": {
+          "de": "Abenteuerpaket",
+          "en": "Adventure package",
+          "es": "Paquete de aventura",
+          "fr": "Forfait aventure"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5c6d0497-7dde-4b80-81bd-bd3ff8e30f76. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5c6d0497-7dde-4b80-81bd-bd3ff8e30f76"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre forfaitaire orientée vers la découverte active et les activités d'aventure ; les activités et autres prestations incluses sont celles décrites dans l'offre.",
+        "description_i18n": {
+          "de": "Pauschalangebot mit Schwerpunkt auf aktiver Entdeckung und Abenteueraktivitäten; eingeschlossen sind die im Angebot beschriebenen Aktivitäten und weiteren Leistungen.",
+          "en": "Package offer focused on active discovery and adventure activities; the activities and other included services are those described in the offer.",
+          "es": "Oferta de paquete orientada al descubrimiento activo y las actividades de aventura; las actividades y demás prestaciones incluidas son las descritas en la oferta.",
+          "fr": "Offre forfaitaire orientée vers la découverte active et les activités d'aventure ; les activités et autres prestations incluses sont celles décrites dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5c6d0497-7dde-4b80-81bd-bd3ff8e30f76. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5c6d0497-7dde-4b80-81bd-bd3ff8e30f76"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "11ec8315-20ac-4079-b4a9-5ed31529501d",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "all_inclusive",
+      "base": {
+        "description": "Forfait tout inclus",
+        "description_i18n": {
+          "de": "All-inclusive-Paket",
+          "en": "All-inclusive package",
+          "es": "Paquete todo incluido",
+          "fr": "Forfait tout inclus"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/11ec8315-20ac-4079-b4a9-5ed31529501d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/11ec8315-20ac-4079-b4a9-5ed31529501d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Formule dont le prix regroupe l'hébergement et l'ensemble des services annoncés comme inclus ; le terme ne signifie pas que toute prestation possible de l'établissement est comprise.",
+        "description_i18n": {
+          "de": "Angebotsform, deren Preis Unterkunft und alle ausdrücklich eingeschlossenen Leistungen umfasst; damit sind nicht sämtliche denkbaren Leistungen des Betriebs gemeint.",
+          "en": "Plan whose price combines accommodation and all services stated as included; the term does not mean that every possible service of the establishment is covered.",
+          "es": "Modalidad cuyo precio reúne el alojamiento y todos los servicios anunciados como incluidos; no significa que cubra cualquier prestación posible del establecimiento.",
+          "fr": "Formule dont le prix regroupe l'hébergement et l'ensemble des services annoncés comme inclus ; le terme ne signifie pas que toute prestation possible de l'établissement est comprise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/11ec8315-20ac-4079-b4a9-5ed31529501d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/11ec8315-20ac-4079-b4a9-5ed31529501d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f13a087a-ac0e-4110-82fe-42fa5b0feada",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "bed_breakfast",
+      "base": {
+        "description": "Forfait petit-déjeuner",
+        "description_i18n": {
+          "de": "Paket mit Übernachtung und Frühstück",
+          "en": "Bed and breakfast package",
+          "es": "Paquete de alojamiento y desayuno",
+          "fr": "Forfait petit-déjeuner"
+        },
+        "name": "Petit-déjeuner",
+        "name_i18n": {
+          "de": "Übernachtung mit Frühstück",
+          "en": "Bed and breakfast",
+          "es": "Alojamiento y desayuno",
+          "fr": "Petit-déjeuner"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Paket mit Übernachtung und Frühstück"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Accommodation and breakfast package"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Paquete de alojamiento y desayuno"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Forfait avec petit-déjeuner"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f13a087a-ac0e-4110-82fe-42fa5b0feada. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f13a087a-ac0e-4110-82fe-42fa5b0feada"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Formule d'hébergement incluant le petit-déjeuner, distincte d'une simple rubrique de plats de petit-déjeuner ou du type d'établissement chambre d'hôtes.",
+        "description_i18n": {
+          "de": "Unterkunftsangebot mit eingeschlossenem Frühstück, getrennt von einer Frühstücksrubrik auf der Speisekarte oder dem Betriebstyp Gästehaus.",
+          "en": "Accommodation plan including breakfast, distinct from a breakfast menu section or the guest-house establishment type.",
+          "es": "Modalidad de alojamiento con desayuno incluido, distinta de una sección de platos de desayuno o del tipo de establecimiento de casa de huéspedes.",
+          "fr": "Formule d'hébergement incluant le petit-déjeuner, distincte d'une simple rubrique de plats de petit-déjeuner ou du type d'établissement chambre d'hôtes."
+        },
+        "name": "Hébergement et petit-déjeuner",
+        "name_i18n": {
+          "de": "Übernachtung mit Frühstück",
+          "en": "Bed and breakfast",
+          "es": "Alojamiento y desayuno",
+          "fr": "Hébergement et petit-déjeuner"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Paket mit Übernachtung und Frühstück"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Accommodation and breakfast package"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Paquete de alojamiento y desayuno"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Forfait avec petit-déjeuner"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Petit-déjeuner"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f13a087a-ac0e-4110-82fe-42fa5b0feada. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f13a087a-ac0e-4110-82fe-42fa5b0feada"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cc531786-84ee-48ad-9f28-44f6fda6835c",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "circuit",
+      "base": {
+        "description": "Forfait circuit",
+        "description_i18n": {
+          "de": "Rundreisepaket",
+          "en": "Tour package",
+          "es": "Paquete de circuito",
+          "fr": "Forfait circuit"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cc531786-84ee-48ad-9f28-44f6fda6835c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cc531786-84ee-48ad-9f28-44f6fda6835c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre forfaitaire organisée autour d'un itinéraire comportant plusieurs étapes ou visites ; les transports, hébergements et prestations compris sont précisés dans l'offre.",
+        "description_i18n": {
+          "de": "Pauschalangebot entlang einer Reiseroute mit mehreren Stationen oder Besichtigungen; enthaltene Beförderung, Unterkünfte und Leistungen werden angegeben.",
+          "en": "Package offer organised around an itinerary with several stages or visits; included transport, accommodation and services are specified in the offer.",
+          "es": "Oferta de paquete organizada en torno a un itinerario con varias etapas o visitas; la oferta precisa los transportes, alojamientos y prestaciones incluidos.",
+          "fr": "Offre forfaitaire organisée autour d'un itinéraire comportant plusieurs étapes ou visites ; les transports, hébergements et prestations compris sont précisés dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cc531786-84ee-48ad-9f28-44f6fda6835c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cc531786-84ee-48ad-9f28-44f6fda6835c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cf83bf49-4399-4915-bfe5-0b9451daab2d",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "cruise",
+      "base": {
+        "description": "Forfait croisière",
+        "description_i18n": {
+          "de": "Kreuzfahrtpaket",
+          "en": "Cruise package",
+          "es": "Paquete de crucero",
+          "fr": "Forfait croisière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cf83bf49-4399-4915-bfe5-0b9451daab2d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cf83bf49-4399-4915-bfe5-0b9451daab2d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre forfaitaire organisée autour d'un voyage en bateau, avec les étapes et prestations annoncées ; elle ne désigne pas le seul embarcadère ou port de départ.",
+        "description_i18n": {
+          "de": "Pauschalangebot rund um eine Schiffsreise mit den angegebenen Stationen und Leistungen; es bezeichnet nicht lediglich den Abfahrtshafen oder Anleger.",
+          "en": "Package offer organised around a boat journey with the stated stops and services; it does not designate only the departure pier or port.",
+          "es": "Oferta de paquete organizada en torno a un viaje en barco con las escalas y prestaciones anunciadas; no designa únicamente el muelle o puerto de salida.",
+          "fr": "Offre forfaitaire organisée autour d'un voyage en bateau, avec les étapes et prestations annoncées ; elle ne désigne pas le seul embarcadère ou port de départ."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cf83bf49-4399-4915-bfe5-0b9451daab2d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cf83bf49-4399-4915-bfe5-0b9451daab2d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "75343c5e-bd8b-42c8-bade-f34cd8c55c4b",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "family",
+      "base": {
+        "description": "Forfait famille",
+        "description_i18n": {
+          "de": "Familienpaket",
+          "en": "Family package",
+          "es": "Paquete familiar",
+          "fr": "Forfait famille"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/75343c5e-bd8b-42c8-bade-f34cd8c55c4b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/75343c5e-bd8b-42c8-bade-f34cd8c55c4b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre forfaitaire conçue pour un séjour ou des activités en famille, dont la composition du groupe et les prestations incluses sont précisées ; elle est distincte d'une simple catégorie de bénéficiaires d'un tarif.",
+        "description_i18n": {
+          "de": "Pauschalangebot für einen Familienaufenthalt oder Familienaktivitäten mit Angaben zur Gruppenzusammensetzung und den enthaltenen Leistungen; es ist von einer bloßen Tarifzielgruppe zu unterscheiden.",
+          "en": "Package designed for a family stay or activities, specifying the party composition and included services; it is distinct from a simple rate-beneficiary category.",
+          "es": "Paquete concebido para una estancia o actividades en familia, con composición del grupo y prestaciones incluidas indicadas; es distinto de una simple categoría de beneficiarios de una tarifa.",
+          "fr": "Offre forfaitaire conçue pour un séjour ou des activités en famille, dont la composition du groupe et les prestations incluses sont précisées ; elle est distincte d'une simple catégorie de bénéficiaires d'un tarif."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/75343c5e-bd8b-42c8-bade-f34cd8c55c4b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/75343c5e-bd8b-42c8-bade-f34cd8c55c4b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3fa64b00-17b4-413d-ae6c-2b76ed2e3557",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "flight_hotel",
+      "base": {
+        "description": "Forfait vol + hôtel",
+        "description_i18n": {
+          "de": "Paket aus Flug und Hotel",
+          "en": "Flight and hotel package",
+          "es": "Paquete de vuelo y hotel",
+          "fr": "Forfait vol + hôtel"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3fa64b00-17b4-413d-ae6c-2b76ed2e3557. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3fa64b00-17b4-413d-ae6c-2b76ed2e3557"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre réunissant un transport aérien et un hébergement hôtelier dans une même proposition forfaitaire, selon les prestations annoncées.",
+        "description_i18n": {
+          "de": "Angebot, das Flugbeförderung und Hotelunterkunft in einer gemeinsamen Pauschale entsprechend den angegebenen Leistungen verbindet.",
+          "en": "Offer combining air transport and hotel accommodation in the same package proposal, according to the services stated.",
+          "es": "Oferta que reúne transporte aéreo y alojamiento hotelero en una misma propuesta de paquete, según las prestaciones anunciadas.",
+          "fr": "Offre réunissant un transport aérien et un hébergement hôtelier dans une même proposition forfaitaire, selon les prestations annoncées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3fa64b00-17b4-413d-ae6c-2b76ed2e3557. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3fa64b00-17b4-413d-ae6c-2b76ed2e3557"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0588a083-1d52-409d-aae2-cf85fe8e7a1a",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "full_board",
+      "base": {
+        "description": "Forfait pension complète",
+        "description_i18n": {
+          "de": "Paket mit Vollpension",
+          "en": "Full-board package",
+          "es": "Paquete de pensión completa",
+          "fr": "Forfait pension complète"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0588a083-1d52-409d-aae2-cf85fe8e7a1a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0588a083-1d52-409d-aae2-cf85fe8e7a1a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Formule d'hébergement incluant le petit-déjeuner, le déjeuner et le dîner ; les boissons et autres prestations ne sont incluses que si l'offre le précise.",
+        "description_i18n": {
+          "de": "Unterkunftsangebot mit Frühstück, Mittag- und Abendessen; Getränke und weitere Leistungen sind nur enthalten, wenn das Angebot dies angibt.",
+          "en": "Accommodation plan including breakfast, lunch and dinner; drinks and other services are included only when stated in the offer.",
+          "es": "Modalidad de alojamiento con desayuno, almuerzo y cena; las bebidas y otras prestaciones solo se incluyen si lo indica la oferta.",
+          "fr": "Formule d'hébergement incluant le petit-déjeuner, le déjeuner et le dîner ; les boissons et autres prestations ne sont incluses que si l'offre le précise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0588a083-1d52-409d-aae2-cf85fe8e7a1a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0588a083-1d52-409d-aae2-cf85fe8e7a1a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "72529576-b093-45d0-82e6-81b940960ed7",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "half_board",
+      "base": {
+        "description": "Forfait demi-pension",
+        "description_i18n": {
+          "de": "Paket mit Halbpension",
+          "en": "Half-board package",
+          "es": "Paquete de media pensión",
+          "fr": "Forfait demi-pension"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72529576-b093-45d0-82e6-81b940960ed7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72529576-b093-45d0-82e6-81b940960ed7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Formule d'hébergement incluant le petit-déjeuner et un autre repas principal ; l'offre précise le repas concerné et les éventuelles boissons incluses.",
+        "description_i18n": {
+          "de": "Unterkunftsangebot mit Frühstück und einer weiteren Hauptmahlzeit; das Angebot nennt die betreffende Mahlzeit und gegebenenfalls enthaltene Getränke.",
+          "en": "Accommodation plan including breakfast and one other main meal; the offer specifies which meal and any included drinks.",
+          "es": "Modalidad de alojamiento con desayuno y otra comida principal; la oferta precisa qué comida y las posibles bebidas incluidas.",
+          "fr": "Formule d'hébergement incluant le petit-déjeuner et un autre repas principal ; l'offre précise le repas concerné et les éventuelles boissons incluses."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72529576-b093-45d0-82e6-81b940960ed7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72529576-b093-45d0-82e6-81b940960ed7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "90de29a1-e4e0-4956-8904-4a98701b5fff",
+      "domain": "package_type",
+      "context_key": "",
+      "code": "wellness",
+      "base": {
+        "description": "Forfait bien-être",
+        "description_i18n": {
+          "de": "Wellnesspaket",
+          "en": "Wellness package",
+          "es": "Paquete de bienestar",
+          "fr": "Forfait bien-être"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/90de29a1-e4e0-4956-8904-4a98701b5fff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/90de29a1-e4e0-4956-8904-4a98701b5fff"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre forfaitaire regroupant des prestations de détente ou de bien-être, éventuellement avec hébergement ; elle n'implique pas à elle seule une prise en charge médicale.",
+        "description_i18n": {
+          "de": "Pauschalangebot mit Entspannungs- oder Wohlfühlleistungen, gegebenenfalls mit Unterkunft; daraus allein ergibt sich keine medizinische Behandlung.",
+          "en": "Package combining relaxation or well-being services, possibly with accommodation; it does not itself imply medical treatment.",
+          "es": "Paquete que reúne prestaciones de relajación o bienestar, eventualmente con alojamiento; por sí solo no implica atención médica.",
+          "fr": "Offre forfaitaire regroupant des prestations de détente ou de bien-être, éventuellement avec hébergement ; elle n'implique pas à elle seule une prise en charge médicale."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/90de29a1-e4e0-4956-8904-4a98701b5fff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/90de29a1-e4e0-4956-8904-4a98701b5fff"
+          }
+        ]
+      }
+    }
+  ]
+}

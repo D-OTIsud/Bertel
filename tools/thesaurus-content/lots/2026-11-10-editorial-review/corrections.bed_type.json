@@ -1,0 +1,378 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-bed_type-1",
+  "proposals": [
+    {
+      "concept_id": "1fa3cbeb-563f-4f12-8e55-7a0c0395edfd",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "baby_cot",
+      "base": {
+        "description": "Lit bébé ou berceau",
+        "description_i18n": {
+          "de": "Babybett oder Wiege",
+          "en": "Cot or cradle for a baby",
+          "es": "Cuna o moisés para un bebé",
+          "fr": "Lit bébé ou berceau"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1fa3cbeb-563f-4f12-8e55-7a0c0395edfd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1fa3cbeb-563f-4f12-8e55-7a0c0395edfd"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Petit couchage conçu pour un bébé, sous forme de lit bébé ou de berceau.",
+        "description_i18n": {
+          "de": "Kleiner Schlafplatz für ein Baby in Form eines Babybetts oder einer Wiege.",
+          "en": "Small sleeping arrangement designed for a baby, in the form of a cot or cradle.",
+          "es": "Cama pequeña diseñada para un bebé, en forma de cuna o moisés.",
+          "fr": "Petit couchage conçu pour un bébé, sous forme de lit bébé ou de berceau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1fa3cbeb-563f-4f12-8e55-7a0c0395edfd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1fa3cbeb-563f-4f12-8e55-7a0c0395edfd"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b60110a3-a313-4fb2-8a52-e730ec06d558",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "bunk",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b60110a3-a313-4fb2-8a52-e730ec06d558. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b60110a3-a313-4fb2-8a52-e730ec06d558"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b60110a3-a313-4fb2-8a52-e730ec06d558. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b60110a3-a313-4fb2-8a52-e730ec06d558"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f3083878-adb0-43de-b4e8-74d866a28d98",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "double",
+      "base": {
+        "description": "Lit deux places standard",
+        "description_i18n": {
+          "de": "Standardbett für zwei Personen",
+          "en": "Standard bed for two people",
+          "es": "Cama estándar para dos personas",
+          "fr": "Lit deux places standard"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f3083878-adb0-43de-b4e8-74d866a28d98. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f3083878-adb0-43de-b4e8-74d866a28d98"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lit de 140 cm de largeur prévu pour le couchage de deux personnes ; la quantité de lits est renseignée séparément.",
+        "description_i18n": {
+          "de": "140 cm breites Bett für zwei Personen; die Anzahl der Betten wird getrennt erfasst.",
+          "en": "Bed 140 cm wide intended for two people; the number of beds is recorded separately.",
+          "es": "Cama de 140 cm de ancho destinada a dos personas; la cantidad de camas se indica por separado.",
+          "fr": "Lit de 140 cm de largeur prévu pour le couchage de deux personnes ; la quantité de lits est renseignée séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f3083878-adb0-43de-b4e8-74d866a28d98. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f3083878-adb0-43de-b4e8-74d866a28d98"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "29a8ab9b-1681-4326-9bb9-12050fa03403",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "extra_bed",
+      "base": {
+        "description": "Lit d'appoint sur demande",
+        "description_i18n": {
+          "de": "Zusätzliches Bett auf Anfrage",
+          "en": "Additional bed on request",
+          "es": "Cama adicional bajo petición",
+          "fr": "Lit d'appoint sur demande"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/29a8ab9b-1681-4326-9bb9-12050fa03403. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/29a8ab9b-1681-4326-9bb9-12050fa03403"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Couchage supplémentaire ajouté sur demande à l'équipement habituel de la chambre.",
+        "description_i18n": {
+          "de": "Zusätzlicher Schlafplatz, der auf Wunsch zur üblichen Bettausstattung des Zimmers hinzukommt.",
+          "en": "Additional sleeping arrangement added on request to the room's usual bedding.",
+          "es": "Cama adicional añadida a petición al equipamiento habitual de la habitación.",
+          "fr": "Couchage supplémentaire ajouté sur demande à l'équipement habituel de la chambre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/29a8ab9b-1681-4326-9bb9-12050fa03403. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/29a8ab9b-1681-4326-9bb9-12050fa03403"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6652a79d-e8fd-4d77-8f89-29ddf3616d46",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "king",
+      "base": {
+        "description": "Très grand lit deux places",
+        "description_i18n": {
+          "de": "Sehr großes Bett für zwei Personen",
+          "en": "Very large bed for two people",
+          "es": "Cama muy grande para dos personas",
+          "fr": "Très grand lit deux places"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lit deux places de 180 cm de largeur, distinct du lit queen de 160 cm dans ce catalogue.",
+        "description_i18n": {
+          "de": "180 cm breites Doppelbett, das in diesem Katalog vom 160 cm breiten Queensize-Bett unterschieden wird.",
+          "en": "Double bed 180 cm wide, distinct from the 160 cm queen bed in this catalogue.",
+          "es": "Cama doble de 180 cm de ancho, distinta de la cama queen de 160 cm en este catálogo.",
+          "fr": "Lit deux places de 180 cm de largeur, distinct du lit queen de 160 cm dans ce catalogue."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5f020242-0b50-4f55-b8bd-772dc4764b77",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "mezzanine",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5f020242-0b50-4f55-b8bd-772dc4764b77. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5f020242-0b50-4f55-b8bd-772dc4764b77"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5f020242-0b50-4f55-b8bd-772dc4764b77. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5f020242-0b50-4f55-b8bd-772dc4764b77"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5e3f3408-bcaf-4b0d-adff-3a03f1257d7d",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "queen",
+      "base": {
+        "description": "Grand lit deux places",
+        "description_i18n": {
+          "de": "Großes Bett für zwei Personen",
+          "en": "Large bed for two people",
+          "es": "Cama grande para dos personas",
+          "fr": "Grand lit deux places"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lit deux places de 160 cm de largeur, distinct du lit double de 140 cm et du lit king de 180 cm dans ce catalogue.",
+        "description_i18n": {
+          "de": "160 cm breites Doppelbett, das in diesem Katalog vom 140 cm breiten Doppelbett und 180 cm breiten Kingsize-Bett unterschieden wird.",
+          "en": "Double bed 160 cm wide, distinct from the 140 cm double and 180 cm king beds in this catalogue.",
+          "es": "Cama doble de 160 cm de ancho, distinta de la cama doble de 140 cm y la king de 180 cm en este catálogo.",
+          "fr": "Lit deux places de 160 cm de largeur, distinct du lit double de 140 cm et du lit king de 180 cm dans ce catalogue."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "08441fcf-7f96-4f7e-beab-f568ca4bdaca",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "single",
+      "base": {
+        "description": "Lit une place",
+        "description_i18n": {
+          "de": "Bett für eine Person",
+          "en": "Bed for one person",
+          "es": "Cama para una persona",
+          "fr": "Lit une place"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/08441fcf-7f96-4f7e-beab-f568ca4bdaca. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/08441fcf-7f96-4f7e-beab-f568ca4bdaca"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lit de 90 cm de largeur destiné au couchage d'une personne.",
+        "description_i18n": {
+          "de": "90 cm breites Bett als Schlafplatz für eine Person.",
+          "en": "Bed 90 cm wide intended for one person to sleep in.",
+          "es": "Cama de 90 cm de ancho destinada al descanso de una persona.",
+          "fr": "Lit de 90 cm de largeur destiné au couchage d'une personne."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/08441fcf-7f96-4f7e-beab-f568ca4bdaca. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/08441fcf-7f96-4f7e-beab-f568ca4bdaca"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "203b0f19-4be4-4cba-bf83-5376d7276557",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "sofa_bed",
+      "base": {
+        "description": "Canapé convertible",
+        "description_i18n": {
+          "de": "Sofa, das in ein Bett umgewandelt werden kann",
+          "en": "Sofa that converts into a bed",
+          "es": "Sofá convertible en cama",
+          "fr": "Canapé convertible"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/203b0f19-4be4-4cba-bf83-5376d7276557. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/203b0f19-4be4-4cba-bf83-5376d7276557"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Canapé pouvant être transformé en lit pour offrir un couchage, distinct d'un canapé destiné uniquement à l'assise.",
+        "description_i18n": {
+          "de": "Sofa, das in ein Bett umgewandelt werden kann und damit einen Schlafplatz bietet; von einem reinen Sitzsofa zu unterscheiden.",
+          "en": "Sofa that can be converted into a bed to provide a sleeping place, distinct from seating-only sofas.",
+          "es": "Sofá que puede transformarse en cama para ofrecer un lugar de descanso, distinto de un sofá destinado solo a sentarse.",
+          "fr": "Canapé pouvant être transformé en lit pour offrir un couchage, distinct d'un canapé destiné uniquement à l'assise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/203b0f19-4be4-4cba-bf83-5376d7276557. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/203b0f19-4be4-4cba-bf83-5376d7276557"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "de71000c-8a2e-422c-b970-4a434f0ad921",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "twin_singles",
+      "base": {
+        "description": "Deux lits simples séparables",
+        "description_i18n": {
+          "de": "Zwei Einzelbetten, die getrennt aufgestellt werden können",
+          "en": "Two single beds that can be placed separately",
+          "es": "Dos camas individuales que pueden colocarse por separado",
+          "fr": "Deux lits simples séparables"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/de71000c-8a2e-422c-b970-4a434f0ad921. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/de71000c-8a2e-422c-b970-4a434f0ad921"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ensemble de deux lits simples de 90 cm chacun, pouvant être disposés séparément ; à distinguer d'un unique lit double.",
+        "description_i18n": {
+          "de": "Zwei Einzelbetten mit jeweils 90 cm Breite, die getrennt aufgestellt werden können; von einem einzelnen Doppelbett zu unterscheiden.",
+          "en": "Set of two single beds, each 90 cm wide, that can be placed separately; distinct from one double bed.",
+          "es": "Conjunto de dos camas individuales de 90 cm cada una, que pueden colocarse por separado; distinto de una sola cama doble.",
+          "fr": "Ensemble de deux lits simples de 90 cm chacun, pouvant être disposés séparément ; à distinguer d'un unique lit double."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/de71000c-8a2e-422c-b970-4a434f0ad921. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/de71000c-8a2e-422c-b970-4a434f0ad921"
+          }
+        ]
+      }
+    }
+  ]
+}

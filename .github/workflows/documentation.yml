@@ -38,6 +38,8 @@ jobs:
         run: node docs/thesaurus-render.check.js
       - name: Test offline thesaurus review and protected proposal tools
         run: node --test tools/thesaurus-content/*.test.mjs
+      - name: Validate all governed domain translations and SQL mirrors
+        run: node tools/thesaurus-content/validate-domain-labels.mjs
       - name: Check Postman route coverage and scripts without sending requests
         run: node docs/postman.check.js
       - name: Build the documentation image with its explicit public file list

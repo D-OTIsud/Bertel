@@ -8,7 +8,7 @@
 
 # API publique Bertel — Guide partenaires
 
-**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-11-09
+**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrats objets `1.0.0`, thésaurus `1.0.0` · Guide mis à jour le 2026-11-10
 
 Bertel est le système d'information touristique de l'OTI du Sud. Son API publique donne aux partenaires un accès **en lecture seule** aux fiches touristiques **publiées** du territoire : hébergements, restaurants, activités, itinéraires, événements, patrimoine, sites naturels…
 
@@ -349,7 +349,7 @@ Ces routes utilisent la même clé partenaire et le même quota que les fiches. 
 | Route | Usage |
 |---|---|
 | `GET /thesaurus` | Découvrir les vocabulaires et la publication courante |
-| `GET /thesaurus/releases/{releaseId}` | Lire le manifeste d'une publication |
+| `GET /thesaurus/releases/{releaseId}` | Lire le manifeste immuable d'une publication |
 | `GET /thesaurus/releases/{releaseId}/concepts` | Parcourir les concepts de cette publication |
 | `GET /thesaurus/releases/{releaseId}/concepts/{conceptId}` | Lire un concept dans cette publication |
 | `GET /thesaurus/releases/{releaseId}/changes` | Lire les changements depuis sa publication précédente |
@@ -357,36 +357,25 @@ Ces routes utilisent la même clé partenaire et le même quota que les fiches. 
 | `GET /thesaurus/releases/{releaseId}/export?format=jsonld` | Télécharger le document RDF JSON-LD/SKOS |
 | `GET /thesaurus/concepts/{conceptId}` | Résoudre l'identité pérenne dans la publication courante |
 
-`contract_version` décrit le contrat HTTP ; `release_id` et `vocabulary_release` identifient les données. Le numéro de publication n'est pas un numéro de version du logiciel Bertel. Une publication conserve ses libellés, relations, états et dates : elle ne change pas parce que la date du jour ou le vocabulaire courant change.
+`contract_version` décrit le contrat HTTP ; `release_id` et `vocabulary_release` identifient les données. Le numéro de publication n'est pas un numéro de version du logiciel Bertel. Une publication conserve ses libellés, relations, états et dates. Les publications historiques restent inchangées après une nouvelle publication.
 
-Pour les listes de concepts et de changements :
+Les paramètres sont stricts : un paramètre inconnu ou répété donne `400 invalid_parameters`. `lang` accepte un tag BCP 47 de 2 à 35 caractères (défaut `fr`) sur toutes les routes. `domains` et `status` sont acceptés uniquement sur les listes de concepts, changements et export. Ils sont rejetés sur les deux manifestes et les deux routes de concept unique. Les listes CSV sont limitées à 100 éléments; les domaines sont des noms de domaine (jusqu'à 80 caractères chacun) et les états sont `active`, `deprecated`, `retired`. Sans `status`, tous les états sont inclus. Les domaines inconnus ou non publics produisent une erreur générique, sans divulguer les référentiels internes.
 
-| Paramètre | Description |
-|---|---|
-| `domains` | Domaines publics séparés par des virgules ; absent = périmètre public de la publication |
-| `status` | `active`, `deprecated`, `retired`, séparés par des virgules ; absent = tous les états |
-| `lang` | Langue demandée, `fr` par défaut ; le détail conserve aussi toutes les traductions réellement publiées |
-| `query` | Texte recherché, au plus 200 caractères |
-| `page_size` | Entier de 1 à 200, 100 par défaut |
-| `cursor` | Curseur opaque obtenu dans `meta.next_cursor` |
+Sur les routes `concepts` et `changes`, `query` filtre le texte (maximum 200 caractères), `page_size` va de 1 à 200 (défaut 100) et `cursor` est opaque. Les curseurs lient publication, filtres, langue, format et taille de page. Gardez les mêmes paramètres lors de la pagination. Un curseur altéré, expiré, d'une autre publication ou réutilisé avec des paramètres différents répond `400 invalid_cursor`.
 
-La réponse reprend `{ "meta": { "contract_version", "release_id", "vocabulary_release", "as_of", "previous_release_id", "next_cursor", "total" }, "data": [...] }`. Les curseurs sont liés à une publication, aux filtres, à la langue et à la taille de page : conservez ces paramètres pendant le parcours. Une publication concurrente ne modifie pas les pages de la version que vous avez choisie. Un curseur malformé, altéré ou utilisé avec d'autres paramètres renvoie `400`.
+La réponse JSON utilise `{ "meta": {...}, "data": ... }`. Les métadonnées communes indiquent `contract_version`, `release_id`, `vocabulary_release`, `previous_release_id` et `as_of`; seules les listes ajoutent `page_size`, `total` et `next_cursor`. Le manifeste dans `data` porte `metadata_scope: "release_snapshot"` aussi bien en découverte qu'en lecture d'une publication épinglée. `meta.metadata_checksum`, quand il existe, est le MD5 de `domains::text` tel que sérialisé en JSONB par PostgreSQL; il est distinct du checksum conceptuel et peut manquer sur les anciennes publications. Dans la découverte, les entrées de l'historique `data.releases[]` portent `is_current` relatif à la publication courante annoncée par cette réponse; une lecture d'une publication historique ne prétend pas définir le courant.
 
-Un concept porte `concept_id`, `uri`, `domain`, `code`, les libellés préférés par langue, les définitions, les synonymes validés, les notes, les relations et les correspondances externes. Les relations utilisent des identités de concepts ; un code seul n'est pas une identité universelle. `requested_lang`, `effective_lang` et `definition_lang` rendent les replis linguistiques explicites. Une définition française utilisée comme repli n'est jamais présentée comme une traduction anglaise dans l'export SKOS.
+Un concept porte `concept_id`, `uri`, `domain`, `code`, `name`, les maps `preferred_labels` et `definitions`, les synonymes validés, notes, relations et correspondances externes. La demande de langue localise le nom (correspondance exacte, langue principale, puis français). `requested_lang` est toujours présent sur le concept; `effective_lang` et `definition_lang` sont présents et valent `null` quand la langue du texte ne peut pas être établie. Les anciens concepts sans maps de langue conservent leur `name` français historique sans inventer une langue effective. Chaque entrée de domaine du manifeste conserve `name_i18n` et expose son `name`, `requested_lang` et `effective_lang` propres. Les réponses ne prétendent pas exposer une langue effective globale au niveau de la réponse.
 
-Certains catalogues réutilisent un même code dans plusieurs schémas ou catégories. `context_key` est le qualifiant opaque de cette portée : l'unicité d'un code est celle du triplet `(domain, context_key, code)`. Utilisez `concept_id` ou `uri` comme identité de synchronisation, jamais ce seul code. Le parent public dans `broader` décrit le contexte métier lorsqu'il existe. L'export SKOS conserve le code comme notation et sa portée dans `bertel:contextKey` ; il ne lui attribue pas une unicité globale.
+Les traductions du snapshot restent intégralement disponibles dans `preferred_labels`, `definitions` et `name_i18n`, y compris si la langue demandée manque. JSON-LD conserve les maps de libellés et de définitions par langue; un fallback ne crée pas une traduction. Les anciens snapshots sans maps de noms de domaines conservent leur nom français historique. `context_key` qualifie les codes réutilisés entre schémas : un code n'est unique que dans `(domain, context_key, code)`. Utilisez `concept_id` ou `uri` comme identité de synchronisation.
 
-`lifecycle` et `assignable` sont distincts : un concept déprécié ou retiré reste résolvable avec `200`, même lorsqu'il n'est plus sélectionnable pour une nouvelle fiche. `replaced_by` signale ses successeurs éventuels ; plusieurs successeurs après une scission ne constituent pas une autorisation de choisir arbitrairement l'un d'eux. Un identifiant inconnu ou non publié renvoie `404`.
+`lifecycle` et `assignable` sont distincts : un concept déprécié ou retiré reste résolvable avec `200`, même lorsqu'il n'est plus sélectionnable pour une nouvelle fiche. `replaced_by` signale ses successeurs éventuels. Le flux `changes` distingue `added`, `modified`, `deprecated` et `retired`, avec les représentations `before` et `after`; un retrait n'est pas une suppression physique.
 
-Le flux `changes` est paginé et compare la publication demandée à `previous_release_id`. Il distingue `added`, `modified`, `deprecated` et `retired`, avec les représentations `before` et `after`. Un retrait conserve le concept historique ; il ne constitue pas une suppression physique. Pour passer plusieurs publications, enchaînez leurs différentiels ou téléchargez un nouvel export complet.
+Les réponses portent un `ETag` propre à la représentation et `Cache-Control: private, no-cache`. Réutilisez-le avec `If-None-Match` pour recevoir `304` sans corps si la représentation est identique. Chaque requête conditionnelle vérifie encore la clé et consomme du quota. JSON-LD est un document autonome `application/ld+json`; la publication est indiquée dans `X-Bertel-Vocabulary-Release`. Les autres réponses utilisent l'enveloppe JSON habituelle.
 
-Les réponses portent un `ETag` et `Cache-Control: private, no-cache`. Réutilisez l'ETag avec `If-None-Match` pour recevoir `304` sans corps si la représentation est identique. **Chaque requête conditionnelle vérifie encore la clé et consomme du quota** : une clé révoquée répond `401`, un quota dépassé `429`, même avec un ETag valide. Le JSON-LD est un document autonome `application/ld+json` ; sa publication est indiquée dans `X-Bertel-Vocabulary-Release`. Les autres réponses utilisent l'enveloppe JSON habituelle.
+Le manifeste contient la provenance, la licence effective et les attributions du vocabulaire publié. La licence du logiciel Bertel (MIT) est distincte de celle des données. Pour le vocabulaire produit par l'OTI du Sud, la politique publiée est la Licence Ouverte / Etalab 2.0, avec attribution à l'Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud). Les éventuelles restrictions et attributions de sources externes restent indiquées dans leur provenance.
 
-Le manifeste contient la provenance, la licence effective et les attributions du vocabulaire publié. Les concepts externes et les classes utilisées pour un export ne sont pas supposés équivalents automatiquement. N'inférez pas une licence à partir du seul format JSON-LD.
-
-La licence du logiciel Bertel (MIT) est distincte de celle des données. Pour le vocabulaire produit par l'OTI du Sud, la politique publiée est la Licence Ouverte / Etalab 2.0, avec attribution à l'Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud). Les éventuelles restrictions et attributions de sources externes restent indiquées dans leur provenance ; une correspondance vers un référentiel externe n'en transfère pas les droits.
-
-Avant la première activation du thésaurus, ces routes répondent `503 {"error":"release_unavailable"}`. Les autres erreurs sont documentées dans OpenAPI. Un domaine inconnu ou non autorisé donne une erreur générique, sans divulguer les référentiels internes.
+Avant la première activation du thésaurus, ces routes répondent `503 {"error":"release_unavailable"}`. Les réponses d'erreur sont plates et documentées dans OpenAPI.
 
 ### 3.6 Synchroniser les versions de vocabulaire
 

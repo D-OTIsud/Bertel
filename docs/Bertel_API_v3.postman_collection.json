@@ -3023,6 +3023,28 @@
                     "exec": [
                       "if (pm.response.code === 200) {",
                       " const d = pm.response.json();",
+                      " pm.test('Noms réellement traduits et maps préservées', function () {",
+                      "   pm.expect(d.data.domains).to.be.an('array').and.not.empty;",
+                      "   const requested = \"fr\";",
+                      "   for (const domain of d.data.domains) {",
+                      "     pm.expect(domain.requested_lang).to.eql(requested);",
+                      "     pm.expect(domain.name_i18n).to.be.an('object');",
+                      "     for (const required of ['fr','en','es','de']) pm.expect(domain.name_i18n[required]).to.be.a('string').and.not.empty;",
+                      "     const effective = domain.name_i18n[requested] ? requested : domain.name_i18n[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "     pm.expect(domain.effective_lang).to.eql(effective);",
+                      "     pm.expect(domain.name).to.eql(domain.name_i18n[effective]);",
+                      "   }",
+                      "   for (const release of d.data.releases || []) {",
+                      "     pm.expect(release.is_current).to.eql(release.release_id === d.meta.release_id);",
+                      "     pm.expect(release.metadata_scope).to.eql('release_snapshot');",
+                      "     for (const domain of release.domains || []) {",
+                      "       const map = domain.name_i18n || {};",
+                      "       const effective = map[requested] ? requested : map[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "       pm.expect(domain.requested_lang).to.eql(requested); pm.expect(domain.effective_lang).to.eql(effective);",
+                      "       if (map[effective]) pm.expect(domain.name).to.eql(map[effective]);",
+                      "     }",
+                      "   }",
+                      " });",
                       " pm.test('Manifeste courant', function () { pm.expect(d.meta.release_id).to.be.a('number').and.at.least(1); pm.expect(d.data).to.be.an('object'); pm.expect(d.data.domains).to.be.an('array'); });",
                       " for (const key of ['thesaurus_concept_id','thesaurus_historical_concept_id','thesaurus_next_cursor','thesaurus_changes_cursor','public_taxonomy_code']) pm.collectionVariables.unset(key);",
                       " pm.collectionVariables.set('thesaurus_release_id', String(d.meta.release_id));",
@@ -4473,6 +4495,742 @@
                     "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code >= 400) { const d = pm.response.json(); pm.test('Erreur attendue', function () { pm.expect(d.error).to.eql('unauthorized'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Localisation domaine — en",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus?lang=en",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "en"
+                    }
+                  ]
+                },
+                "description": "Contrôle les champs de nom et de langue du manifeste pour le tag demandé.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      " const d = pm.response.json();",
+                      " pm.test('Noms réellement traduits et maps préservées', function () {",
+                      "   pm.expect(d.data.domains).to.be.an('array').and.not.empty;",
+                      "   const requested = \"en\";",
+                      "   for (const domain of d.data.domains) {",
+                      "     pm.expect(domain.requested_lang).to.eql(requested);",
+                      "     pm.expect(domain.name_i18n).to.be.an('object');",
+                      "     for (const required of ['fr','en','es','de']) pm.expect(domain.name_i18n[required]).to.be.a('string').and.not.empty;",
+                      "     const effective = domain.name_i18n[requested] ? requested : domain.name_i18n[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "     pm.expect(domain.effective_lang).to.eql(effective);",
+                      "     pm.expect(domain.name).to.eql(domain.name_i18n[effective]);",
+                      "   }",
+                      "   for (const release of d.data.releases || []) {",
+                      "     pm.expect(release.is_current).to.eql(release.release_id === d.meta.release_id);",
+                      "     pm.expect(release.metadata_scope).to.eql('release_snapshot');",
+                      "     for (const domain of release.domains || []) {",
+                      "       const map = domain.name_i18n || {};",
+                      "       const effective = map[requested] ? requested : map[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "       pm.expect(domain.requested_lang).to.eql(requested); pm.expect(domain.effective_lang).to.eql(effective);",
+                      "       if (map[effective]) pm.expect(domain.name).to.eql(map[effective]);",
+                      "     }",
+                      "   }",
+                      " });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Localisation domaine — es",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus?lang=es",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "es"
+                    }
+                  ]
+                },
+                "description": "Contrôle les champs de nom et de langue du manifeste pour le tag demandé.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      " const d = pm.response.json();",
+                      " pm.test('Noms réellement traduits et maps préservées', function () {",
+                      "   pm.expect(d.data.domains).to.be.an('array').and.not.empty;",
+                      "   const requested = \"es\";",
+                      "   for (const domain of d.data.domains) {",
+                      "     pm.expect(domain.requested_lang).to.eql(requested);",
+                      "     pm.expect(domain.name_i18n).to.be.an('object');",
+                      "     for (const required of ['fr','en','es','de']) pm.expect(domain.name_i18n[required]).to.be.a('string').and.not.empty;",
+                      "     const effective = domain.name_i18n[requested] ? requested : domain.name_i18n[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "     pm.expect(domain.effective_lang).to.eql(effective);",
+                      "     pm.expect(domain.name).to.eql(domain.name_i18n[effective]);",
+                      "   }",
+                      "   for (const release of d.data.releases || []) {",
+                      "     pm.expect(release.is_current).to.eql(release.release_id === d.meta.release_id);",
+                      "     pm.expect(release.metadata_scope).to.eql('release_snapshot');",
+                      "     for (const domain of release.domains || []) {",
+                      "       const map = domain.name_i18n || {};",
+                      "       const effective = map[requested] ? requested : map[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "       pm.expect(domain.requested_lang).to.eql(requested); pm.expect(domain.effective_lang).to.eql(effective);",
+                      "       if (map[effective]) pm.expect(domain.name).to.eql(map[effective]);",
+                      "     }",
+                      "   }",
+                      " });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Localisation domaine — de",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus?lang=de",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "de"
+                    }
+                  ]
+                },
+                "description": "Contrôle les champs de nom et de langue du manifeste pour le tag demandé.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      " const d = pm.response.json();",
+                      " pm.test('Noms réellement traduits et maps préservées', function () {",
+                      "   pm.expect(d.data.domains).to.be.an('array').and.not.empty;",
+                      "   const requested = \"de\";",
+                      "   for (const domain of d.data.domains) {",
+                      "     pm.expect(domain.requested_lang).to.eql(requested);",
+                      "     pm.expect(domain.name_i18n).to.be.an('object');",
+                      "     for (const required of ['fr','en','es','de']) pm.expect(domain.name_i18n[required]).to.be.a('string').and.not.empty;",
+                      "     const effective = domain.name_i18n[requested] ? requested : domain.name_i18n[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "     pm.expect(domain.effective_lang).to.eql(effective);",
+                      "     pm.expect(domain.name).to.eql(domain.name_i18n[effective]);",
+                      "   }",
+                      "   for (const release of d.data.releases || []) {",
+                      "     pm.expect(release.is_current).to.eql(release.release_id === d.meta.release_id);",
+                      "     pm.expect(release.metadata_scope).to.eql('release_snapshot');",
+                      "     for (const domain of release.domains || []) {",
+                      "       const map = domain.name_i18n || {};",
+                      "       const effective = map[requested] ? requested : map[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "       pm.expect(domain.requested_lang).to.eql(requested); pm.expect(domain.effective_lang).to.eql(effective);",
+                      "       if (map[effective]) pm.expect(domain.name).to.eql(map[effective]);",
+                      "     }",
+                      "   }",
+                      " });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Localisation domaine — en-GB",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus?lang=en-GB",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "en-GB"
+                    }
+                  ]
+                },
+                "description": "Contrôle les champs de nom et de langue du manifeste pour le tag demandé.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      " const d = pm.response.json();",
+                      " pm.test('Noms réellement traduits et maps préservées', function () {",
+                      "   pm.expect(d.data.domains).to.be.an('array').and.not.empty;",
+                      "   const requested = \"en-GB\";",
+                      "   for (const domain of d.data.domains) {",
+                      "     pm.expect(domain.requested_lang).to.eql(requested);",
+                      "     pm.expect(domain.name_i18n).to.be.an('object');",
+                      "     for (const required of ['fr','en','es','de']) pm.expect(domain.name_i18n[required]).to.be.a('string').and.not.empty;",
+                      "     const effective = domain.name_i18n[requested] ? requested : domain.name_i18n[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "     pm.expect(domain.effective_lang).to.eql(effective);",
+                      "     pm.expect(domain.name).to.eql(domain.name_i18n[effective]);",
+                      "   }",
+                      "   for (const release of d.data.releases || []) {",
+                      "     pm.expect(release.is_current).to.eql(release.release_id === d.meta.release_id);",
+                      "     pm.expect(release.metadata_scope).to.eql('release_snapshot');",
+                      "     for (const domain of release.domains || []) {",
+                      "       const map = domain.name_i18n || {};",
+                      "       const effective = map[requested] ? requested : map[requested.split('-')[0]] ? requested.split('-')[0] : 'fr';",
+                      "       pm.expect(domain.requested_lang).to.eql(requested); pm.expect(domain.effective_lang).to.eql(effective);",
+                      "       if (map[effective]) pm.expect(domain.name).to.eql(map[effective]);",
+                      "     }",
+                      "   }",
+                      " });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /thesaurus domains",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus?domains=taxonomy_hlo",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus"
+                  ],
+                  "query": [
+                    {
+                      "key": "domains",
+                      "value": "taxonomy_hlo"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /thesaurus status",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus?status=active",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /releases/{id} domains",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus/releases/{{thesaurus_release_id}}?domains=taxonomy_hlo",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus",
+                    "releases",
+                    "{{thesaurus_release_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "domains",
+                      "value": "taxonomy_hlo"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /releases/{id} status",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus/releases/{{thesaurus_release_id}}?status=active",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus",
+                    "releases",
+                    "{{thesaurus_release_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /concepts/{id} domains",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus/concepts/{{thesaurus_concept_id}}?domains=taxonomy_hlo",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus",
+                    "concepts",
+                    "{{thesaurus_concept_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "domains",
+                      "value": "taxonomy_hlo"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /concepts/{id} status",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus/concepts/{{thesaurus_concept_id}}?status=active",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus",
+                    "concepts",
+                    "{{thesaurus_concept_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /releases/{id}/concepts/{id} domains",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus/releases/{{thesaurus_release_id}}/concepts/{{thesaurus_concept_id}}?domains=taxonomy_hlo",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus",
+                    "releases",
+                    "{{thesaurus_release_id}}",
+                    "concepts",
+                    "{{thesaurus_concept_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "domains",
+                      "value": "taxonomy_hlo"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "400 — GET /releases/{id}/concepts/{id} status",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{partner_key}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/thesaurus/releases/{{thesaurus_release_id}}/concepts/{{thesaurus_concept_id}}?status=active",
+                  "host": [
+                    "{{public_base_url}}"
+                  ],
+                  "path": [
+                    "thesaurus",
+                    "releases",
+                    "{{thesaurus_release_id}}",
+                    "concepts",
+                    "{{thesaurus_concept_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "Le paramètre est volontairement non pris en charge sur cette route et doit répondre 400 invalid_parameters.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expected_status', '400');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code >= 400) { const d=pm.response.json(); pm.test('Filtre interdit explicitement rejeté', function () { pm.expect(d.error).to.eql('invalid_parameters'); }); }"
                     ]
                   }
                 }

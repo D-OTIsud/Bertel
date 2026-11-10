@@ -853,6 +853,10 @@ COMMIT;
 \ir thesaurus_admin_rpc_timeout.sql
 \ir tests/test_thesaurus_admin_rpc_timeout.sql
 
+\echo '== Frozen multilingual vocabulary metadata and ordinary metadata publication =='
+\ir thesaurus_domain_metadata_localization.sql
+\ir tests/test_thesaurus_domain_metadata_localization.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

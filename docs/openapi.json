@@ -654,29 +654,13 @@
         ],
         "operationId": "getThesaurus",
         "summary": "Découvrir les vocabulaires et la publication courante",
-        "description": "Surface de lecture partenaire. Une publication fixe ses valeurs/dates ; les concepts dépréciés et retirés restent résolvables. Aucun scope supplémentaire n’est exigé.",
+        "description": "Découvre la publication courante et les vocabulaires publics. `lang` localise les noms de domaines. `domains` et `status` sont rejetés.",
         "parameters": [
-          {
-            "name": "domains",
-            "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
-            "schema": {
-              "type": "string",
-              "example": "taxonomy_hlo,taxonomy_hot"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
-            "schema": {
-              "type": "string"
-            }
-          },
+
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -807,7 +791,7 @@
         ],
         "operationId": "getThesaurusRelease",
         "summary": "Lire le manifeste d’une publication",
-        "description": "Le manifeste contient le périmètre, as_of, previous_release_id, empreinte, provenance, licence effective et attribution.",
+        "description": "Manifeste immuable de la publication demandée. Les noms de domaines sont localisés dans ce snapshot; metadata_scope vaut release_snapshot et metadata_checksum est facultatif. domains et status sont rejetés.",
         "parameters": [
           {
             "name": "releaseId",
@@ -821,26 +805,9 @@
             "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
           },
           {
-            "name": "domains",
-            "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
-            "schema": {
-              "type": "string",
-              "example": "taxonomy_hlo,taxonomy_hot"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -971,7 +938,7 @@
         ],
         "operationId": "listThesaurusConcepts",
         "summary": "Parcourir les concepts d’une publication",
-        "description": "Pagination déterministe attachée à la publication. Une nouvelle publication concurrente ne modifie pas le parcours.",
+        "description": "Liste paginée des concepts de la publication. domains et status filtrent cette publication; sans status, tous les états sont inclus. page_size vaut 100 par défaut (maximum 200).",
         "parameters": [
           {
             "name": "releaseId",
@@ -1004,7 +971,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1162,7 +1129,7 @@
         ],
         "operationId": "getThesaurusConcept",
         "summary": "Lire un concept dans une publication",
-        "description": "Un concept retiré connu répond 200 avec lifecycle et ses remplacements ; un inconnu répond 404.",
+        "description": "Concept de la publication immuable demandée. La réponse conserve les maps de langue et expose le fallback réellement utilisé.",
         "parameters": [
           {
             "name": "releaseId",
@@ -1188,7 +1155,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1319,7 +1286,7 @@
         ],
         "operationId": "resolveThesaurusConcept",
         "summary": "Résoudre une URI pérenne dans la publication courante",
-        "description": "Résolution réservée aux partenaires authentifiés ; sans clé 401. Le concept ne change pas d’identité après renommage ou dépréciation.",
+        "description": "Résout le concept dans la publication courante. La réponse conserve les maps de langue et expose le fallback réellement utilisé.",
         "parameters": [
           {
             "name": "conceptId",
@@ -1334,7 +1301,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1465,7 +1432,7 @@
         ],
         "operationId": "listThesaurusChanges",
         "summary": "Lire les changements depuis la publication précédente",
-        "description": "added/modified/deprecated/retired avec before et after ; aucun retrait ne supprime physiquement le concept. Enchaîner les publications intermédiaires pour un delta éloigné.",
+        "description": "Changements par rapport à previous_release_id. domains et status filtrent les concepts; sans status, tous les états sont inclus.",
         "parameters": [
           {
             "name": "releaseId",
@@ -1498,7 +1465,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1656,7 +1623,7 @@
         ],
         "operationId": "exportThesaurus",
         "summary": "Exporter une publication en JSON ou JSON-LD/SKOS",
-        "description": "format=json utilise l’enveloppe habituelle ; format=jsonld renvoie un document RDF autonome application/ld+json, version dans X-Bertel-Vocabulary-Release. Les langues absentes ne sont jamais inventées.",
+        "description": "Export filtré de la publication demandée. JSON-LD est autonome et conserve les maps SKOS de libellés et définitions par langue; ETag lié à la représentation.",
         "parameters": [
           {
             "name": "releaseId",
@@ -1689,7 +1656,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -2304,6 +2271,10 @@
                   "integer",
                   "null"
                 ]
+              },
+              "metadata_checksum": {
+                "type": "string",
+                "description": "MD5 de domains::text JSONB PostgreSQL pour le snapshot; distinct du checksum conceptuel. Absent sur les publications historiques qui ne le possèdent pas."
               }
             }
           },
@@ -2327,7 +2298,7 @@
               },
               {
                 "type": "object",
-                "description": "Manifeste de publication : domaines, date, empreinte, provenance, licence et attribution."
+                "description": "Manifeste de publication : domaines avec name_i18n conservé, name localisé, requested_lang et effective_lang propres à chaque domaine; metadata_scope vaut release_snapshot. En découverte, is_current est relatif à meta.release_id."
               }
             ]
           }

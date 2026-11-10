@@ -102,6 +102,9 @@ function parseQuery(url: URL, action: ThesaurusAction): Query {
   if (action === 'concept' || action === 'resolve') {
     supported.delete('domains'); supported.delete('status');
   }
+  if (action === 'manifest' || action === 'release') {
+    supported.delete('domains'); supported.delete('status');
+  }
   for (const name of url.searchParams.keys()) {
     if (!supported.has(name) || url.searchParams.getAll(name).length !== 1) throw new Error('invalid_parameters');
   }
@@ -138,6 +141,50 @@ function localized(values: Record<string, string>, requested: string): { value: 
   const candidates = [requested, requested.toLowerCase(), requested.split('-')[0], 'fr', ...Object.keys(values).sort()];
   for (const lang of candidates) if (values[lang]) return { value: values[lang], lang };
   return { value: null, lang: null };
+}
+
+function localizedDomainName(values: Record<string, string>, requested: string): { value: string | null; lang: string | null } {
+  const primary = requested.split('-')[0];
+  for (const lang of [requested, requested.toLowerCase(), primary, primary.toLowerCase(), 'fr']) {
+    if (values[lang]) return { value: values[lang], lang };
+  }
+  return { value: null, lang: null };
+}
+
+function localizeDomain(value: unknown, requestedLang: string): JsonObject {
+  const row = object(value);
+  if (!row) throw new Error('invalid_snapshot');
+  const nameMap = stringMap(row.name_i18n);
+  const hasMap = object(row.name_i18n) !== null;
+  const chosen = localizedDomainName(nameMap, requestedLang);
+  const legacyName = typeof row.name === 'string' && row.name.trim() ? row.name : null;
+  return {
+    ...row,
+    ...(chosen.value !== null ? { name: chosen.value } : legacyName !== null ? { name: legacyName } : {}),
+    requested_lang: requestedLang,
+    effective_lang: chosen.lang ?? (legacyName !== null ? 'fr' : null),
+    ...(hasMap ? { name_i18n: row.name_i18n } : {}),
+  };
+}
+
+/** Localize only names embedded in immutable manifests; translation maps remain untouched. */
+function localizeManifest(value: unknown, requestedLang: string, discoveryRelease: number | null): JsonObject {
+  const source = object(value);
+  if (!source) throw new Error('invalid_snapshot');
+  const result: JsonObject = { ...source, metadata_scope: 'release_snapshot' };
+  if (Array.isArray(source.domains)) result.domains = source.domains.map((domain) => localizeDomain(domain, requestedLang));
+  if (discoveryRelease === null) delete result.is_current;
+  if (Array.isArray(source.releases)) {
+    result.releases = source.releases.map((entry) => {
+      const release = object(entry);
+      if (!release) throw new Error('invalid_snapshot');
+      const localizedRelease = localizeManifest(release, requestedLang, discoveryRelease);
+      if (discoveryRelease === null) delete localizedRelease.is_current;
+      else localizedRelease.is_current = Number(release.release_id) === discoveryRelease;
+      return localizedRelease;
+    });
+  }
+  return result;
 }
 
 /** Explicit public projection: new private fields added to a snapshot never leak by default. */
@@ -325,9 +372,12 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   const meta: JsonObject = { contract_version: PUBLIC_API_CONTRACT_VERSION, release_id: actualRelease,
     vocabulary_release: actualRelease, previous_release_id: rpcMeta.previous_release_id ?? null,
     as_of: rpcMeta.as_of ?? null };
+  if (typeof rpcMeta.metadata_checksum === 'string') meta.metadata_checksum = rpcMeta.metadata_checksum;
   let data: unknown = body.data;
   try {
-    if (target.action === 'concept' || target.action === 'resolve') {
+    if (target.action === 'manifest' || target.action === 'release') {
+      data = localizeManifest(data, query.lang, target.action === 'manifest' ? actualRelease : null);
+    } else if (target.action === 'concept' || target.action === 'resolve') {
       if (data === null) return fail(404, 'not_found');
       data = publicThesaurusConcept(data, query.lang);
     } else if (target.action === 'concepts' || target.action === 'export') {

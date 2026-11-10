@@ -42,6 +42,12 @@ La page Équipe permet de gérer les membres, les rôles métier, les rôles adm
 
 ## 4. Navigation principale
 
+Pour entretenir les vocabulaires de référence, consulter le
+[guide métier du thésaurus](../guide-metier-thesaurus.md) : recherche des concepts,
+synonymes, traductions, relations sémantiques, validation et publication. Ce parcours
+d'administration est réservé aux comptes habilités ; il est distinct de la saisie
+des valeurs sur une fiche touristique.
+
 | Zone | Finalité | Données manipulées |
 |---|---|---|
 | Dashboard | Vue de pilotage qualité, offre, actualisation et filtres. | Agrégats, indicateurs, données de fiches touristiques. |

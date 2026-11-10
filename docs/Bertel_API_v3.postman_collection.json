@@ -1176,14 +1176,14 @@
           }
         },
         {
-          "name": "Fiches et appartenances aux sélections (option à confirmer)",
+          "name": "Fiches et appartenances aux sélections",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Option activée : HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Appartenances disponibles : HTTP 200', function () { pm.response.to.have.status(200); });",
                   "if (pm.response.code === 200) {",
                   "  const d = pm.response.json();",
                   "  pm.test('Enveloppe du flux général', function () { pm.expect(d.meta).to.be.an('object'); pm.expect(d.data).to.be.an('array'); });",
@@ -1211,11 +1211,11 @@
                 {"key": "cursor", "value": "{{membership_next_cursor}}", "disabled": true, "description": "Activer seulement pour la page suivante ; garder true et les mêmes options jusqu’à la dernière page"}
               ]
             },
-            "description": "Confirmer l'activation de cette option avec l'OTI ; cet exemple ne prouve pas son déploiement. Même GET /objects et clé partenaire. Chaque item card/full reçoit selection_ids à sa racine : chaînes triées uniques, [] sans sélection active, aucun nom privé ni règle. Détail et documents pivots inchangés. Absent ou false conserve le traitement historique sans champ. Paramètre vide, répété ou autre que true/false : 400. Toute combinaison avec selection_id, même false : 400. Conserver le flag et les mêmes options pendant la pagination. Pas d'instantané entre pages. Actualiser selection_ids à chaque synchronisation complète même si updated_at est inchangé, car une suspension ou une modification des critères peut changer les appartenances seules. Appliquer les retraits uniquement après toutes les pages réussies ; 503 selection_membership_unavailable conserve l'état précédent et n'est jamais un tableau vide. Le test mémorise membership_next_cursor."
+            "description": "Même GET /objects et clé partenaire. Chaque item card/full reçoit selection_ids à sa racine : chaînes triées uniques, [] sans sélection active, aucun nom privé ni règle. Détail et documents pivots inchangés. Absent ou false conserve le traitement historique sans champ. Paramètre vide, répété ou autre que true/false : 400. Toute combinaison avec selection_id, même false : 400. Conserver le flag et les mêmes options pendant la pagination. Pas d'instantané entre pages. Actualiser selection_ids à chaque synchronisation complète même si updated_at est inchangé, car une suspension ou une modification des critères peut changer les appartenances seules. Appliquer les retraits uniquement après toutes les pages réussies ; 503 selection_membership_unavailable conserve l'état précédent et n'est jamais un tableau vide. Le test mémorise membership_next_cursor."
           }
         },
         {
-          "name": "Sélection bêta — Terroir et artisanat (1006)",
+          "name": "Sélection — Terroir et artisanat (1006)",
           "event": [
             {
               "listen": "test",
@@ -1225,7 +1225,7 @@
                   "pm.test('Sélection disponible : HTTP 200', function () { pm.response.to.have.status(200); });",
                   "if (pm.response.code === 200) {",
                   "  const d = pm.response.json();",
-                  "  pm.test('Même enveloppe, contexte sélection et fiches', function () { pm.expect(d.meta.selection_id).to.eql('1006'); pm.expect(d.meta.selection_name).to.eql('Terroir et artisanat'); pm.expect(d.meta.selection_revision).to.be.a('number'); pm.expect(d.data).to.be.an('array'); });",
+                  "  pm.test('Même enveloppe, contexte sélection et fiches', function () { pm.expect(d.meta.selection_id).to.eql('1006'); pm.expect(d.meta.selection_name).to.be.a('string').and.not.empty; pm.expect(d.meta.selection_revision).to.be.a('number').and.at.least(1); pm.expect(d.data).to.be.an('array'); });",
                   "  if (d.meta.next_cursor) { pm.collectionVariables.set('selection_next_cursor', d.meta.next_cursor); } else { pm.collectionVariables.unset('selection_next_cursor'); }",
                   "}"
                 ]
@@ -1249,7 +1249,7 @@
                 {"key": "cursor", "value": "{{selection_next_cursor}}", "disabled": true, "description": "Activer pour la page suivante seulement, puis désactiver pour recommencer"}
               ]
             },
-            "description": "Extension BÊTA : confirmer son activation avec l'OTI avant utilisation ; cette collection n'atteste pas son déploiement. Même endpoint /objects et mêmes fiches full. 1006 fusionne producteurs, artisans et marchés sans doublon, sur les quatre communes OTI (INSEE 97403/97412/97417/97422), publié et hors test. meta ajoute selection_id/selection_name/selection_revision (1 initialement). Ne pas combiner avec types/taxonomy/search/include_equivalent_predecessors/include_selection_ids, même false ; seules cursor/page_size/view/lang/track/format/variant sont acceptées. Sélection inconnue : 404 sans retour au catalogue global ; vide/répétée ou conflit : 400. Le test conserve next_cursor dans selection_next_cursor pour une pagination manuelle. Lectures en temps réel sans snapshot : rapprocher les appartenances uniquement après toutes les pages réussies ; une erreur ne justifie aucun retrait. Les identifiants 1001–1015 sont détaillés dans le guide partenaires."
+            "description": "Sélection enregistrée dans Bertel, avec le même endpoint /objects et les mêmes fiches full. La définition initiale 1006 fusionne producteurs, artisans et marchés sans doublon, sur les quatre communes OTI (INSEE 97403/97412/97417/97422), publié et hors test. meta ajoute selection_id/selection_name/selection_revision (1 initialement). Ne pas combiner avec types/taxonomy/search/include_equivalent_predecessors/include_selection_ids, même false ; seules cursor/page_size/view/lang/track/format/variant sont acceptées. Sélection inconnue ou suspendue : 404 sans retour au catalogue global ; vide/répétée ou conflit : 400. Le test conserve next_cursor dans selection_next_cursor pour une pagination manuelle. Lectures en temps réel sans snapshot : rapprocher les appartenances uniquement après toutes les pages réussies ; une erreur ne justifie aucun retrait. Les identifiants des quinze définitions initiales 1001–1015 sont détaillés dans le guide partenaires."
           }
         },
         {

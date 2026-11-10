@@ -73,6 +73,7 @@ La documentation complète de l'API Bertel v3.0 est disponible dans le dossier [
 
 ### Accès rapide
 
+- **Guide métier du thésaurus** : [entretenir les concepts, synonymes et relations ; valider et publier](./docs/guide-metier-thesaurus.md)
 - **Documentation web** : [docs/index.html](./docs/index.html)
 - **Collection Postman** : [docs/Bertel_API_v3.postman_collection.json](./docs/Bertel_API_v3.postman_collection.json)
 - **Guide Postman** : [docs/README_Postman.md](./docs/README_Postman.md)

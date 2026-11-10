@@ -11,8 +11,8 @@ import { strictErrorMessage } from '../../lib/strict-error-message';
  * (several modules — e.g. characteristics — legitimately span multiple sections).
  */
 export const MODULE_LABEL: Record<WorkspaceModuleId, string> = {
-  'general-info': 'Identité & taxonomie',
-  taxonomy: 'Taxonomie',
+  'general-info': 'Identité & catégories',
+  taxonomy: 'Catégories',
   publication: 'Publication',
   'sync-identifiers': 'Identifiants externes',
   location: 'Localisation',

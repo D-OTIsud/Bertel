@@ -729,7 +729,7 @@ export default function SettingsPage() {
           <div className="panel-heading">
             <div>
               <h2>Listes & référentiels</h2>
-              <p>Tous les catalogues de référence, rangés par famille. Les listes structurelles (taxonomies, registres, permissions) restent en lecture seule, avec leur motif.</p>
+              <p>Tous les catalogues de référence, rangés par famille. Les listes en lecture seule indiquent le motif de leur protection.</p>
             </div>
           </div>
           <nav className="reference-management-switch" aria-label="Gestion des vocabulaires">

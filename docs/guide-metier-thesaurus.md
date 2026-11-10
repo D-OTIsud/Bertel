@@ -32,7 +32,7 @@ Le bouton **Soumettre à validation** lance immédiatement les contrôles du sys
 
 | Élément | À quoi sert-il ? | Exemple |
 |---|---|---|
-| Domaine | Regrouper un vocabulaire utilisé dans un contexte précis. | Taxonomie des hôtels, équipements, moyens de paiement. |
+| Domaine | Regrouper un vocabulaire utilisé dans un contexte précis. | **Hôtels**, **Équipements et services**, **Moyens de paiement**. |
 | Concept | Identifier une notion, indépendamment de ses formulations. | Un petit hôtel indépendant tenu par une famille. |
 | Code stable | Conserver l'identité technique dans son domaine et son contexte. | Un code existant reste le même lorsque son libellé est corrigé. |
 | Libellé préféré | Nommer le concept dans une langue. | « Hôtel familial ». |
@@ -45,7 +45,23 @@ Le bouton **Soumettre à validation** lance immédiatement les contrôles du sys
 | Brouillon | Préparer une modification sans changer la version publiée. | Une définition réécrite et en cours de relecture. |
 | Publication | Conserver et diffuser une version cohérente du vocabulaire. | Une nouvelle version avec plusieurs corrections validées. |
 
-Un code seul n'identifie pas toujours un concept : il peut être réutilisé dans plusieurs domaines ou schémas. Pour un échange avec l'équipe technique, fournir le domaine, le contexte éventuel et le code, ou l'identifiant pérenne du concept. Deux entrées appelées « Hôtel familial » dans une taxonomie et dans un classement gardent des identités distinctes.
+Les intitulés des domaines sont rédigés en français et constituent la base commune de l'affichage métier. Ils nomment les rubriques dans lesquelles travailler ; ils sont distincts du libellé préféré et des traductions d'un concept. Par exemple, **Hôtels** est le domaine et « Hôtel familial » est une notion de ce domaine.
+
+| Rubrique | La choisir pour… | À distinguer de… |
+|---|---|---|
+| **Labels et classements** | Définir un label, un classement ou un référentiel de qualification. | Le niveau ou la mention attribuable dans ce référentiel. |
+| **Niveaux et mentions des labels et classements** | Définir une valeur rattachée à son label ou classement : étoiles, adhésion, mention… | Une valeur de même nom dans un autre référentiel ; « 4 » seul ne précise pas s'il s'agit d'étoiles, d'épis ou de clés. |
+| **Types de forfait** | Décrire la composition ou la famille d'une offre forfaitaire : pension, circuit, vol + hôtel… | L'unité tarifaire « par forfait ». |
+| **Catégories de menu** | Classer un menu ou organiser ses plats en rubriques : brunch, entrées, desserts… | Le type de cuisine, les régimes et les allergènes. |
+| **Équipements et services** | Décrire un équipement ou un service : Wi-Fi, parking, restaurant… | La famille qui sert à les regrouper. |
+| **Familles d’équipements et de services** | Regrouper les équipements et services : accessibilité, chambre, salle de bain… | L'équipement ou la prestation effectivement proposé. |
+| **Publics tarifaires** | Indiquer à qui s'adresse un tarif : adulte, enfant, groupe, personne en situation de handicap… | La nature du tarif et son unité. |
+| **Types de tarif** | Distinguer tarif principal, option, menu, abonnement, taxe, caution… | Le public bénéficiaire. |
+| **Unités tarifaires** | Exprimer « par personne », « par nuit », « par séjour », « par forfait »… | La composition d'une offre forfaitaire. |
+
+Un code seul n'identifie pas toujours un concept : il peut être réutilisé dans plusieurs domaines ou référentiels. Pour un échange avec l'équipe technique, fournir le domaine, le contexte éventuel et le code, ou l'identifiant pérenne du concept. Deux entrées appelées « Hôtel familial » dans **Hôtels** et dans **Niveaux et mentions des labels et classements** gardent des identités distinctes.
+
+Pour l'interopérabilité, la clé technique du domaine reste stable : par exemple, **Commerces** est identifié par `taxonomy_com` dans les échanges API. Clarifier son intitulé français ne renomme pas cette clé, les concepts ou leurs relations. Une ancienne publication conserve les noms qu'elle a enregistrés ; on ne réécrit pas son historique pour modifier un intitulé d'affichage.
 
 ### Thésaurus, catalogue et fiche : trois niveaux
 
@@ -244,7 +260,7 @@ L'écran ne permet pas de créer un nouveau domaine ni de modifier toutes les pr
 
 ### Cas particulier : nouveau label et valeurs de classement
 
-Les valeurs d'un nouveau label ont besoin que leur schéma de classement soit déjà publié. Préparer deux étapes :
+Dans **Niveaux et mentions des labels et classements**, les valeurs d'un nouveau label ont besoin que leur référentiel parent, dans **Labels et classements**, soit déjà publié. Préparer les étapes suivantes :
 
 1. Créer, valider et publier le label.
 2. Faire définir et vérifier ses types de fiches applicables avec l'équipe technique.
@@ -288,7 +304,7 @@ Si l'aperçu correspond au résultat attendu, cliquer sur **Publier cette versio
 
 La publication applique ensemble le vocabulaire et ses mises à jour requises. Une ancienne publication reste immuable et consultable par les voies prévues pour les partenaires ; ce tableau d'administration ne propose pas un bouton de retour arrière.
 
-**Exemple complet — clarifier un tarif handicap :** conserver le code existant, rédiger le libellé et la définition couvrant les différentes formes de handicap, relire EN/ES/DE, retirer un éventuel alias exact limité aux PMR, puis enregistrer et valider. Dans l'aperçu, vérifier ces champs et l'impact annoncé avant de publier. Les conditions tarifaires de chaque prestataire restent dans les fiches ; cette publication ne leur attribue pas automatiquement une réduction.
+**Exemple complet — clarifier un tarif handicap :** choisir **Publics tarifaires**, conserver le code existant, rédiger le libellé et la définition couvrant les différentes formes de handicap, relire EN/ES/DE, retirer un éventuel alias exact limité aux PMR, puis enregistrer et valider. Dans l'aperçu, vérifier ces champs et l'impact annoncé avant de publier. Les conditions tarifaires de chaque prestataire restent dans les fiches ; cette publication ne leur attribue pas automatiquement une réduction.
 
 ### Étape 5 — Contrôler le résultat
 
@@ -296,7 +312,7 @@ Relever le nouveau numéro de publication et vérifier les concepts corrigés. D
 
 En cas d'**Échec à reprendre** ou d'attente persistante, utiliser **Reprendre** et vérifier à nouveau. Une tâche **Terminée** confirme son traitement et l'émission de la notification ; elle ne prouve pas la réception par chaque partenaire. Un échec de notification n'annule pas une publication déjà réussie : ne pas republier le même contenu uniquement pour réparer cette tâche.
 
-Quand le changement répond à un problème concret, refaire ce parcours : retrouver une taxonomie avec son synonyme, consulter la traduction concernée ou relire la valeur sur une fiche. Pour un partenaire API, le [guide partenaires](guide-partenaires.md#35-thésaurus-versionné) décrit la consultation d'une publication, ses exports et la synchronisation des changements.
+Quand le changement répond à un problème concret, refaire ce parcours : retrouver une valeur avec son synonyme, consulter la traduction concernée ou relire la valeur sur une fiche. Pour un partenaire API, le [guide partenaires](guide-partenaires.md#35-thésaurus-versionné) décrit la consultation d'une publication, ses exports et la synchronisation des changements.
 
 ## 11. Gérer les conflits et les erreurs
 

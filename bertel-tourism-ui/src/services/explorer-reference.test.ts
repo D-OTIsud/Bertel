@@ -1,10 +1,16 @@
 import type { ExplorerTaxonomyDomain } from '../types/domain';
+import { buildDemoReferences } from '../data/explorer-reference-demo';
 import {
   buildTaxonomyDomains,
+  listExplorerReferences,
+  listTaxonomyReferences,
   projectLegacyOutdoorAccommodationFamilies,
   projectLegacyOutdoorAccommodationTaxonomies,
   toRankedLabelSchemeValues,
 } from './explorer-reference';
+
+jest.mock('../lib/supabase', () => ({ getSupabaseClient: () => null }));
+jest.mock('../store/session-store', () => ({ useSessionStore: { getState: () => ({ demoMode: true }) } }));
 
 describe('toRankedLabelSchemeValues', () => {
   it('groups grade values by scheme code, sorted ascending, numeric-aware', () => {
@@ -30,6 +36,21 @@ describe('toRankedLabelSchemeValues', () => {
 });
 
 describe('buildTaxonomyDomains — vocabulaire hébergement §192', () => {
+  it('replaces legacy technical domain names without rewriting category codes or names', () => {
+    const domainRows = [{ domain: 'taxonomy_com', name: 'Taxonomie COM', object_type: 'COM', position: 1 }];
+    const nodes = [{
+      id: 'commerce-local', domain: 'taxonomy_com', code: 'local_products', name: 'Produits locaux',
+      description: 'Produits proposés localement.', parent_id: null, is_assignable: true, position: 1, metadata: {},
+    }];
+
+    const result = buildTaxonomyDomains(domainRows, nodes);
+
+    expect(result[0]).toMatchObject({ domain: 'taxonomy_com', name: 'Commerces', objectType: 'COM' });
+    expect(result[0].nodes[0]).toMatchObject({ code: 'local_products', name: 'Produits locaux', isAssignable: true });
+    expect(domainRows[0].name).toBe('Taxonomie COM');
+    expect(nodes[0].id).toBe('commerce-local');
+  });
+
   it('expose l’axe, la famille, les alias Berta et la référence normative', () => {
     const domains = buildTaxonomyDomains(
       [{ domain: 'taxonomy_hlo', name: 'Hébergement', object_type: 'HLO', position: 1 }],
@@ -54,6 +75,22 @@ describe('buildTaxonomyDomains — vocabulaire hébergement §192', () => {
       sourceRef: 'Code du tourisme art. D324-1',
       description: 'Villa, appartement ou studio meublé.',
     });
+  });
+});
+
+describe('domain names in demo references', () => {
+  it('uses the same business names on Explorer and object-creation reference paths', async () => {
+    const baseline = buildDemoReferences([]).taxonomies;
+    const references = await listExplorerReferences();
+    const categories = await listTaxonomyReferences();
+
+    expect(categories).toEqual(references.taxonomies);
+    expect(categories.find((domain) => domain.domain === 'taxonomy_hot')?.name).toBe('Hôtels');
+    expect(categories.map(({ domain, nodes }) => ({ domain, nodes })))
+      .toEqual(baseline.map(({ domain, nodes }) => ({ domain, nodes })));
+    for (const domain of categories) {
+      expect(domain.name).not.toMatch(/Taxonomie|taxonomy_|^[A-Z]{2,4}$/);
+    }
   });
 });
 

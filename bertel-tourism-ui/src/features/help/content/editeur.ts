@@ -1,6 +1,6 @@
 /** Rubrique « Éditer une fiche » — éditeur pleine page en sections numérotées.
  *  Vérifié contre `src/features/object-editor/section-config.ts` (labels de section
- *  exacts : 01 Identité & taxonomie, 02 Localisation, 03 Contacts, 04 Descriptions
+ *  exacts : 01 Identité & catégories, 02 Localisation, 03 Contacts, 04 Descriptions
  *  & langues parlées, 05 Médias, 06 bloc spécifique au type, 07 Capacité & accueil
  *  [masqué pour les HEB, cf. CLAUDE.md §64], 08 Classifications, 09 Accessibilité,
  *  10 Démarche durable, 11 Tags & étiquettes, 13 Tarifs/paiement/extras,
@@ -31,7 +31,7 @@ export const EDITEUR_FAQ: FaqEntry[] = [
 - **La nature** répond à « **quel type d'établissement est-ce ?** » — Camping, Chambre d'hôtes, Aire de bivouac… Une seule valeur, en section *Identité*.
 - **Le type d'unité** répond à « **dans quoi le visiteur dort-il ?** » — bulle, tipi, lodge, cabane. **Plusieurs valeurs possibles** sur une même fiche, en section *Identité*, juste sous la nature.
 - **Un service** répond à « **qu'est-ce qui est mis à disposition ?** » — alimentation en eau, vidange des eaux usées, branchement électrique. Ce sont des **équipements**, jamais une nature.
-- **Un tarif** répond à « **combien cela coûte-t-il ?** » — y compris la gratuité. Il vit dans la section *Tarifs*, jamais dans la taxonomie.
+- **Un tarif** répond à « **combien cela coûte-t-il ?** » — y compris la gratuité. Il vit dans la section *Tarifs*, jamais dans les catégories métier.
 - **Le classement** (étoiles, épis, clés) est une distinction officielle, en section *Classement & labels*. Il ne fait pas partie de l'identité de la nature : un camping non classé reste un camping.
 
 **Ce qui n'est pas déductible.** Disposer d'eau, de vidange et d'électricité ne prouve **pas** que la nuitée est autorisée : une *Aire de services camping-car* n'est pas une *Aire d'accueil camping-car*. Inversement, une aire d'accueil peut autoriser la nuitée sans posséder le moindre service.

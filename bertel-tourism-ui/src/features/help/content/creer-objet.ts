@@ -301,9 +301,9 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
 
 **Quand choisir ce type.** Vente de produits ou de créations, y compris l'**artisanat**. **Pas ce type si** : production visitable avec accueil du public → Producteur (PRD).
 
-**Sous-catégorie.** Précisez la nature du commerce via la taxonomie (boutique de souvenirs, épicerie fine, atelier d'artisan…) dans la section Identité & taxonomie.
+**Sous-catégorie.** Précisez la nature du commerce (boutique de souvenirs, épicerie fine, atelier d'artisan…) dans la section Identité & catégories.
 
-**Étapes.** Créer → type « Commerce » → nom exact. Renseignez la localisation, les horaires d'ouverture et la sous-catégorie de taxonomie.
+**Étapes.** Créer → type « Commerce » → nom exact. Renseignez la localisation, les horaires d'ouverture et la sous-catégorie métier.
 
 **Pièges.** Un artisan qui vend uniquement sa production sans accueil du public reste en Commerce (COM) — voir la rubrique « Choisir le bon type » pour l'arbitrage avec Producteur (PRD).`,
   },

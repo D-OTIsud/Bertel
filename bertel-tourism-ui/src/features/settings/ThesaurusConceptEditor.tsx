@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
+import { getThesaurusDomainLabel } from '@/lib/thesaurus-domain-labels';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { thesaurusDocumentValues } from './thesaurus-document-display';
 import {
@@ -53,7 +54,7 @@ function ConceptPicker({ value, onChange, knownConcepts, domain, allowedDomains,
       <div className="thesaurus__picker-head"><small>{query.length < 2 ? 'Concepts du domaine ouvert ; saisissez deux lettres pour élargir.' : 'Résultats de recherche'}</small><button type="button" className="ghost-button" onClick={() => setOpened(false)}>Fermer la recherche</button></div>
       {searchQuery.isFetching && query.length >= 2 && <p role="status">Recherche…</p>}
       {searchQuery.isError && <p role="alert">{thesaurusErrorMessage(searchQuery.error)}</p>}
-      {options.map((item) => <button type="button" key={item.concept_id} className="thesaurus__picker-option" onClick={() => { onChange(item.concept_id, item); setSelectedName(item.name); setSearch(''); setOpened(false); }}><strong>{item.name}</strong><small>{item.domain} · {item.code}</small></button>)}
+      {options.map((item) => <button type="button" key={item.concept_id} className="thesaurus__picker-option" onClick={() => { onChange(item.concept_id, item); setSelectedName(item.name); setSearch(''); setOpened(false); }}><strong>{item.name}</strong><small>{getThesaurusDomainLabel(item.domain, searchQuery.data?.domains.find((entry) => entry.domain === item.domain)?.name)} · {item.code}</small></button>)}
       {!searchQuery.isFetching && options.length === 0 && <p>Aucun concept ne correspond.</p>}
     </div>}
   </div>;
@@ -156,7 +157,7 @@ export function ThesaurusConceptEditor({ concept, initialRevision, domain, conce
 
   return <section className="thesaurus__editor" aria-labelledby={`${formId}-heading`}>
     <header className="thesaurus__editor-head">
-      <div><h3 id={`${formId}-heading`}>{concept?.name ?? 'Nouveau concept'}</h3><p className="muted">{domain.name}{concept && (concept.usage_count == null ? ' · Impact calculé dans la prévisualisation' : ` · ${concept.usage_count} fiche${concept.usage_count > 1 ? 's' : ''}`)}</p></div>
+      <div><h3 id={`${formId}-heading`}>{concept?.name ?? 'Nouveau concept'}</h3><p className="muted">{getThesaurusDomainLabel(domain.domain, domain.name)}{concept && (concept.usage_count == null ? ' · Impact calculé dans la prévisualisation' : ` · ${concept.usage_count} fiche${concept.usage_count > 1 ? 's' : ''}`)}</p></div>
       <span className={`thesaurus__badge ${revision?.status === 'validated' && !dirty ? 'is-valid' : ''}`}>{dirty ? 'Modifications non enregistrées' : revision?.status === 'validated' ? 'Brouillon validé' : revision && revision.status !== 'published' ? 'Brouillon' : concept ? 'Publié' : 'À créer'}</span>
     </header>
     {!domain.is_governed && <p role="note" className="inline-alert inline-alert--warning">Ce domaine doit être activé dans Configuration avant de publier ses modifications.</p>}

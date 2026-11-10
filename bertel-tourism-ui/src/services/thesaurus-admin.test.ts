@@ -68,6 +68,29 @@ describe('thesaurus administration network contract', () => {
     expect(rpc).toHaveBeenCalledWith('thesaurus_admin', { p_action: 'bootstrap', p_payload: { domains: ['taxonomy_hlo'] } });
   });
 
+  it('normalizes legacy domain names while preserving identifiers and editorial rules', async () => {
+    const domains = [
+      { domain: 'taxonomy_com', name: 'Taxonomie COM' },
+      { domain: 'package_type', name: 'package_type' },
+      { domain: 'menu_category', name: 'menu_category' },
+      { domain: 'classification_value', name: 'Valeurs de classification' },
+      { domain: 'amenity', name: 'amenity' },
+    ].map((domain) => ({ ...domain, is_governed: true, is_public: true, require_definition: false }));
+    const rpc = jest.fn().mockResolvedValue({ data: { domains, concepts: [] }, error: null });
+    getClient.mockReturnValue(rpcClient(rpc));
+
+    const result = await fetchThesaurusWorkspace({ domain: 'taxonomy_com' });
+
+    expect(result.domains.map(({ domain, name, require_definition }) => ({ domain, name, require_definition }))).toEqual([
+      { domain: 'taxonomy_com', name: 'Commerces', require_definition: false },
+      { domain: 'package_type', name: 'Types de forfait', require_definition: false },
+      { domain: 'menu_category', name: 'Catégories de menu', require_definition: false },
+      { domain: 'classification_value', name: 'Niveaux et mentions des labels et classements', require_definition: false },
+      { domain: 'amenity', name: 'Équipements et services', require_definition: false },
+    ]);
+    expect(rpc).toHaveBeenCalledWith('thesaurus_admin', { p_action: 'workspace', p_payload: { domain: 'taxonomy_com' } });
+  });
+
   it('reads publication counts from the persisted SQL release manifests', async () => {
     // workspace returns to_jsonb(thesaurus.release): changed_count belongs to
     // its stored manifest, whereas a direct publish response has it at the top.

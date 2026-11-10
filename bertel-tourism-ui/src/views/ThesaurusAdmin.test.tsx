@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getThesaurusDomainLabel } from '@/lib/thesaurus-domain-labels';
 import { ThesaurusAdmin } from './ThesaurusAdmin';
 import { ThesaurusConceptEditor } from '../features/settings/ThesaurusConceptEditor';
 import * as service from '../services/thesaurus-admin';
@@ -26,7 +27,7 @@ const revision = (overrides: Partial<ThesaurusRevision> = {}): ThesaurusRevision
 });
 function workspace(overrides: Partial<ThesaurusWorkspace> = {}): ThesaurusWorkspace {
   return {
-    domains: [{ domain: 'taxonomy_hlo', name: 'Hébergements locatifs', is_governed: true, is_public: true, require_definition: true, concept_count: 2 }],
+    domains: [{ domain: 'taxonomy_hlo', name: getThesaurusDomainLabel('taxonomy_hlo'), is_governed: true, is_public: true, require_definition: true, concept_count: 2 }],
     concepts: [concept(), concept({ concept_id: 'concept-2', name: 'Studio', code: 'studio' })],
     revisions: [], releases: [{ release_id: 7, previous_release_id: 6, changed_count: 2, affected_objects: 12, created_at: '2026-11-06T10:00:00Z' }],
     latest_release_id: 7, stats: { total_concepts: 2, matching_concepts: 2, retired_usages: 0 },
@@ -37,6 +38,23 @@ function workspace(overrides: Partial<ThesaurusWorkspace> = {}): ThesaurusWorksp
 function renderAdmin() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(<QueryClientProvider client={client}><ThesaurusAdmin /></QueryClientProvider>);
+}
+
+function workspaceWithTechnicalDomainNames(isGoverned = true): ThesaurusWorkspace {
+  return workspace({
+    domains: [
+      { domain: 'taxonomy_com', name: 'Taxonomie COM' },
+      { domain: 'package_type', name: 'package_type' },
+      { domain: 'menu_category', name: 'menu_category' },
+    ].map((item) => ({ ...item, is_governed: isGoverned, is_public: true, require_definition: false, concept_count: 2 })),
+    concepts: [
+      concept({ domain: 'taxonomy_com', name: 'Marché couvert', code: 'marche_couvert' }),
+      concept({ concept_id: 'commerce-2', domain: 'taxonomy_com', name: 'Boutique artisanale', code: 'boutique_artisanale' }),
+      concept({ concept_id: 'package-1', domain: 'package_type', name: 'Forfait séjour', code: 'forfait_sejour' }),
+      concept({ concept_id: 'menu-1', domain: 'menu_category', name: 'Menu enfant', code: 'menu_enfant' }),
+    ],
+    revisions: [revision({ domain: 'taxonomy_com', document: service.normalizeThesaurusDocument({ code: 'marche_couvert', name: 'Marché couvert' }) })],
+  });
 }
 
 describe('ThesaurusAdmin editorial workflow', () => {
@@ -54,6 +72,66 @@ describe('ThesaurusAdmin editorial workflow', () => {
     mock.rebaseThesaurusDraft.mockResolvedValue(revision({ version: 3 }));
     mock.discardThesaurusDraft.mockResolvedValue(undefined);
     Object.defineProperty(globalThis.crypto, 'randomUUID', { configurable: true, value: () => '00000000-0000-4000-8000-000000000001' });
+  });
+
+  it('uses business domain names in navigation, editor, publication and configuration even when the API returns technical names', async () => {
+    mock.fetchThesaurusWorkspace.mockResolvedValue(workspaceWithTechnicalDomainNames());
+    renderAdmin();
+    await screen.findByLabelText('Libellé préféré (fr)');
+    const domainSelect = screen.getByRole('combobox', { name: 'Domaine du thésaurus' });
+    expect(within(domainSelect).getByRole('option', { name: 'Commerces' })).toHaveValue('taxonomy_com');
+    expect(within(domainSelect).getByRole('option', { name: 'Types de forfait' })).toHaveValue('package_type');
+    expect(within(domainSelect).getByRole('option', { name: 'Catégories de menu' })).toHaveValue('menu_category');
+    expect(screen.getByText('Commerces · 12 fiches')).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/Taxonomie|taxonomy_|package_type|menu_category/);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Publications/ }));
+    expect(screen.getByText('Commerces · Révision 2')).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/Taxonomie|taxonomy_|package_type|menu_category/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Configuration' }));
+    for (const label of ['Commerces', 'Types de forfait', 'Catégories de menu']) {
+      expect(screen.getByText(label, { selector: 'strong' })).toBeInTheDocument();
+    }
+    expect(document.body).not.toHaveTextContent(/Taxonomie|taxonomy_|package_type|menu_category/);
+    const commerceRule = screen.getByText('Commerces', { selector: 'strong' }).closest('.thesaurus__domain-policy');
+    if (!(commerceRule instanceof HTMLElement)) throw new Error('Règle du domaine Commerces introuvable.');
+    expect(within(commerceRule).getByRole('checkbox', { name: 'Définition obligatoire' })).not.toBeChecked();
+    expect(mock.configureThesaurusDomain).not.toHaveBeenCalled();
+  });
+
+  it('shows business labels during source activation and still sends the unchanged domain identifiers', async () => {
+    mock.fetchThesaurusWorkspace.mockResolvedValue(workspaceWithTechnicalDomainNames(false));
+    renderAdmin();
+    await screen.findByLabelText('Libellé préféré (fr)');
+    fireEvent.click(screen.getByRole('button', { name: 'Configuration' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Commerces/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Types de forfait/ }));
+    expect(screen.getByRole('checkbox', { name: /Catégories de menu/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Vérifier l’activation de 2 domaines' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Activer ces domaines dans le thésaurus ?' });
+    expect(within(dialog).getByText('Commerces · 2 concepts ; Types de forfait · 2 concepts')).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/Taxonomie|taxonomy_|package_type|menu_category/);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Activer les domaines sélectionnés' }));
+    await waitFor(() => expect(mock.bootstrapThesaurus).toHaveBeenCalledWith(['taxonomy_com', 'package_type']));
+  });
+
+  it('names domains in semantic relation choices when no lookup catalogue has been loaded', async () => {
+    mock.fetchThesaurusWorkspace.mockResolvedValue(workspaceWithTechnicalDomainNames());
+    renderAdmin();
+    await screen.findByLabelText('Libellé préféré (fr)');
+    fireEvent.click(screen.getByText(/Hiérarchie et relations/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une relation' }));
+    fireEvent.focus(screen.getByLabelText('Concept lié 1'));
+    expect(screen.getByRole('button', { name: /Boutique artisanale Commerces/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Forfait séjour Types de forfait/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Menu enfant Catégories de menu/ }));
+    expect(document.body).not.toHaveTextContent(/Taxonomie|taxonomy_|package_type|menu_category/);
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le brouillon' }));
+    await waitFor(() => expect(mock.saveThesaurusDraft).toHaveBeenCalledWith(expect.objectContaining({
+      domain: 'taxonomy_com', concept_id: 'concept-1',
+      document: expect.objectContaining({ relations: [{ type: 'related', target_id: 'menu-1' }] }),
+    })));
   });
 
   it('saves a complete draft without changing the published concept or its stable code', async () => {
@@ -190,7 +268,7 @@ describe('ThesaurusAdmin editorial workflow', () => {
     expect(guide).toHaveAttribute('target', '_blank');
     expect(guide).toHaveAttribute('rel', 'noopener noreferrer');
     expect(mock.bootstrapThesaurus).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('checkbox', { name: /Hébergements locatifs/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(getThesaurusDomainLabel('taxonomy_hlo')) }));
     fireEvent.click(screen.getByRole('button', { name: 'Vérifier l’activation de 1 domaine' }));
     const dialog = await screen.findByRole('dialog', { name: 'Activer ces domaines dans le thésaurus ?' });
     expect(mock.bootstrapThesaurus).not.toHaveBeenCalled();
@@ -215,7 +293,7 @@ describe('ThesaurusAdmin editorial workflow', () => {
     fireEvent.change(screen.getByLabelText('Code stable'), { target: { value: '4_stars' } });
     fireEvent.change(screen.getByLabelText('Libellé préféré (fr)'), { target: { value: 'Quatre étoiles' } });
     fireEvent.focus(screen.getByLabelText('Schéma ou valeur de classement parent'));
-    fireEvent.click(screen.getByRole('button', { name: /Étoiles hôtelières classification_scheme/ }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`Étoiles hôtelières ${getThesaurusDomainLabel('classification_scheme')}`) }));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le brouillon' }));
     await waitFor(() => expect(mock.saveThesaurusDraft).toHaveBeenCalledWith(expect.objectContaining({
       domain: 'classification_value', concept_id: null,

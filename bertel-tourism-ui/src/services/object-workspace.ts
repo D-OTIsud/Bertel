@@ -75,6 +75,7 @@ export {
 } from './object-workspace-payloads/descriptions';
 
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import { getThesaurusDomainLabel } from '../lib/thesaurus-domain-labels';
 import {
   readCoercingString as readString,
   readPermissiveBoolean as readBoolean,
@@ -990,7 +991,7 @@ interface TaxonomyNodeRef {
 function normalizeTaxonomyDomainRef(row: Record<string, unknown>): TaxonomyDomainRef {
   return {
     domain: readString(row.domain),
-    label: readString(row.name, readString(row.domain)),
+    label: getThesaurusDomainLabel(readString(row.domain), readString(row.name)),
     description: readString(row.description),
     objectType: readString(row.object_type),
     position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
@@ -1194,7 +1195,7 @@ export async function getObjectWorkspaceTaxonomyModule(
   if (!client) {
     return {
       ...baseModule,
-      unavailableReason: 'Connexion backend indisponible pour charger la taxonomie structurante.',
+      unavailableReason: 'Connexion backend indisponible pour charger les catégories de cette fiche.',
     };
   }
 
@@ -1235,7 +1236,7 @@ export async function getObjectWorkspaceTaxonomyModule(
   if (nodeRefsResult.error || assignmentsResult.error) {
     return {
       ...baseModule,
-      unavailableReason: 'Le live actuel ne fournit pas encore une taxonomie structurante complete pour ce profil.',
+      unavailableReason: 'Le catalogue de catégories disponible pour ce profil est incomplet.',
     };
   }
 
@@ -1244,7 +1245,7 @@ export async function getObjectWorkspaceTaxonomyModule(
   const unresolvedAssignment = ((assignmentsResult.data ?? []) as Record<string, unknown>[])
     .some((row) => domainCodes.includes(readString(row.domain)) && !knownNodeIds.has(readString(row.ref_code_id)));
   if (unresolvedAssignment) {
-    return { ...baseModule, unavailableReason: 'Une nature existante est absente du catalogue chargé. Rechargez la fiche avant de modifier sa taxonomie.' };
+    return { ...baseModule, unavailableReason: 'Une nature existante est absente du catalogue chargé. Rechargez la fiche avant de modifier ses catégories.' };
   }
   const nodesByDomain = new Map<string, TaxonomyNodeRef[]>();
   for (const node of nodeRefs) {
@@ -4420,7 +4421,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
 
   const client = getSupabaseClient();
   if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer la taxonomie structurante.');
+    throw new Error('Connexion backend indisponible pour enregistrer les catégories de cette fiche.');
   }
 
   const managedDomains = Array.from(new Set(
@@ -4446,11 +4447,11 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
   ]);
 
   if (taxonomyNodesResult.error) {
-    throw mapMutationError(taxonomyNodesResult.error, 'Impossible de charger les noeuds de taxonomie.');
+    throw mapMutationError(taxonomyNodesResult.error, 'Impossible de charger les catégories.');
   }
 
   if (existingAssignmentsResult.error) {
-    throw mapMutationError(existingAssignmentsResult.error, 'Impossible de charger les affectations de taxonomie.');
+    throw mapMutationError(existingAssignmentsResult.error, 'Impossible de charger les catégories affectées à la fiche.');
   }
 
   const nodeRows = ((taxonomyNodesResult.data ?? []) as Record<string, unknown>[])
@@ -4483,7 +4484,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
       ?? null;
 
     if (!selectedNode) {
-      throw new Error(`Noeud de taxonomie inconnu pour le domaine ${domain.label || domain.domain}.`);
+      throw new Error(`Catégorie inconnue pour le domaine ${getThesaurusDomainLabel(domain.domain, domain.label)}.`);
     }
 
     const existing = existingByDomain.get(domain.domain);
@@ -4512,7 +4513,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
       .upsert(upsertRows, { onConflict: 'object_id,domain' });
 
     if (error) {
-      throw mapMutationError(error, "Impossible d'enregistrer la taxonomie structurante.");
+      throw mapMutationError(error, "Impossible d'enregistrer les catégories de cette fiche.");
     }
   }
 
@@ -4525,7 +4526,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
       .in('domain', domainsToDelete);
 
     if (error) {
-      throw mapMutationError(error, "Impossible de supprimer les affectations de taxonomie retirees.");
+      throw mapMutationError(error, 'Impossible de supprimer les anciennes affectations de catégories.');
     }
   }
 

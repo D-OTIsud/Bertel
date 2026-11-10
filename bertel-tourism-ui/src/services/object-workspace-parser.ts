@@ -61,6 +61,7 @@ import type {
 } from './object-workspace-types';
 
 import { EMPTY_UNIT_TYPES, EMPTY_POSITIONINGS } from './object-workspace-types';
+import { getThesaurusDomainLabel } from '../lib/thesaurus-domain-labels';
 
 export type {
   WorkspaceModuleId,
@@ -610,7 +611,7 @@ function parseWorkspaceTaxonomyModule(raw: Record<string, unknown>): ObjectWorks
 
   for (const record of readArray(taxonomyRecord.domains)) {
     const domain = readString(record.domain).trim();
-    const label = readString(record.domain_name, domain).trim();
+    const label = getThesaurusDomainLabel(domain, readString(record.domain_name));
     if (!domain || !label) {
       continue;
     }

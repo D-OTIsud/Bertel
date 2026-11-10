@@ -80,7 +80,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, archetype
     <Fs
       num="11"
       title="Tags & étiquettes"
-      sub="Couche d'affichage colorée — apparaît sur la carte Explorer et en tête de fiche. Distincte de la taxonomie métier et des classifications."
+      sub="Étiquettes colorées affichées sur la carte Explorer et en tête de fiche. Elles complètent les catégories métier, les labels et les classements."
       folded={folded}
       pill={{ tone: 'ok', label: `${displayed.length} affichée(s)` }}
     >

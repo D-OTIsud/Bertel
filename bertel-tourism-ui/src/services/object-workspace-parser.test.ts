@@ -6,6 +6,26 @@ import {
 import type { ObjectDetail } from '../types/domain';
 
 describe('parseObjectWorkspace', () => {
+  it.each(['Taxonomie COM', 'taxonomy_com', undefined])('uses a business category name for legacy domain label %s and preserves the assignment', (domainName) => {
+    const domainRecord = {
+      domain: 'taxonomy_com', domain_name: domainName, object_type: 'COM',
+      assigned_node: { id: 'node-shop', code: 'local_crafts', name: 'Artisanat local', depth: 0 },
+      updated_at: '2026-11-10T04:00:00Z', source: 'migration_taxonomy',
+    };
+    const detail: ObjectDetail = {
+      id: 'COM-1', name: 'Boutique de test', type: 'COM', raw: { taxonomy: { domains: [domainRecord] } },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.taxonomy.domains[0]).toMatchObject({
+      domain: 'taxonomy_com', label: 'Commerces', objectType: 'COM',
+      assignment: { nodeId: 'node-shop', code: 'local_crafts', label: 'Artisanat local', source: 'migration_taxonomy', updatedAt: '2026-11-10T04:00:00Z' },
+    });
+    expect(domainRecord.domain_name).toBe(domainName);
+    expect(domainRecord.assigned_node.id).toBe('node-shop');
+  });
+
   it('keeps object and sub-place descriptions separated and preserves language maps', () => {
     const detail: ObjectDetail = {
       id: 'HOTRUN0000000001',
@@ -438,7 +458,7 @@ describe('parseObjectWorkspace', () => {
     expect(parsed.taxonomy.domains).toHaveLength(1);
     expect(parsed.taxonomy.domains[0]).toMatchObject({
       domain: 'taxonomy_hot',
-      label: 'Taxonomie HOT',
+      label: 'Hôtels',
       objectType: 'HOT',
     });
     expect(parsed.taxonomy.domains[0].assignment).toMatchObject({

@@ -10,7 +10,7 @@ describe('makeSections', () => {
     expect(groups.map((group) => group.group)).toEqual(['Identité', 'Caractéristiques', 'Tarifs & ouverture', 'Liens & territoire', 'Gestion']);
     const items = groups.flatMap((group) => group.items);
     expect(items.map(({ num, label }) => `${num} ${label}`)).toEqual([
-      '01 Identité & taxonomie', '02 Localisation', '03 Contacts', '04 Descriptions & langues parlées',
+      '01 Identité & catégories', '02 Localisation', '03 Contacts', '04 Descriptions & langues parlées',
       '05 Médias', `06 ${typeLabel}`, ...(archetype === 'HEB' ? [] : ['07 Capacité & accueil']),
       '08 Classifications', '09 Accessibilité', '10 Démarche durable', '11 Tags & étiquettes',
       '13 Tarifs, paiement & extras', "14 Périodes d'ouverture", '15 Liens vers fiches',
@@ -64,7 +64,7 @@ describe('makeSections', () => {
     expect(groups[0]).toMatchObject({
       group: 'Identité',
       items: [
-        { num: '01', label: 'Identité & taxonomie' },
+        { num: '01', label: 'Identité & catégories' },
         { num: '02', label: 'Localisation' },
         { num: '03', label: 'Contacts' },
       ],

@@ -821,6 +821,10 @@ COMMIT;
 \ir tests/test_partner_selection_memberships.sql
 \ir tests/test_partner_selection_memberships_regression.sql
 
+\echo '== Thesaurus business domain names: full reviewed vocabulary and display metadata =='
+\ir thesaurus_business_domain_names.sql
+\ir tests/test_thesaurus_business_domain_names.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

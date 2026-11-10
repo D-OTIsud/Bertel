@@ -1,0 +1,46 @@
+[
+  {
+    "domain": "amenity_family",
+    "name": "Familles d’équipements et de services"
+  },
+  {
+    "domain": "classification_value",
+    "name": "Niveaux et mentions des labels et classements"
+  },
+  {
+    "domain": "iti_difficulty",
+    "name": "Niveaux de difficulté des itinéraires"
+  },
+  {
+    "domain": "iti_stage_kind",
+    "name": "Types d’étape d’itinéraire"
+  },
+  {
+    "domain": "language_level",
+    "name": "Niveaux de maîtrise des langues"
+  },
+  {
+    "domain": "taxonomy_asc",
+    "name": "Structures d’activités sportives et culturelles"
+  },
+  {
+    "domain": "taxonomy_hlo",
+    "name": "Locations et hébergements collectifs"
+  },
+  {
+    "domain": "taxonomy_hot",
+    "name": "Hôtels"
+  },
+  {
+    "domain": "taxonomy_loi",
+    "name": "Loisirs, visites et découvertes"
+  },
+  {
+    "domain": "taxonomy_prd",
+    "name": "Producteurs et savoir-faire"
+  },
+  {
+    "domain": "taxonomy_spu",
+    "name": "Services et équipements publics"
+  }
+]

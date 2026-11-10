@@ -115,14 +115,15 @@ test('localizes a concept from exact or primary language, preserves maps, and la
     preferred_labels: {}, definitions: {} });
 });
 
-test('uses a domain legacy name only when the snapshot has no language map', async () => {
+test('adds a truthful legacy French fallback alongside a partial stored name map', async () => {
   rpc.mockResolvedValue(rpcResponse({ release_id: 7, domains: [
     { domain: 'taxonomy_hlo', name: 'Legacy French name', name_i18n: { de: 'Deutscher Name' } },
   ] }));
   const result = await handleThesaurusRequest(request(urlFor.release + '?lang=en'), { action: 'release', releaseId: '7' });
   const body = await result.json();
-  expect(body.data.domains[0]).toMatchObject({ name_i18n: { de: 'Deutscher Name' }, requested_lang: 'en', effective_lang: null });
-  expect(body.data.domains[0]).not.toHaveProperty('name');
+  expect(body.data.domains[0]).toMatchObject({ name: 'Legacy French name',
+    name_i18n: { fr: 'Legacy French name', de: 'Deutscher Name' }, requested_lang: 'en', effective_lang: 'fr',
+    name_metadata_scope: 'release_snapshot' });
 });
 
 test('JSON-LD preserves the complete language maps when a translated representation is requested', async () => {

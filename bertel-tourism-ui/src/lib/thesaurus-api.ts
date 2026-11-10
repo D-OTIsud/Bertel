@@ -3,6 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { admitPartner, logPartnerCall } from './partner-auth';
 import { callPublicRpc, PUBLIC_API_CONTRACT_VERSION, publicHeaders } from './public-api';
+import { THESAURUS_VOCABULARY_LABELS } from './thesaurus-vocabulary-labels';
 
 export type ThesaurusAction = 'manifest' | 'release' | 'concepts' | 'concept' | 'changes' | 'export' | 'resolve';
 export interface ThesaurusTarget {
@@ -144,46 +145,64 @@ function localized(values: Record<string, string>, requested: string): { value: 
   return { value: null, lang: null };
 }
 
-function localizedDomainName(values: Record<string, string>, requested: string): { value: string | null; lang: string | null } {
-  const primary = requested.split('-')[0];
-  for (const lang of [requested, requested.toLowerCase(), primary, primary.toLowerCase(), 'fr']) {
-    if (values[lang]) return { value: values[lang], lang };
-  }
-  return { value: null, lang: null };
-}
-
-function localizeDomain(value: unknown, requestedLang: string): JsonObject {
-  const row = object(value);
-  if (!row) throw new Error('invalid_snapshot');
-  const nameMap = stringMap(row.name_i18n);
-  const hasMap = object(row.name_i18n) !== null;
-  const chosen = localizedDomainName(nameMap, requestedLang);
-  const legacyName = typeof row.name === 'string' && row.name.trim() ? row.name : null;
-  const fallbackName = !hasMap ? legacyName : null;
-  const result: JsonObject = { ...row };
-  if (chosen.value !== null) result.name = chosen.value;
-  else if (fallbackName !== null) result.name = fallbackName;
-  else delete result.name;
-  result.requested_lang = requestedLang;
-  result.effective_lang = chosen.lang ?? (fallbackName !== null ? 'fr' : null);
-  if (hasMap) result.name_i18n = row.name_i18n;
-  return result;
-}
-
-/** Localize only names embedded in immutable manifests; translation maps remain untouched. */
-function localizeManifest(value: unknown, requestedLang: string, discoveryRelease: number | null): JsonObject {
+/** Localize the HTTP view of a stored manifest without changing its snapshot fields. */
+function publicThesaurusManifest(value: unknown, requestedLang: string, discoveryRelease: number | null): JsonObject {
   const source = object(value);
   if (!source) throw new Error('invalid_snapshot');
   const result: JsonObject = { ...source, metadata_scope: 'release_snapshot' };
-  if (Array.isArray(source.domains)) result.domains = source.domains.map((domain) => localizeDomain(domain, requestedLang));
+  const frozenMetadata = typeof source.metadata_checksum === 'string' && source.metadata_checksum.length > 0;
+  if (source.domains !== undefined) {
+    if (!Array.isArray(source.domains)) throw new Error('invalid_snapshot');
+    result.domains = source.domains.map((value) => {
+      const vocabulary = object(value);
+      if (!vocabulary || typeof vocabulary.domain !== 'string'
+        || typeof vocabulary.name !== 'string' || !vocabulary.name.trim()) throw new Error('invalid_snapshot');
+      const storedNames = stringMap(vocabulary.name_i18n);
+      const hasStoredNames = Object.keys(storedNames).length > 0;
+      let names: Record<string, string>;
+      let nameMetadataScope: 'release_snapshot' | 'reviewed_legacy_dictionary' | 'legacy_scalar';
+      if (frozenMetadata) {
+        // New checksummed manifests own their exact maps; never repair or augment them from code.
+        names = storedNames;
+        nameMetadataScope = hasStoredNames ? 'release_snapshot' : 'legacy_scalar';
+      } else {
+        const standard = Object.hasOwn(THESAURUS_VOCABULARY_LABELS, vocabulary.domain)
+          ? THESAURUS_VOCABULARY_LABELS[vocabulary.domain] : undefined;
+        const reviewedEnglish = standard && standard.fr.includes(vocabulary.name) && !storedNames.en
+          ? standard.en : undefined;
+        // For legacy releases, a reviewed English alias may fill the old scalar representation.
+        // Stored valid translations win; the historical scalar remains the authoritative French title.
+        names = {
+          ...(reviewedEnglish ? { en: reviewedEnglish } : {}),
+          ...storedNames,
+          fr: vocabulary.name,
+        };
+        nameMetadataScope = reviewedEnglish ? 'reviewed_legacy_dictionary' : hasStoredNames ? 'release_snapshot' : 'legacy_scalar';
+      }
+      const selected = localized(names, requestedLang);
+      const legacyFrenchName = !frozenMetadata || !hasStoredNames
+        ? (typeof vocabulary.name === 'string' && vocabulary.name.trim() ? vocabulary.name : null) : null;
+      const translatedName = selected.value ?? legacyFrenchName;
+      return {
+        ...vocabulary,
+        ...(frozenMetadata && !hasStoredNames
+          ? (vocabulary.name_i18n === undefined ? {} : { name_i18n: vocabulary.name_i18n })
+          : { name_i18n: frozenMetadata ? vocabulary.name_i18n : names }),
+        ...(translatedName !== null ? { name: translatedName } : { name: null }),
+        requested_lang: requestedLang,
+        effective_lang: selected.lang ?? (legacyFrenchName !== null ? 'fr' : null),
+        name_metadata_scope: nameMetadataScope,
+      };
+    });
+  }
   if (discoveryRelease === null) delete result.is_current;
-  if (Array.isArray(source.releases)) {
+  if (source.releases !== undefined) {
+    if (!Array.isArray(source.releases)) throw new Error('invalid_snapshot');
     result.releases = source.releases.map((entry) => {
       const release = object(entry);
       if (!release) throw new Error('invalid_snapshot');
-      const localizedRelease = localizeManifest(release, requestedLang, discoveryRelease);
-      if (discoveryRelease === null) delete localizedRelease.is_current;
-      else localizedRelease.is_current = Number(release.release_id) === discoveryRelease;
+      const localizedRelease = publicThesaurusManifest(release, requestedLang, discoveryRelease);
+      if (discoveryRelease !== null) localizedRelease.is_current = Number(release.release_id) === discoveryRelease;
       return localizedRelease;
     });
   }
@@ -394,7 +413,7 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   let data: unknown = body.data;
   try {
     if (target.action === 'manifest' || target.action === 'release') {
-      data = localizeManifest(data, query.lang, target.action === 'manifest' ? actualRelease : null);
+      data = publicThesaurusManifest(data, query.lang, target.action === 'manifest' ? actualRelease : null);
     } else if (target.action === 'concept' || target.action === 'resolve') {
       if (data === null) return fail(404, 'not_found');
       data = publicThesaurusConcept(data, query.lang);

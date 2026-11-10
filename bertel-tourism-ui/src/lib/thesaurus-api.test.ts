@@ -12,6 +12,10 @@ import { admitPartner, logPartnerCall } from './partner-auth';
 import { callPublicRpc } from './public-api';
 import { GET as getConcepts } from '@/app/api/public/thesaurus/releases/[releaseId]/concepts/route';
 import { GET as getManifest } from '@/app/api/public/thesaurus/route';
+import { GET as getRelease } from '@/app/api/public/thesaurus/releases/[releaseId]/route';
+import { THESAURUS_VOCABULARY_LABELS } from './thesaurus-vocabulary-labels';
+import productionVocabularyTitles from './__fixtures__/thesaurus-vocabulary-titles-20261110.json';
+import historicalVocabularyTitles from './__fixtures__/thesaurus-vocabulary-history-titles-20261110.json';
 import { canonicalThesaurusJson, decodeThesaurusCursor, encodeThesaurusCursor,
   handleThesaurusRequest, publicThesaurusConcept, thesaurusJsonLd } from './thesaurus-api';
 
@@ -39,6 +43,22 @@ function req(query = '', headers: Record<string, string> = {}) {
 function response(data: unknown = [concept], extraMeta = {}) {
   return { ok: true, status: 200, body: { meta: { release_id: 1, previous_release_id: null,
     as_of: '2026-11-06T12:00:00Z', total: 1, next_after: null, ...extraMeta }, data } };
+}
+
+function manifestReq(query = '', headers: Record<string, string> = {}) {
+  return new NextRequest(`http://localhost/api/public/thesaurus${query}`, {
+    headers: { authorization: `Bearer bk_live_${'a'.repeat(48)}`, ...headers },
+  });
+}
+
+const activityVocabulary = {
+  domain: 'activity_type', name: 'Types d’activité', source_kind: 'ref_code',
+  require_definition: false, required_languages: ['fr'],
+};
+
+function manifest(domains: Record<string, unknown>[] = [activityVocabulary]) {
+  return { release_id: 1, previous_release_id: null, as_of: '2026-11-06T12:00:00Z',
+    checksum: 'published-snapshot-checksum', total_concepts: 42, domains };
 }
 
 beforeEach(() => {
@@ -123,6 +143,176 @@ it('normalizes filters and pins every continuation to the same immutable release
 it('does not accept a snapshot for a different requested release', async () => {
   rpc.mockResolvedValue(response([concept], { release_id: 2 }));
   expect((await handleThesaurusRequest(req(), { action: 'concepts', releaseId: '1' })).status).toBe(502);
+});
+
+it.each([
+  ['', 'fr', 'fr', 'Types d’activité'],
+  ['?lang=en', 'en', 'en', 'Activity types'],
+  ['?lang=EN-us', 'en-US', 'en', 'Activity types'],
+  ['?lang=es', 'es', 'fr', 'Types d’activité'],
+])('localizes discovery vocabulary titles with explicit language fallback: %s', async (query, requested, effective, name) => {
+  rpc.mockResolvedValue(response(manifest()));
+  const result = await getManifest(manifestReq(query));
+  expect(result.status).toBe(200);
+  const body = await result.json();
+  expect(body.data.domains).toEqual([{
+    ...activityVocabulary, name, name_i18n: { fr: 'Types d’activité', en: 'Activity types' },
+    requested_lang: requested, effective_lang: effective, name_metadata_scope: 'reviewed_legacy_dictionary',
+  }]);
+  expect(rpc).toHaveBeenCalledWith('thesaurus_public', {
+    p_action: 'manifest', p_release_id: null, p_params: expect.objectContaining({ lang: requested }),
+  });
+});
+
+it('localizes embedded and pinned release manifests without altering published snapshots or metadata', async () => {
+  const oldVocabulary = { ...activityVocabulary, name: 'Anciennes catégories locales' };
+  const oldRelease = manifest([oldVocabulary]);
+  const currentRelease = { ...manifest(), release_id: 2, previous_release_id: 1,
+    as_of: '2026-11-07T12:00:00Z', checksum: 'current-snapshot-checksum' };
+  const snapshot = { ...currentRelease, releases: [currentRelease, oldRelease] };
+  const original = structuredClone(snapshot);
+  rpc.mockResolvedValue(response(snapshot, { release_id: 2, previous_release_id: 1, as_of: currentRelease.as_of }));
+  const result = await getManifest(manifestReq('?lang=en'));
+  expect(result.status).toBe(200);
+  const body = await result.json();
+  expect(body.data.domains[0].name).toBe('Activity types');
+  expect(body.data.releases[0].domains[0].name).toBe('Activity types');
+  expect(body.data.releases[1].domains[0]).toEqual({
+    ...oldVocabulary, name_i18n: { fr: 'Anciennes catégories locales' },
+    requested_lang: 'en', effective_lang: 'fr', name_metadata_scope: 'legacy_scalar',
+  });
+  expect(body.data.releases.map(({ release_id, checksum, as_of }: Record<string, unknown>) => ({ release_id, checksum, as_of })))
+    .toEqual([currentRelease, oldRelease].map(({ release_id, checksum, as_of }) => ({ release_id, checksum, as_of })));
+  expect(body.data.domains[0].required_languages).toEqual(['fr']);
+  expect(body.meta).toMatchObject({ release_id: 2, vocabulary_release: 2, previous_release_id: 1, as_of: currentRelease.as_of });
+  expect(snapshot).toEqual(original);
+
+  rpc.mockResolvedValue(response(currentRelease, { release_id: 2, previous_release_id: 1, as_of: currentRelease.as_of }));
+  const pinned = await getRelease(manifestReq('?lang=en'), { params: Promise.resolve({ releaseId: '2' }) });
+  expect(pinned.status).toBe(200);
+  const expectedPinned = { ...body.data.releases[0] };
+  delete expectedPinned.is_current;
+  expect((await pinned.json()).data).toEqual(expectedPinned);
+  expect(rpc).toHaveBeenLastCalledWith('thesaurus_public', {
+    p_action: 'release', p_release_id: 2, p_params: expect.objectContaining({ lang: 'en' }),
+  });
+  expect(snapshot).toEqual(original);
+});
+
+it('preserves custom and unknown vocabulary names instead of assigning an unrelated standard translation', async () => {
+  const domains = [
+    { ...activityVocabulary, name: 'Activités réservées aux groupes' },
+    { ...activityVocabulary, domain: 'local_vocabulary', name: 'Catégories du territoire' },
+    { ...activityVocabulary, domain: 'constructor', name: 'Autre vocabulaire' },
+  ];
+  rpc.mockResolvedValue(response(manifest(domains)));
+  const result = await getManifest(manifestReq('?lang=en'));
+  expect(result.status).toBe(200);
+  const body = await result.json();
+  expect(body.data.domains).toEqual(domains.map((domain) => ({
+    ...domain, name_i18n: { fr: domain.name }, requested_lang: 'en', effective_lang: 'fr', name_metadata_scope: 'legacy_scalar',
+  })));
+});
+
+it.each([
+  ['en-US', 'en-US', 'Outdoor activities'],
+  ['en-GB', 'en', 'Local activities'],
+  ['de-DE', 'de', 'Lokale Aktivitäten'],
+  ['fr', 'fr', 'Types d’activité'],
+])('uses published vocabulary translations before catalog translations for %s', async (requested, effective, name) => {
+  const name_i18n = { fr: 'Ancien titre à ignorer', en: 'Local activities', 'en-US': 'Outdoor activities', de: 'Lokale Aktivitäten' };
+  rpc.mockResolvedValue(response(manifest([{ ...activityVocabulary, name_i18n }])));
+  const result = await getManifest(manifestReq(`?lang=${requested}`));
+  expect(result.status).toBe(200);
+  const body = await result.json();
+  expect(body.data.domains[0]).toEqual({
+    ...activityVocabulary, name, name_i18n: { ...name_i18n, fr: activityVocabulary.name },
+    requested_lang: requested, effective_lang: effective, name_metadata_scope: 'release_snapshot',
+  });
+});
+
+it('uses published translations for custom titles and ignores empty or invalid translation entries', async () => {
+  rpc.mockResolvedValue(response(manifest([
+    { ...activityVocabulary, name: 'Activités locales', name_i18n: { en: 'Local activities', es: 7, de: ' ' } },
+    { ...activityVocabulary, name_i18n: { en: ' ', es: 7 } },
+  ])));
+  const result = await getManifest(manifestReq('?lang=en'));
+  expect(result.status).toBe(200);
+  const { data } = await result.json();
+  expect(data.domains[0]).toMatchObject({
+    name: 'Local activities', name_i18n: { fr: 'Activités locales', en: 'Local activities' }, effective_lang: 'en',
+  });
+  expect(data.domains[0].name_i18n).not.toHaveProperty('es');
+  expect(data.domains[0].name_i18n).not.toHaveProperty('de');
+  expect(data.domains[1]).toMatchObject({ name: 'Activity types', effective_lang: 'en',
+    name_i18n: { fr: 'Types d’activité', en: 'Activity types' }, name_metadata_scope: 'reviewed_legacy_dictionary' });
+});
+
+it('translates every standard catalog title and raw domain alias on discovery while retaining vocabulary order', async () => {
+  const catalog = Object.entries(THESAURUS_VOCABULARY_LABELS);
+  expect(catalog).toHaveLength(66);
+  const domains = catalog.flatMap(([domain, labels]) => labels.fr.map((name) => ({ ...activityVocabulary, domain, name })));
+  const expectedNames = catalog.flatMap(([, labels]) => labels.fr.map(() => labels.en));
+  expect(catalog.every(([domain, labels]) => labels.fr.includes(domain) && labels.en.trim() && labels.en !== domain)).toBe(true);
+  rpc.mockResolvedValue(response(manifest(domains)));
+  const result = await getManifest(manifestReq('?lang=en'));
+  expect(result.status).toBe(200);
+  const { data } = await result.json();
+  expect(data.domains.map((domain: { name: string }) => domain.name)).toEqual(expectedNames);
+  expect(data.domains.map((domain: { domain: string }) => domain.domain)).toEqual(domains.map((domain) => domain.domain));
+  expect(data.domains.every((domain: { effective_lang: string }) => domain.effective_lang === 'en')).toBe(true);
+});
+
+it('translates all vocabulary titles captured independently from production release 25', async () => {
+  expect(productionVocabularyTitles).toHaveLength(66);
+  rpc.mockResolvedValue(response(manifest(productionVocabularyTitles)));
+  const result = await getManifest(manifestReq('?lang=en'));
+  expect(result.status).toBe(200);
+  const { data } = await result.json();
+  expect(data.domains).toHaveLength(66);
+  expect(data.domains.map((domain: { domain: string; name_i18n: { fr: string } }) => ({
+    domain: domain.domain, name: domain.name_i18n.fr,
+  }))).toEqual(productionVocabularyTitles);
+  expect(data.domains.every((domain: { requested_lang: string; effective_lang: string }) =>
+    domain.requested_lang === 'en' && domain.effective_lang === 'en')).toBe(true);
+  expect(data.domains.find((domain: { domain: string }) => domain.domain === 'activity_type').name).toBe('Activity types');
+  expect(data.domains.find((domain: { domain: string }) => domain.domain === 'taxonomy_hot').name).toBe('Hotels');
+});
+
+it('translates independent historical vocabulary titles in embedded release manifests', async () => {
+  expect(historicalVocabularyTitles).toHaveLength(11);
+  const historicalRelease = manifest(historicalVocabularyTitles);
+  rpc.mockResolvedValue(response({ ...manifest(), releases: [historicalRelease] }));
+  const result = await getManifest(manifestReq('?lang=en'));
+  expect(result.status).toBe(200);
+  const { data } = await result.json();
+  const domains = data.releases[0].domains;
+  expect(domains).toHaveLength(11);
+  expect(domains.map((domain: { domain: string; name_i18n: { fr: string } }) => ({
+    domain: domain.domain, name: domain.name_i18n.fr,
+  }))).toEqual(historicalVocabularyTitles);
+  expect(domains.every((domain: { requested_lang: string; effective_lang: string }) =>
+    domain.requested_lang === 'en' && domain.effective_lang === 'en')).toBe(true);
+  expect(domains.find((domain: { domain: string }) => domain.domain === 'taxonomy_hot').name).toBe('Hotels');
+});
+
+it('keeps discovery ETags specific to the localized representation and honors matching English validators', async () => {
+  const snapshot = manifest();
+  const original = structuredClone(snapshot);
+  rpc.mockResolvedValue(response(snapshot));
+  const french = await getManifest(manifestReq());
+  const frenchEtag = french.headers.get('etag')!;
+  const english = await getManifest(manifestReq('?lang=en', { 'if-none-match': frenchEtag }));
+  expect(english.status).toBe(200);
+  expect((await english.json()).data.domains[0].name).toBe('Activity types');
+  const englishEtag = english.headers.get('etag')!;
+  expect(englishEtag).not.toBe(frenchEtag);
+  const repeated = await getManifest(manifestReq('?lang=en'));
+  expect(repeated.headers.get('etag')).toBe(englishEtag);
+  const unchanged = await getManifest(manifestReq('?lang=en', { 'if-none-match': englishEtag }));
+  expect(unchanged.status).toBe(304);
+  expect(await unchanged.text()).toBe('');
+  expect(snapshot).toEqual(original);
 });
 
 it('completes a signed HTTP page traversal without duplicates or omissions after the current publication advances', async () => {
@@ -229,7 +419,7 @@ it('uses regional base-language matches, preserves maps, and binds ETags to the 
 });
 
 it('localizes a standalone release only from its frozen maps and omits discovery-relative flags', async () => {
-  const releaseSnapshot = { release_id: 1, is_current: true, domains: [
+  const releaseSnapshot = { release_id: 1, metadata_checksum: 'frozen-meta', is_current: true, domains: [
     { domain: 'taxonomy_hlo', name: 'Nom français gelé', name_i18n: { fr: 'Nom français gelé', en: 'Frozen English' } },
   ] };
   rpc.mockResolvedValue(response(releaseSnapshot, { release_id: 1, metadata_checksum: 'frozen-meta' }));
@@ -238,7 +428,8 @@ it('localizes a standalone release only from its frozen maps and omits discovery
   }), { action: 'release', releaseId: '1' });
   const body = await result.json();
   expect(body.meta.metadata_checksum).toBe('frozen-meta');
-  expect(body.data.domains[0]).toMatchObject({ name: 'Nom français gelé', requested_lang: 'de', effective_lang: 'fr' });
+  expect(body.data.domains[0]).toMatchObject({ name: 'Nom français gelé', requested_lang: 'de', effective_lang: 'fr',
+    name_metadata_scope: 'release_snapshot' });
   expect(body.data.domains[0].name_i18n).toEqual(releaseSnapshot.domains[0].name_i18n);
   expect(body.data).not.toHaveProperty('is_current');
 });
@@ -259,14 +450,18 @@ it.each(['manifest', 'release'] as const)('returns the actual requested domain t
   }
 });
 
-it('does not invent translations or present-day policy for a legacy release', async () => {
+it('uses a reviewed English alias without presenting present-day policy for a legacy release', async () => {
   const legacy = { release_id: 1, domains: [{ domain: 'opening_schedule_type', name: 'Modes d’ouverture', require_definition: false, required_languages: ['fr'] }] };
   rpc.mockResolvedValue(response(legacy));
   const result = await handleThesaurusRequest(req('?lang=en-GB'), { action: 'release', releaseId: '1' });
   const body = await result.json();
   expect(body.meta).not.toHaveProperty('metadata_checksum');
   expect(body.data).not.toHaveProperty('metadata_checksum');
-  expect(body.data.domains[0]).toEqual({ ...legacy.domains[0], requested_lang: 'en-GB', effective_lang: 'fr' });
+  expect(body.data.domains[0]).toEqual({
+    ...legacy.domains[0], name: 'Opening arrangements',
+    name_i18n: { fr: 'Modes d’ouverture', en: 'Opening arrangements' }, requested_lang: 'en-GB', effective_lang: 'en',
+    name_metadata_scope: 'reviewed_legacy_dictionary',
+  });
   expect(legacy.domains[0]).not.toHaveProperty('requested_lang');
 });
 

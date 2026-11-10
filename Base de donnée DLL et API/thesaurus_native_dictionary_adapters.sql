@@ -425,8 +425,8 @@ DO $native_admin_creation$
 DECLARE definition text;body text;old text;new text;
 BEGIN
   SELECT pg_get_functiondef(oid),prosrc INTO STRICT definition,body FROM pg_proc WHERE oid='thesaurus.admin_dispatch(text,jsonb)'::regprocedure;
-  old:=$old$CASE v.source_kind WHEN'classification_value'THEN COALESCE(doc#>>'{source_fields,scheme_id}','')WHEN'sustainability_action'THEN COALESCE(doc#>>'{source_fields,category_id}','')ELSE''END;$old$;
-  new:=$new$CASE v.source_kind WHEN'classification_value'THEN COALESCE(doc#>>'{source_fields,scheme_id}','')WHEN'sustainability_action'THEN COALESCE(doc#>>'{source_fields,category_id}','')WHEN'sustainability_group'THEN COALESCE(doc#>>'{source_fields,category_id}','')ELSE''END;$new$;
+  old:=$old$CASE v.source_kind WHEN'classification_value'THEN COALESCE(doc#>>'{source_fields,scheme_id}','')WHEN'sustainability_action'THEN COALESCE(doc#>>'{source_fields,category_id}','')ELSE''END,v.source_kind$old$;
+  new:=$new$CASE v.source_kind WHEN'classification_value'THEN COALESCE(doc#>>'{source_fields,scheme_id}','')WHEN'sustainability_action'THEN COALESCE(doc#>>'{source_fields,category_id}','')WHEN'sustainability_group'THEN COALESCE(doc#>>'{source_fields,category_id}','')ELSE''END,v.source_kind$new$;
   IF strpos(body,new)=0 THEN
     IF length(body)-length(replace(body,old,''))<>length(old) THEN RAISE EXCEPTION 'Native concept context creation predecessor changed';END IF;
     body:=replace(body,old,new);

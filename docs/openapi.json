@@ -2260,6 +2260,39 @@
           }
         }
       },
+      "ThesaurusVocabulary": {
+        "type": "object",
+        "description": "Métadonnées d’un vocabulaire dans un manifeste localisé. Les nouvelles publications conservent leurs noms figés sans enrichissement externe. Pour les anciens manifestes, le catalogue versionné traduit uniquement les alias français exactement relus pour ce domaine ; un titre personnalisé ou inconnu conserve son français sans traduction publiée. Cette projection historique ne réécrit aucun manifeste. Ces noms de métadonnées ne traduisent pas les concepts.",
+        "required": ["domain", "name", "name_i18n", "requested_lang", "effective_lang"],
+        "properties": {
+          "domain": { "type": "string", "example": "activity_type" },
+          "name": { "type": "string", "description": "Titre résolu dans effective_lang.", "example": "Activity types" },
+          "name_i18n": { "type": "object", "description": "Traductions de métadonnées disponibles, dont le titre français stocké dans le manifeste.", "additionalProperties": { "type": "string" }, "example": { "fr": "Types d’activité", "en": "Activity types" } },
+          "requested_lang": { "type": "string", "description": "Locale BCP 47 canonicalisée demandée par le partenaire.", "example": "en" },
+          "effective_lang": { "type": ["string", "null"], "description": "Langue réellement utilisée pour name ; null si aucun titre n’est disponible.", "example": "en" },
+          "name_metadata_scope": { "type": "string", "enum": ["release_snapshot", "reviewed_legacy_dictionary", "legacy_scalar"], "description": "Provenance des noms de domaine : map figée, dictionnaire historique versionné ou scalaire historique français." },
+          "source_kind": { "type": "string", "example": "ref_code" },
+          "require_definition": { "type": "boolean" },
+          "required_languages": { "type": "array", "description": "Langues exigées pour la publication éditoriale ; ni la langue de réponse, ni l’inventaire des traductions disponibles.", "items": { "type": "string" }, "example": ["fr"] }
+        },
+        "additionalProperties": true,
+        "example": { "domain": "activity_type", "name": "Activity types", "name_i18n": { "fr": "Types d’activité", "en": "Activity types" }, "requested_lang": "en", "effective_lang": "en", "source_kind": "ref_code", "require_definition": false, "required_languages": ["fr"] }
+      },
+      "ThesaurusManifest": {
+        "type": "object",
+        "description": "Manifeste de publication : domaines, date, empreinte, provenance, licence et attribution. La localisation est une projection HTTP ; les identifiants, as_of et checksums stockés restent inchangés.",
+        "properties": {
+          "release_id": { "type": "integer", "minimum": 1 },
+          "previous_release_id": { "type": ["integer", "null"] },
+          "as_of": { "type": "string", "format": "date-time" },
+          "checksum": { "type": "string", "description": "Empreinte stockée de la publication ; utiliser l’ETag pour la représentation HTTP localisée." },
+          "metadata_scope": { "type": "string", "const": "release_snapshot", "description": "Le manifeste est lu dans la publication sélectionnée. Les traductions HTTP des titres historiques sont qualifiées séparément." },
+          "metadata_checksum": { "type": "string", "description": "MD5 des domaines bruts figés en JSONB PostgreSQL, avant localisation HTTP ; absent des anciens manifestes sans cette empreinte." },
+          "domains": { "type": "array", "items": { "$ref": "#/components/schemas/ThesaurusVocabulary" } },
+          "releases": { "type": "array", "description": "Présent à la découverte : manifestes récents dont les domaines utilisent la même langue demandée.", "items": { "$ref": "#/components/schemas/ThesaurusManifest" } }
+        },
+        "additionalProperties": true
+      },
       "ThesaurusEnvelope": {
         "type": "object",
         "required": [
@@ -2342,8 +2375,7 @@
                 }
               },
               {
-                "type": "object",
-                "description": "Manifeste de publication : domaines avec name_i18n conservé, name localisé, requested_lang et effective_lang propres à chaque domaine; metadata_scope vaut release_snapshot. En découverte, is_current est relatif à meta.release_id."
+                "$ref": "#/components/schemas/ThesaurusManifest"
               }
             ]
           }

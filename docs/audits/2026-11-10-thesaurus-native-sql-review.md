@@ -1,10 +1,10 @@
 # Native dictionary SQL review — 10 November 2026
 
-Status: all eight findings below are resolved in the corrected SQL; full fresh/
-behavior CI remains pending. This file is not deployment approval. No production
+Status: all ten findings are resolved, including native migration ordering;
+full fresh/behavior CI remains pending. This file is not deployment approval. No production
 writes, publication, commits or overlapping SQL edits were performed by reviewer.
 
-Reviewed candidate: `supabase/migrations/20261110190229_thesaurus_native_dictionary_adapters.sql`
+Reviewed candidate: `supabase/migrations/20261110201213_thesaurus_native_dictionary_adapters.sql`
 and standalone mirror, against the adapter extension design, current publication/
 preparation constructors, source schema/policies, and root's read-only production
 function/view fingerprint capture. Expanded scope is nine adapters: six public
@@ -45,6 +45,18 @@ Production counts are not assumed to equal fresh-seed counts.
    `CHECK ((num_nonnulls(a, b) = 1))`. The candidate's
    `LIKE 'CHECK (num_nonnulls(%'` is false, so its STRICT predecessor query finds
    no constraint. Match the exact canonical old eight-column expression instead.
+9. Full fresh CI then reached the admin context constructor and found an exact
+   fragment mismatch: its CASE expression occurs inside `VALUES`, followed by
+   `,v.source_kind`, not a semicolon. The reviewer corrected only the old/new
+   literal anchors in both SQL copies, retaining exact full-body fingerprint and
+   single-occurrence checks.
+10. Metadata was installed under actual ledger version `20261110195115`; the
+    prepared native filename `20261110190229` consequently sorts before its required
+    metadata predecessor. The explicit standalone fresh manifest masks this order.
+    The Supabase CLI allocated `20261110201213` after the applied metadata entry;
+    the reviewed SQL body was moved into that native migration. The applied
+    metadata ledger remains unchanged. Align this filename with the real native
+    ledger version after installation.
 
 The reviewer reproduced item 8 in a newly created, independently identified
 temporary PostgreSQL 17 cluster bound to loopback, verified before any mutation.
@@ -53,8 +65,9 @@ No existing database, archived harness or production connection was used.
 
 ## Corrected candidate reread
 
-Migration and standalone mirror at commit `f1ac9120` are byte-identical, SHA-256
-`fb8cb2b0f1e8b787e0c7685d7663ecc3fbf4707ad4c87955b9c04a864d65f05e`.
+Migration and standalone mirror after the item-9 literal correction are
+byte-identical, SHA-256
+`7b445ff1e6f334b8b549ef689abf85a0dd11e6988e5d918e4939e2299cefce40`.
 The reviewer re-read the actual corrected SQL. It now pins eleven normalized
 function predecessors plus the view, preserves all twelve existing function
 metadata snapshots and the view metadata, validates the old preparation contract
@@ -66,6 +79,12 @@ Catalog timestamp triggers remain enabled normally; only label/timestamp are
 excluded from the nonlabel-metadata comparison. No concrete code blocker remains
 in this candidate, subject to actual full fresh/publication runtime qualification.
 The integration candidate also replaces a reserved catalog alias found by root.
+To avoid repeated CI-only discovery, the reviewer generated a bounded read-only
+production query from all seventeen old-fragment guards. It returned only block,
+signature and occurrence count: every fragment occurs exactly once in the actual
+post-metadata production body, including both admin, both renderer, usage,
+historical-reference, group-validation and activation fragments. No private
+function body was returned and no production mutation occurred.
 
 The root also identified production-only row/edge count assertions that reject
 legitimate fresh seeds. Keep exact production evidence in deployment preflight;

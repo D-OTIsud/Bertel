@@ -1,0 +1,2804 @@
+{
+  "format_version": 1,
+  "scope": "complete-private-editorial-postflight",
+  "project_ref": "ryycrdhlkmzpxwwwwupy",
+  "transport": "production via Bertel Supabase MCP; SELECT only",
+  "release_id": 25,
+  "capture_started_at": "2026-11-10T10:04:51.950Z",
+  "capture_completed_at": "2026-11-10T10:11:59.981Z",
+  "query_manifest_sha256": "3ddc69ea9596605cddea487f7c19b02dd4f4e3894ff8ecf783cce24ce8e09163",
+  "source_workspace_sha256": "af2a53f11287adcb1838a648a6ea9564069bf7f951aa8f9d42190f032b18114e",
+  "legacy_input_sha256": "3b0f1af0df1fa70c972132a585f1dcfea2bd7f7d97b48de34d1d9f623d77f1e4",
+  "review_inputs": [
+    {
+      "file": "accommodation_family.json",
+      "sha256": "4f16a19b406545f0365bbb21149666645c8fc8768128e3ade01e6fffaf7667e5"
+    },
+    {
+      "file": "accommodation_type.json",
+      "sha256": "4fbb80a86b23c059ceb434b35724b0278601f2022afbc2d1a59df3df34ecbac0"
+    },
+    {
+      "file": "accommodation_unit_type.json",
+      "sha256": "df32d62cc28ee24cd405d475f27844303014610b1c89b43e02560e8962a97656"
+    },
+    {
+      "file": "activity_type.json",
+      "sha256": "b7ca4245352b753726269e9c42471b745510eb9e05bcb442b8b8e88a547ecf92"
+    },
+    {
+      "file": "allergen.json",
+      "sha256": "53d5cbd23a7928fbae34b3816e3d2c958b77bc41dc5a9249fb16866a0e5f873d"
+    },
+    {
+      "file": "amenity.json",
+      "sha256": "a63fe755b0ffb22f325b7cb460347d848a77f3046be61f532002f44a0bbd3281"
+    },
+    {
+      "file": "amenity_family.json",
+      "sha256": "93c9fa15cc250bcdfcf00149368fa0f37e32dad235d7fcfcb899f42784d63d43"
+    },
+    {
+      "file": "assistance_type.json",
+      "sha256": "5a64769fed52bc1e2e98a02a7d0ac14e57337f26cd1f3cf35c75c8e788870d62"
+    },
+    {
+      "file": "bed_type.json",
+      "sha256": "321792ba83dc2d7ab662c80ba1ac0e45f73dc10f02390c44fcf767dc10c89813"
+    },
+    {
+      "file": "booking_status.json",
+      "sha256": "fe229be48f5b312c85e0379bb6b9442734cee358e72818d4c6f539f6a2f7205b"
+    },
+    {
+      "file": "classification_scheme.json",
+      "sha256": "df056b9c2d12e61aada6a1b66933ea8e80a3ffbc2bb7933c15da23f1d4ae025b"
+    },
+    {
+      "file": "classification_value.json",
+      "sha256": "ff8ea066b55dc25914b2a646a39cdc32b2b4cca0b77f51e3aa8d32d779d08ebb"
+    },
+    {
+      "file": "client_type.json",
+      "sha256": "7f63a0c0140d1668fb39c99198d9fb17003609915adf3736eef1dabe65fe4fcf"
+    },
+    {
+      "file": "commune.json",
+      "sha256": "311e8eace633dcd4d025f61e6b16939746116db0e2a7a644b6598969f28ebaf9"
+    },
+    {
+      "file": "contact_kind.json",
+      "sha256": "1b1193d97cab546991d3dbff40ea2e01cad2df9717ee58272fcbadb89336e089"
+    },
+    {
+      "file": "crm_sentiment.json",
+      "sha256": "55fa5098c72599e12163e9c7fa76fa785530717071fabfc54069df3afc64a4f4"
+    },
+    {
+      "file": "cuisine_type.json",
+      "sha256": "0f49432268e142ac9ab541e7d12fe9ce14923c520c8ec82d6395445178c48641"
+    },
+    {
+      "file": "demand_topic.json",
+      "sha256": "8f7a04a001488eeb7871fa6caa37d2336b0d588114b42ff940e2b02c24982313"
+    },
+    {
+      "file": "destination_type.json",
+      "sha256": "f76857573ed9540b46f73ba54dfa66f7e4e082613eaf1d42bf88f5d8e2c6a11a"
+    },
+    {
+      "file": "dietary_tag.json",
+      "sha256": "499035ea1d32273238382f273bd75ca15e526075945f43bca6627cb63235c345"
+    },
+    {
+      "file": "distribution_channel.json",
+      "sha256": "563859812ec02c95cd4c0de895d57babd2a87074fbe989c580eff9ce56bdd116"
+    },
+    {
+      "file": "document_type.json",
+      "sha256": "845ff403befb45c5bf3e4d624cd7f9e7e8fb0648ce0dfb12c08ff9035258b3a9"
+    },
+    {
+      "file": "environment_tag.json",
+      "sha256": "d1ba82064efa729ad60754cf8434a4f85a7d903697503a1101689752bf3c0512"
+    },
+    {
+      "file": "event_type.json",
+      "sha256": "55bb74cab286349bddc2f2d5c74f9a35002125b3c26a78e2ed8a85ebe007d811"
+    },
+    {
+      "file": "feedback_type.json",
+      "sha256": "56e0a36e04306fcc806bb42a620e5b103d98ba239531228d9fb209e0ad15399c"
+    },
+    {
+      "file": "insurance_type.json",
+      "sha256": "76d8cc6fba6667a7113e9f7c4d590414cac26b5ea67a5436d04a8c072fc143ad"
+    },
+    {
+      "file": "iti_difficulty.json",
+      "sha256": "cbbe8b802d1b8ec21f19fde87481f8f0a9154ed3fd24ad98dc8d3820519eaae0"
+    },
+    {
+      "file": "iti_open_status.json",
+      "sha256": "85b10fe950475aa7958d26d441a1f8b39a45b333f947c9b68eee93249608aeb0"
+    },
+    {
+      "file": "iti_practice.json",
+      "sha256": "c4df5688030556fb322480f7509cef947bd1810fce6df4a3d78433f9c1a2c667"
+    },
+    {
+      "file": "iti_stage_kind.json",
+      "sha256": "c39c6338e5775281ee6f646b72ad0cb142ee0efc98683c7ed627083c6ff06110"
+    },
+    {
+      "file": "language.json",
+      "sha256": "079246480fc8709fcf2924c22a2b7eda6ddb70d2af859b2d2b59f72c00bce8c5"
+    },
+    {
+      "file": "language_level.json",
+      "sha256": "9cf131896ea44cd0a400fdbdf1e49e7535fa69fa3eb9de821206a1fd9c4bdfac"
+    },
+    {
+      "file": "media_tag.json",
+      "sha256": "c9e86a1ede86aa15f1334775912be7622e1986288d110301b6b7d036be91ba21"
+    },
+    {
+      "file": "media_type.json",
+      "sha256": "b027678bba9bc04dffe223b448ba224c93c4be1051d2fa2715c4232496814b91"
+    },
+    {
+      "file": "meeting_equipment.json",
+      "sha256": "46f07895ab5efb596bc7779be858690ba62b319fcdce6037da6beeb771fd3421"
+    },
+    {
+      "file": "membership_campaign.json",
+      "sha256": "53fc44b6aa390f92e439343ac76a3523640d5583030a89fd2b2e1504ee61c53b"
+    },
+    {
+      "file": "membership_tier.json",
+      "sha256": "f286a1bb7169332334a546ebdbeecf7151d91473114b2667836584fea841c3a3"
+    },
+    {
+      "file": "menu_category.json",
+      "sha256": "9a9bc3428b9a01d397c2d831dcf959940fa52bb3567e81712224c7debf050414"
+    },
+    {
+      "file": "mood.json",
+      "sha256": "c04bb88dfc6876353bc540a64e96146c5a4df730de6acaba78e2318e21d1aa58"
+    },
+    {
+      "file": "opening_period_type.json",
+      "sha256": "a62beb8d17f6b7cb750a6555f5624df0714fe4eaafda7188494358215a82b421"
+    },
+    {
+      "file": "opening_schedule_type.json",
+      "sha256": "df61092780f9a7b98adf1d40ef0c61df1a8faec556d9ec33efb88886c2aaa0cd"
+    },
+    {
+      "file": "package_type.json",
+      "sha256": "8aff52d3bf7ebc5f4521084515c9d0eb1a503583bd486b3a1f5359aa40a2930b"
+    },
+    {
+      "file": "partnership_type.json",
+      "sha256": "56e80a834a66818e82c72fba1bab9947b44bbb4e240b77038349718925f1a680"
+    },
+    {
+      "file": "payment_method.json",
+      "sha256": "6045c76e98608236ac585d4ade4ad3cd999f1d12e542a2dfbf59dd96a5f8048d"
+    },
+    {
+      "file": "price_kind.json",
+      "sha256": "522c5cefabae05d949bf8b97e5a5386568436195d6f0ad30d59da43a741c6323"
+    },
+    {
+      "file": "price_type.json",
+      "sha256": "af1128125d99e7edd7bb03b4035459fde528776a7c3b8d0062b7f4d804f0c09b"
+    },
+    {
+      "file": "price_unit.json",
+      "sha256": "6c704922b5601076b8fd941003305143f2af580bb06e5c2b160cfcabd96e829e"
+    },
+    {
+      "file": "promotion_type.json",
+      "sha256": "c72f26a61993cfb8540c03d960c86f25916ab716ddda55bb8676be65883da44c"
+    },
+    {
+      "file": "room_type.json",
+      "sha256": "7e156ba142334a7ee0234ffde8e1025492f1443ea70516f7da4ce9a41265a808"
+    },
+    {
+      "file": "season_type.json",
+      "sha256": "f0def37a233a1c68e0243d07b7823cf003986321fdcfb119b75d0a31031e9539"
+    },
+    {
+      "file": "service_type.json",
+      "sha256": "48ee99851a232e3fd39b3a574cfd5bca3390708122950fd36eaf3303f7607f7d"
+    },
+    {
+      "file": "social_network.json",
+      "sha256": "bed37f169f83dcf82c1d83dc002921c88a637b46b837db68a5a99f652be8ca8b"
+    },
+    {
+      "file": "sustainability_action.0-179.json",
+      "sha256": "ef23b1113155d25373fcf5c30e5ecb1d544adea2d11dc480a3652dd24a47fc3a"
+    },
+    {
+      "file": "sustainability_action.180-238.json",
+      "sha256": "2954bffa83b614bd417efa2c8a0fb3c204a42340a571048d9bef32b971051ed6"
+    },
+    {
+      "file": "sustainability_category.json",
+      "sha256": "75b9a2df974b7cb886db18372a21abd8269d1ec38e03521321201df527bac691"
+    },
+    {
+      "file": "taxonomy_act.json",
+      "sha256": "8f77e61e74199f4d533c5758cba18af9045cd47b5e95f837c1c0cc59ca839bd9"
+    },
+    {
+      "file": "taxonomy_asc.json",
+      "sha256": "a4ce0f5014ec8b3dd275a3d68b36b6d844e6032d5e445b0bb3c05dc67902bb4f"
+    },
+    {
+      "file": "taxonomy_camp.json",
+      "sha256": "e9cdd62c8246d3144ac03fb4dcf000d8c2db8278a7c9cc4efe1e824bad95bbde"
+    },
+    {
+      "file": "taxonomy_com.json",
+      "sha256": "aa64535ab39d0345ea2884724425aaef4187559839df09c832777e353fcd4b57"
+    },
+    {
+      "file": "taxonomy_fma.json",
+      "sha256": "1a6b8b9ff9ac3a8ae6664c4b70689399d0d37127257abe99ed0ba4701e042315"
+    },
+    {
+      "file": "taxonomy_hlo.json",
+      "sha256": "3766170e8b27d0d922cee3815e6cffbd171bea04ce7389efb52c23ebe0ebbccb"
+    },
+    {
+      "file": "taxonomy_hot.json",
+      "sha256": "5c7e831c94be60580bed7dae3a657f4fe199ad3a7598677e80ef77573830b23e"
+    },
+    {
+      "file": "taxonomy_hpa.json",
+      "sha256": "e959a5f3ee770c69924ae3620d2bda7da9aab4c3cdd3847b87a577664e3889b1"
+    },
+    {
+      "file": "taxonomy_iti.json",
+      "sha256": "3e24d86ddb3143e791782a845bf35df4de460065857d77109d343ee67e613648"
+    },
+    {
+      "file": "taxonomy_loi.json",
+      "sha256": "7b6ae9c172cb2cf7710f8509cca761da7542df28db50c9c5360763555bc635e7"
+    },
+    {
+      "file": "taxonomy_org.json",
+      "sha256": "031b21472626bbaf8b959917dfbe7e6cd548b30adafc9253d56b69f78d073141"
+    },
+    {
+      "file": "taxonomy_pcu.json",
+      "sha256": "32d5796f5c50f21f98679256e9d8a35230dbae7f3b39a1bf85760133731860a9"
+    },
+    {
+      "file": "taxonomy_pna.json",
+      "sha256": "b1e539b21b7cfc07243430dc22065897ffcf7e423fbdc1a0953cdee09dbd5014"
+    },
+    {
+      "file": "taxonomy_prd.json",
+      "sha256": "176e7c0d899152505e78f5ffc9a21f04946a9551f330d38274a4682ccac9da6c"
+    },
+    {
+      "file": "taxonomy_psv.json",
+      "sha256": "52fe94a24827abef21ad3e3292519ccb643be66d548c6076af87bf212b4637dd"
+    },
+    {
+      "file": "taxonomy_res.json",
+      "sha256": "cb50213a69cab860145f5f548c2af6d56a5b92dc82964fc64fa2820832163f01"
+    },
+    {
+      "file": "taxonomy_rva.json",
+      "sha256": "eb7a34efe1770ae7935e9ecbdc904fd2c61d9faa995c0de86b29af87ddbd4e68"
+    },
+    {
+      "file": "taxonomy_spu.json",
+      "sha256": "6ad3e7807e45402c0b2ebbd719faab6cf644d219d9688eb1ababc928a9486eb2"
+    },
+    {
+      "file": "taxonomy_vil.json",
+      "sha256": "2e2f3ff666cc204d4d0da38a95d78400e168c6cd46ca4f4c80534015feae003e"
+    },
+    {
+      "file": "tourism_type.json",
+      "sha256": "f08989ff47695968ddfb8ecce19f13cfa2055a89de4d75deebe7805bf4481abf"
+    },
+    {
+      "file": "trail_link_role.json",
+      "sha256": "6c7dba9446b09e82a2e2a3051d73b1734ff83b79639a649d1f68fcf5bac16f08"
+    },
+    {
+      "file": "transport_type.json",
+      "sha256": "5089649cc8d55a6dd296fd710c999339a4c1eed2f2da9540012af62e76e07605"
+    },
+    {
+      "file": "view_type.json",
+      "sha256": "d3ba7b07988d45b6f42186ed100be3f3ac5f812bbedbd49c0991e8b7a3e7ae98"
+    },
+    {
+      "file": "weekday.json",
+      "sha256": "7ead742e9cbf4bdb340c3ea60e1aee5465b4f21c17ba4d5d1e9442aea54d21da"
+    }
+  ],
+  "compared_fields": [
+    "concept_id",
+    "domain",
+    "context_key",
+    "code",
+    "qualified_code",
+    "source_kind",
+    "source_key",
+    "uri",
+    "name",
+    "description",
+    "name_i18n",
+    "description_i18n",
+    "parent_concept_id",
+    "lifecycle",
+    "assignable",
+    "valid_from",
+    "valid_to",
+    "labels",
+    "notes",
+    "mappings",
+    "relations",
+    "replaced_by",
+    "broader",
+    "narrower",
+    "related",
+    "legacy_search_terms",
+    "preferred_labels",
+    "definitions"
+  ],
+  "excluded_derived_fields": [
+    "source_fingerprint",
+    "source_fields"
+  ],
+  "normalization": "JSONB typed equality; unordered semantic arrays retain multiplicity; only notes/mappings source absent, JSON null and empty string normalize to JSON null; legacy arrays retain exact order.",
+  "queries": 152,
+  "checked": 1477,
+  "legacy_nonempty_checked": 39,
+  "different_concepts": 0,
+  "complete": true,
+  "results": [
+    {
+      "group": 1,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 2,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:04:54.242Z",
+        "query_sha256": "0b45b75c56f6eb347b5e75a0c3356508f60bc661f8394ea9dabae7f65cf6b370"
+      }
+    },
+    {
+      "group": 2,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 4,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:04:51.950Z",
+        "query_sha256": "cbd0170609a6c9c9490830dccc95ec069573284e4b5cc047231b239ac15e1d93"
+      }
+    },
+    {
+      "group": 3,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 10,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:04:53.463Z",
+        "query_sha256": "52c4a6cfc4964da85ff03a2c587b65a0916d0674e72558b04440b39b40559159"
+      }
+    },
+    {
+      "group": 4,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 8,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:04:52.676Z",
+        "query_sha256": "72c2eb52a8fc05057f1ec8201a0dd319fe306a4780ae725d563a81735542bec0"
+      }
+    },
+    {
+      "group": 5,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:40.462Z",
+        "query_sha256": "39962677be891279b88fc51e6eccd4fefe6624e73fbf355c63890c30aff320d4"
+      }
+    },
+    {
+      "group": 6,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:39.732Z",
+        "query_sha256": "d8895e1917017dd8045696aa226df06686565ab620b796782555f300b7b54fea"
+      }
+    },
+    {
+      "group": 7,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:41.457Z",
+        "query_sha256": "ade39da4c34d822d5953caf6ea9f08cdcb06f5f211a46fa7f8a612696c479318"
+      }
+    },
+    {
+      "group": 8,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:42.223Z",
+        "query_sha256": "f7003a5f9923ebdce734b3760f786a10846f868ae91e0b9090a5a516c097f783"
+      }
+    },
+    {
+      "group": 9,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:46.463Z",
+        "query_sha256": "826bee5d8a0bdbf8fe5f9a75e0c941c3bcbbd36d5b7679d47b7e833ee2e5727e"
+      }
+    },
+    {
+      "group": 10,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:47.696Z",
+        "query_sha256": "18d5ac58188361e0ec6d1cca68a085503c38fa9066beb31c563e620a4d3067dc"
+      }
+    },
+    {
+      "group": 11,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:45.679Z",
+        "query_sha256": "87810935722513ffcc31d23db9836f4570351a98815d5063f8177284f4f7786a"
+      }
+    },
+    {
+      "group": 12,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:52.201Z",
+        "query_sha256": "768819aa3e7b6f95fad75e099b2d282adeae651e87ae9e28a60a3ac02ac95e9c"
+      }
+    },
+    {
+      "group": 13,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:58.235Z",
+        "query_sha256": "dbba79cef8ac235e9eb080efc740aea60130bbe12368e52fd5402c121ea546b0"
+      }
+    },
+    {
+      "group": 14,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:55.891Z",
+        "query_sha256": "cc81fa6c03b1c66e946b17dc72eda8014ed7db31400b53f068bbaeaa6282257a"
+      }
+    },
+    {
+      "group": 15,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:57.116Z",
+        "query_sha256": "f2cdf4ee6783317c847b9f7fc047b87cc3f0e4096ee9d65e837500a002f0fd7f"
+      }
+    },
+    {
+      "group": 16,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:05:59.479Z",
+        "query_sha256": "cb0098901d76154209c7d29e874a5ecb95a4091666b27dc866d08bc095c347ce"
+      }
+    },
+    {
+      "group": 17,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:05.817Z",
+        "query_sha256": "dccf11be213772e01e835e291071dfe764091e8ec37f6e8495b6e7bc3447e024"
+      }
+    },
+    {
+      "group": 18,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:03.372Z",
+        "query_sha256": "99c0a7128dd168de4f43525c26b200491bd5e28f1f8ce25095a3ff360ba31fba"
+      }
+    },
+    {
+      "group": 19,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:06.669Z",
+        "query_sha256": "6692ed0a35818dda92b5d4dabdb13ea5b79681011f89ebb11f6b770e8837ade5"
+      }
+    },
+    {
+      "group": 20,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:04.877Z",
+        "query_sha256": "fd6b3a9c44bce8c9b1f0f3342b420ac02a13c34ce06e5e6cb7238ff38fe5c1fd"
+      }
+    },
+    {
+      "group": 21,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:11.700Z",
+        "query_sha256": "1fb105a0950459bab15a9a1ca9cf528e059f5188adf843294cb810bf51556e1d"
+      }
+    },
+    {
+      "group": 22,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:11.008Z",
+        "query_sha256": "718e6033b11c0abe97480d75564fa27fb694167e2e7acd1eb067e28be61c29b2"
+      }
+    },
+    {
+      "group": 23,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:12.605Z",
+        "query_sha256": "a193ac91f6dd96549209d2c55ab0fcd56081a07defabae5cf94c2336cc6aa4d4"
+      }
+    },
+    {
+      "group": 24,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:10.253Z",
+        "query_sha256": "8401167358d9f33546017a72fb0c76f42fd964183cb478613a0863b30ce3a73c"
+      }
+    },
+    {
+      "group": 25,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:24.796Z",
+        "query_sha256": "19329b6a99b6abfe9235b680dd49a772e2783cd679f48684bea0d34815990f42"
+      }
+    },
+    {
+      "group": 26,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:25.521Z",
+        "query_sha256": "fad92b1f20b173c75707c80c09d19f35ab3a666289adee21e470308f03b080e5"
+      }
+    },
+    {
+      "group": 27,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:21.677Z",
+        "query_sha256": "5498806ad2816005c81889200516b790e7255355e8faa30d2714d4ff6d3a9f7c"
+      }
+    },
+    {
+      "group": 28,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:16.347Z",
+        "query_sha256": "b1ad8936e2b8518e7da09d5e44d986fa074ca78044925eb4cad11f311197c095"
+      }
+    },
+    {
+      "group": 29,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:30.905Z",
+        "query_sha256": "0e1df7f4b04533b19852aa4680a1c2bdef1691eca4e1b9e1cfd76cead04f297b"
+      }
+    },
+    {
+      "group": 30,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:29.364Z",
+        "query_sha256": "efeaf1763fb84f28429bb5f2b1531eb361cc7e2d4f1a836001a087491fbbded9"
+      }
+    },
+    {
+      "group": 31,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:30.072Z",
+        "query_sha256": "1a2c0753e1a5790333e4d08b45ebc5dbf7f6b93d6f7ac32d29e7f94745148e20"
+      }
+    },
+    {
+      "group": 32,
+      "status": "checked",
+      "checked": 8,
+      "expected": 8,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:34.438Z",
+        "query_sha256": "ab2dc5f32257d025efa907246618a3e5c4fab444b4d125f5b0e0697f0d710f22"
+      }
+    },
+    {
+      "group": 33,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:40.189Z",
+        "query_sha256": "2fc3186ddc22e02c36f5414eafd33bf529e1d9dbe153093f846c973469e89937"
+      }
+    },
+    {
+      "group": 34,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:40.914Z",
+        "query_sha256": "2e7c388874ed5fcad2be65dcf1314e5a0c09e8d840b5d07f8b13478bd18b966e"
+      }
+    },
+    {
+      "group": 35,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:39.435Z",
+        "query_sha256": "61011b75dc8d641e2cc4754ee3f2d3fb4066a3eb432d77cb1de8fab98c9935eb"
+      }
+    },
+    {
+      "group": 36,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:38.397Z",
+        "query_sha256": "00773f587fd28ba3df1a63388d90a6c56d2f3c905fe900d9764680ce9cc3a4f4"
+      }
+    },
+    {
+      "group": 37,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:45.704Z",
+        "query_sha256": "cdec62b90f49894212cd30ce16f5eb1d6bfa962245eb0cccc8088796fd80abf1"
+      }
+    },
+    {
+      "group": 38,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:44.984Z",
+        "query_sha256": "49be491a6627d7cc50261c0377f956a8cd31e18a376ab60db5ffcc70a3a85ce4"
+      }
+    },
+    {
+      "group": 39,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:46.762Z",
+        "query_sha256": "c91bf90ad4bf57b8259240e5f8ebbbf2dcc76e37288a8399655f50645f3d132e"
+      }
+    },
+    {
+      "group": 40,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:50.298Z",
+        "query_sha256": "ccbc6048912cbcad911d016cb6f69f6ddd2155d059e518aa6d12a9f4cdc847c1"
+      }
+    },
+    {
+      "group": 41,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:54.913Z",
+        "query_sha256": "9219fa064a3674fee0398725ea7989ef27249b68443868933e1ef7698d97b155"
+      }
+    },
+    {
+      "group": 42,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:55.669Z",
+        "query_sha256": "dfabfbad8c3f5a22e8afddd39eb904985fc075c281558b46b575c5459b6080ad"
+      }
+    },
+    {
+      "group": 43,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:56.414Z",
+        "query_sha256": "f020ce398c943600c3acf541fed3cdf8fefd7455e1c3ba4588c48032a41fe269"
+      }
+    },
+    {
+      "group": 44,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:06:54.266Z",
+        "query_sha256": "dedaa714799b60966fc945678e5ef167eb8d58bd5fcb6cd0caae3b051ee3de47"
+      }
+    },
+    {
+      "group": 45,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:01.641Z",
+        "query_sha256": "4f14c5fa84a4a20d7c050ea063cf3225bd9a7ebe5c7d64e0faac716966eff1ad"
+      }
+    },
+    {
+      "group": 46,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:00.224Z",
+        "query_sha256": "5dcc969744ba772de1731933dc97c4954ce73f56573c8a46732e039397854585"
+      }
+    },
+    {
+      "group": 47,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:02.430Z",
+        "query_sha256": "6f3d61c78f4fa4d0c96bf4a2e74edf09b0024a21c6f7a87210d2008f6d010813"
+      }
+    },
+    {
+      "group": 48,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:00.941Z",
+        "query_sha256": "e70f5c8c07f9e0e6d97b9f88d335ab6eceedbe3deb3942a6f8ea3a1adaf4789f"
+      }
+    },
+    {
+      "group": 49,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:06.106Z",
+        "query_sha256": "c04718a38b4fc54bfc1b7d55412f2a23e7194900c9d61b20ff58a1e94965b8c4"
+      }
+    },
+    {
+      "group": 50,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:08.088Z",
+        "query_sha256": "f1f134f16e49ab1d0b09ef6e160a8d14b325ca817f0443701502f8c322f4474c"
+      }
+    },
+    {
+      "group": 51,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:10.329Z",
+        "query_sha256": "c590399ac1efb451281ea09808dd3a3ec4a7fce8053fff4830efd009e2725523"
+      }
+    },
+    {
+      "group": 52,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:07.036Z",
+        "query_sha256": "93e582846957ad5e3d8348705c2df9c4cd9d5be9b839f45f55f349892d2d92f5"
+      }
+    },
+    {
+      "group": 53,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:15.953Z",
+        "query_sha256": "5a0706a3d34ffebb626f29142c6c6fa94d11a908f85c5a3c99b14d73b3b9244b"
+      }
+    },
+    {
+      "group": 54,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:15.181Z",
+        "query_sha256": "95135cb718cf45afbf82102e019dd5562b801426dacf554b35a35aa71187b7a4"
+      }
+    },
+    {
+      "group": 55,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:14.425Z",
+        "query_sha256": "a9b0004ffc8ef9a9feac7d9cc5715c8c954a359ee3b126e42969f0f0098739c1"
+      }
+    },
+    {
+      "group": 56,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:16.636Z",
+        "query_sha256": "a1dd51c49301e1a03e16eb419994b813f1fd589ec5b4cd00a0fa5122e6be3ac4"
+      }
+    },
+    {
+      "group": 57,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:22.172Z",
+        "query_sha256": "4b89a571f767560fd6a0d2a41a2016d55f947df48db0bd67d12c62b8c5dfb56a"
+      }
+    },
+    {
+      "group": 58,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:23.063Z",
+        "query_sha256": "02136c6b07f312c17891b68fc017a9012c7a62b473937d71a74647038245548c"
+      }
+    },
+    {
+      "group": 59,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:21.249Z",
+        "query_sha256": "bc217d30de836c696f33404267e5b8b9a6f32f067ee7b5149d4b774473a2c6f5"
+      }
+    },
+    {
+      "group": 60,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:20.461Z",
+        "query_sha256": "35fe75fdc329c4ae20ca3bcf8ebf8fb3950ba064ef14b38c1b857af860fd5b20"
+      }
+    },
+    {
+      "group": 61,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:36.479Z",
+        "query_sha256": "5008cc935fabdcb26feedf1182816ae5e21be1aa7a5e913b2e6cce03f22c9f4a"
+      }
+    },
+    {
+      "group": 62,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:27.317Z",
+        "query_sha256": "6b3772b737c19870406c0713f6a51d2ebeaf5ae36ac072010d38b007927064c0"
+      }
+    },
+    {
+      "group": 63,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:37.234Z",
+        "query_sha256": "22e7c1156656065285d6312153a303b9edc474799e3f910d684b039d48a9e596"
+      }
+    },
+    {
+      "group": 64,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:35.640Z",
+        "query_sha256": "bd64c95ff6f678c8fdb2752ff9a6ab087fe5b14707e7b3ee720edcfc1e5652ca"
+      }
+    },
+    {
+      "group": 65,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:45.095Z",
+        "query_sha256": "fa6617b3220a9cea6234ac4ef17e5e593331e07abfdbe3be62876d1ab0f6afb3"
+      }
+    },
+    {
+      "group": 66,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:44.274Z",
+        "query_sha256": "8b22530721d070838e49d5c9001919253d5468a7aecf1be0e8df1419362502da"
+      }
+    },
+    {
+      "group": 67,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:45.826Z",
+        "query_sha256": "0c7eae39335122c734cb4c18c1b83fa9d051ac3e29b5d38df0efb80dbf2cae78"
+      }
+    },
+    {
+      "group": 68,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:43.204Z",
+        "query_sha256": "70cddace399389f114d43bdbae04a9693ee28a567d3bbb4190c1a2bec6e6573d"
+      }
+    },
+    {
+      "group": 69,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:52.441Z",
+        "query_sha256": "ebe051ef23f138ac8f391bc9c8ddf1f90ddf4c5e5363fed20ec3e1ebaa399cd6"
+      }
+    },
+    {
+      "group": 70,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:49.992Z",
+        "query_sha256": "aac2ae6c169fcb5a450937fbc07efac2246f94cae21f5b968ceebda11917622b"
+      }
+    },
+    {
+      "group": 71,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:51.592Z",
+        "query_sha256": "e4299ab8dc889610fb47ee4f82f1d207d26e2307cf4075f24ccf1892cb78535e"
+      }
+    },
+    {
+      "group": 72,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:50.858Z",
+        "query_sha256": "98c60d5ad7f315638fed7d97dd013758d92c0ae05de9ac8e4bcf305ea772226b"
+      }
+    },
+    {
+      "group": 73,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:58.978Z",
+        "query_sha256": "8cac35a46bc0f12c32a59fc7710af266aad2c85f094356d3ef78d19a2ec333b4"
+      }
+    },
+    {
+      "group": 74,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:56.997Z",
+        "query_sha256": "5dde10f21cb2f9f41654cddb3629a2738d0badf362147c0ba7970096a583c2b5"
+      }
+    },
+    {
+      "group": 75,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:58.177Z",
+        "query_sha256": "6965dbd149697be3b2db3d06968f52b8cfdccbf5747c450e7ed668b215d8b1c3"
+      }
+    },
+    {
+      "group": 76,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:07:59.953Z",
+        "query_sha256": "99a4babd453f7b820df0c94b46a3760cd973d6c55914c50e8b278f7441a45d1f"
+      }
+    },
+    {
+      "group": 77,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:13.089Z",
+        "query_sha256": "2f3f0fd118fbbeaeafe34f805fa256580e22221d3c0239e173bb8e032782c392"
+      }
+    },
+    {
+      "group": 78,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:04.242Z",
+        "query_sha256": "fa078bcfbe394be25cf834262ed5075c5db4e2c2dfa01219bfb712e7f372cc40"
+      }
+    },
+    {
+      "group": 79,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:03.558Z",
+        "query_sha256": "7fd69bb3243c51359bcf253d4a522257ce81dea4e537c56374c04511fc21c798"
+      }
+    },
+    {
+      "group": 80,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:07.733Z",
+        "query_sha256": "d89fc8b4e18f29181457dfc97ea05d784d17f439401e1c9b522ca3c78b4c9a02"
+      }
+    },
+    {
+      "group": 81,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:18.730Z",
+        "query_sha256": "6604468293c1bb41f9ff7ef6a493e7487937cf2c753c4c0d9d0c656334d98a52"
+      }
+    },
+    {
+      "group": 82,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:19.500Z",
+        "query_sha256": "bd2589793c80de5461feb71d2eb62c8c98d1664d40ccaea805e22878c73600d9"
+      }
+    },
+    {
+      "group": 83,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:16.997Z",
+        "query_sha256": "d0b8ba08db962c19bde9135d8fb4ff5de12badbf194628bf2d420adac907ecac"
+      }
+    },
+    {
+      "group": 84,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:18.059Z",
+        "query_sha256": "087e81c5f7b6637a82b6ea457127cff34c6bfa5a0ad19a8546a910ad9c6f540b"
+      }
+    },
+    {
+      "group": 85,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:24.914Z",
+        "query_sha256": "abc85e2d7a5a3bdd65bf87b6e8f23f53cb4748d2c9afdbfe9a82d6051ebaa629"
+      }
+    },
+    {
+      "group": 86,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:24.152Z",
+        "query_sha256": "329eed2ed8193ab2b349849d442bdba641530ab68eee5c8a18722bc1e83dff24"
+      }
+    },
+    {
+      "group": 87,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:23.290Z",
+        "query_sha256": "67b5ab9722a89934b625ce47fd0aacb088dffb450f9e8d8a4e18e83dc4af36a9"
+      }
+    },
+    {
+      "group": 88,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:25.931Z",
+        "query_sha256": "592b51a2a76b192f1998d9769548a22ffa249ba0457b1a241eeeab369ccf4374"
+      }
+    },
+    {
+      "group": 89,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:34.913Z",
+        "query_sha256": "60aaec305cb69d9e3ad4243a4e5a4b8710e516e18f8cd2b10064894e8d27fb05"
+      }
+    },
+    {
+      "group": 90,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:35.745Z",
+        "query_sha256": "5e6febabe789343947713edd0522597ca27b0360333d2b1fe38953e6eee6644a"
+      }
+    },
+    {
+      "group": 91,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:32.833Z",
+        "query_sha256": "abe21c5d23d19487753e2da8e7b1998f70aca459ca5cc9794703a59e7429d626"
+      }
+    },
+    {
+      "group": 92,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:33.696Z",
+        "query_sha256": "ba6c68ac67218e34f97227ddd8f7fbc28e2eb3c093fe4bf69adb7c83fb2317ad"
+      }
+    },
+    {
+      "group": 93,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:42.809Z",
+        "query_sha256": "0d1f645762da59e45c2c163826691561b277eb58952d9ad82b9b6b618bcca04e"
+      }
+    },
+    {
+      "group": 94,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:40.247Z",
+        "query_sha256": "81d4835d3a125dc24e72f69d5c53e35f0bc792bab0f4bc0bb780864c84478813"
+      }
+    },
+    {
+      "group": 95,
+      "status": "checked",
+      "checked": 8,
+      "expected": 8,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:41.943Z",
+        "query_sha256": "86a41fe4c7dc354d5441b7100e35c92d2739012540366646810137e2438f880d"
+      }
+    },
+    {
+      "group": 96,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:41.250Z",
+        "query_sha256": "ba76464336e7face9ad9cbea69ba82aa7ad603d57379a71f2d9d6f774a8207df"
+      }
+    },
+    {
+      "group": 97,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:51.935Z",
+        "query_sha256": "8b5e0739776a124cc02783765f718140c262acc399aabe6c3a91774431eeb56f"
+      }
+    },
+    {
+      "group": 98,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:46.682Z",
+        "query_sha256": "b5411f65f6ff65e9caf742e6e50257a643b0cdf057474bca205b82ecad146ce0"
+      }
+    },
+    {
+      "group": 99,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:51.221Z",
+        "query_sha256": "55107568cb09d30aa685fca2751f4c7f6b43e6c4fa646189636eca5f6a28b04f"
+      }
+    },
+    {
+      "group": 100,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:47.382Z",
+        "query_sha256": "88079513e8c390647e8b9daf4eac2ab2a8b1db98b3afbea9e83ce7e179094981"
+      }
+    },
+    {
+      "group": 101,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:00.322Z",
+        "query_sha256": "be6012ce32685cbe4a983815ec3ac12f818d097d5644e692c2b2d0ea4321b0b2"
+      }
+    },
+    {
+      "group": 102,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:55.769Z",
+        "query_sha256": "93f27462b4ad79d3a3ebeb3d136164db404afdfdfe84017625cd93ac8b7a7385"
+      }
+    },
+    {
+      "group": 103,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:57.492Z",
+        "query_sha256": "e9c0e11b466091b59190d61376ce3621c5ffd2fb6e8d2885ccd361cf59917e00"
+      }
+    },
+    {
+      "group": 104,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:08:56.675Z",
+        "query_sha256": "d1f616dbff8371fba7f6e9f23ff16b333378b6d99361b76c0ac66cd808c36295"
+      }
+    },
+    {
+      "group": 105,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:05.617Z",
+        "query_sha256": "8d066de92c7f8afffef0b58f20d75a09cb31e5948d2582bc2976676221e19ba4"
+      }
+    },
+    {
+      "group": 106,
+      "status": "checked",
+      "checked": 8,
+      "expected": 8,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:06.509Z",
+        "query_sha256": "5330651ca5acc82d75e5e93a5fbe1781185c1a6729956107edac1f345413e42e"
+      }
+    },
+    {
+      "group": 107,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:03.994Z",
+        "query_sha256": "85eeeebcdc6c9d03d4a96551434f5e94921332b6a33813e78e58534e229bb626"
+      }
+    },
+    {
+      "group": 108,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:04.837Z",
+        "query_sha256": "33b2bc604a95239f323749de5786cea3b9383d2c9f2b57ff27bec8d607dcc61f"
+      }
+    },
+    {
+      "group": 109,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:15.087Z",
+        "query_sha256": "41fb6e32d3447a3f4283e2a724843cb868d40c719ddd52bfc18c3dfb7f339a1f"
+      }
+    },
+    {
+      "group": 110,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:15.835Z",
+        "query_sha256": "9682a78bad5b5634740a9e81328052aab5066889aac738eb08db9e791002d314"
+      }
+    },
+    {
+      "group": 111,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:14.353Z",
+        "query_sha256": "d6fa68413ba3ac461818aae9687a4d96ffe0cb50d22081f50edf0a4826cb6250"
+      }
+    },
+    {
+      "group": 112,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:13.580Z",
+        "query_sha256": "8a0469f341f65ebb0d1a2efed5cbf8ae3c1897003f44fe928701d787eecb06e2"
+      }
+    },
+    {
+      "group": 113,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:20.819Z",
+        "query_sha256": "ce375e53e9cf163f39522bb0e089fc63fc40a3085d30915d99750b4029abbf74"
+      }
+    },
+    {
+      "group": 114,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:20.038Z",
+        "query_sha256": "bc1a3949a39f7c696c96308eff062fe84ac9c6b66b4dad18b12a054456c9c792"
+      }
+    },
+    {
+      "group": 115,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:22.049Z",
+        "query_sha256": "2077ac86e83413eeab82ebc0db2d492929a2ff5fd0bd9dc4cacd9db05084b666"
+      }
+    },
+    {
+      "group": 116,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:22.850Z",
+        "query_sha256": "8a7c542675e7e12bd46ec61748e150cdc27748c439a535bc79311b9a47bde6fb"
+      }
+    },
+    {
+      "group": 117,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:31.821Z",
+        "query_sha256": "b33b48d71182902621d59bb2c8859d0e228b8ba80ebb4c69e292910adad97ddc"
+      }
+    },
+    {
+      "group": 118,
+      "status": "checked",
+      "checked": 8,
+      "expected": 8,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:32.583Z",
+        "query_sha256": "ea6bbfc492ac8d368b72287116a638826838922138ddf1fb57822216b14fa818"
+      }
+    },
+    {
+      "group": 119,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:30.890Z",
+        "query_sha256": "8f0b6a63e8f2396463031b31484f2c6514778505b9f61ee20662ce106baaf884"
+      }
+    },
+    {
+      "group": 120,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:09:30.064Z",
+        "query_sha256": "ba1b9f4a20daa32fa009f37f2ca186f98190f8e3bf5e638fc7510de57982b5ec"
+      }
+    },
+    {
+      "group": 121,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:10:39.158Z",
+        "query_sha256": "e883f51abfe50cc214f69f71815ade0432adeed080b7d0a99998a862ede4bd28"
+      }
+    },
+    {
+      "group": 122,
+      "status": "checked",
+      "checked": 7,
+      "expected": 7,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:10:39.175Z",
+        "query_sha256": "27e35ad73da4f9a130caaedd86c40af07826135287924d24a859c59a9dca138f"
+      }
+    },
+    {
+      "group": 123,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:10:39.192Z",
+        "query_sha256": "11a983b6a86f3c221bb6bd5318404389a439c93a017a4f4438a2695c0065a9d2"
+      }
+    },
+    {
+      "group": 124,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:10:39.208Z",
+        "query_sha256": "2b8125ad531dc4b7755f96ac84a89c24b49e8335778b8eef7c31cf5d39746e61"
+      }
+    },
+    {
+      "group": 125,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:14.892Z",
+        "query_sha256": "0c945a20089497b5f20d3492ebc77b3483ead354e7ab22d57daeb0c6b0c48e69"
+      }
+    },
+    {
+      "group": 126,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 1,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:14.910Z",
+        "query_sha256": "8b7b7493de5ed9c92f7a24b9b899d2b400ea3d012b568176de3c3f8f533a980e"
+      }
+    },
+    {
+      "group": 127,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:14.927Z",
+        "query_sha256": "94663c9d6da2219790dbc7ec8a5ef726a64e7ce22472df93495488bedb744a28"
+      }
+    },
+    {
+      "group": 128,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:14.943Z",
+        "query_sha256": "97a0973d0842939f24f9103edd684f81a621d0bc2b5f03c9c749cd109d3f5635"
+      }
+    },
+    {
+      "group": 129,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 4,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:23.717Z",
+        "query_sha256": "5816c7b2bf2963cb0a9e21a7f47b1cfac4fe87966250df87d87c8105bd790ff5"
+      }
+    },
+    {
+      "group": 130,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 2,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:23.735Z",
+        "query_sha256": "dc46063b927c2432a32c40cda2483cc7126bb0cf787f1a393b7b51bd8037f075"
+      }
+    },
+    {
+      "group": 131,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 3,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:23.752Z",
+        "query_sha256": "b471cd1558850d7a0303c31f54610dd461c017b871475e58121d267bac8146f7"
+      }
+    },
+    {
+      "group": 132,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 4,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:23.769Z",
+        "query_sha256": "ea584dfce42574c8e4a942644e9dec84463fddaeea974cf780c2f89676d5d100"
+      }
+    },
+    {
+      "group": 133,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:31.443Z",
+        "query_sha256": "4c96bc6985cc9d28ee90a3e0b88042aad114a821f366a15a9b23f3279de8a70b"
+      }
+    },
+    {
+      "group": 134,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:31.462Z",
+        "query_sha256": "c2df7221c06624c2c447b3dadccc08b22b1ce8bdab72c3f8cd3c4581322b9984"
+      }
+    },
+    {
+      "group": 135,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:31.481Z",
+        "query_sha256": "c27870d9cd6ee0e969e01eb6d47496f447cea0f82dd3f3b0e81d9abf2216986b"
+      }
+    },
+    {
+      "group": 136,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:31.500Z",
+        "query_sha256": "e53e4d47d39584017ef35a63c5411ad6ffa0c117beebcadb17f8ac67d0c5b20a"
+      }
+    },
+    {
+      "group": 137,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:38.720Z",
+        "query_sha256": "8116fb4dc7d6fc55cdafe95a397d7516a52f1d7bb3d6008c8c1e4a00d4c9ed44"
+      }
+    },
+    {
+      "group": 138,
+      "status": "checked",
+      "checked": 9,
+      "expected": 9,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:38.742Z",
+        "query_sha256": "c876e2cdf7b2d73ff59cc208989a7181e9112d712090b8914e2f4bcd6fec1075"
+      }
+    },
+    {
+      "group": 139,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:38.761Z",
+        "query_sha256": "a7fb3bbb9227092331f94ef9474bbb5f3fe939e4adad5cd6b1e30e74a6e11806"
+      }
+    },
+    {
+      "group": 140,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:38.780Z",
+        "query_sha256": "058941457ed49d0b160fb538291b82387dc9795a7aaa3ef3cd256980c041473d"
+      }
+    },
+    {
+      "group": 141,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:45.666Z",
+        "query_sha256": "9f16795880df67e64ff8503608f2264b81d7ac559cf107023cf6f36af3e08acc"
+      }
+    },
+    {
+      "group": 142,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:45.685Z",
+        "query_sha256": "dccd43a577c153705d056deaa46a3ca08c4b73b5488c5d4e0799e1f7ed7faa23"
+      }
+    },
+    {
+      "group": 143,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:45.703Z",
+        "query_sha256": "c7b09e055819f5b08616ec38d40a3b8bb2a3f26229d577090279029684a98108"
+      }
+    },
+    {
+      "group": 144,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:45.722Z",
+        "query_sha256": "e1a86f3b90fe9dd1cee1a956118bd1e3939513fe2037842e8e3fbc9f5d713add"
+      }
+    },
+    {
+      "group": 145,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 1,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:53.036Z",
+        "query_sha256": "ee9601e6f0c6b5da485f93d4ec7d6c56d312d822f4bbca97de9cf61d4029c46b"
+      }
+    },
+    {
+      "group": 146,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:53.054Z",
+        "query_sha256": "6c3714042144f61fb151284453d623faf126b4d16c99e2eec7ab4b8120778fe9"
+      }
+    },
+    {
+      "group": 147,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:53.073Z",
+        "query_sha256": "1e5ca46f149c316672c1841f40ee5f7275a7160908b7a41002d66235190f5473"
+      }
+    },
+    {
+      "group": 148,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:53.097Z",
+        "query_sha256": "010c8ec2adb8528d34ea5baace730feef5126ae505c37d0836710ac5e31c941d"
+      }
+    },
+    {
+      "group": 149,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:59.916Z",
+        "query_sha256": "ed2d3547be19a0eb43297d21509fdb830337366e5ae8aa4431698388d0ad40e2"
+      }
+    },
+    {
+      "group": 150,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:59.936Z",
+        "query_sha256": "6441013d794f94fb92c64e46a0decdc4023d0684f712baa2404bb092c793478f"
+      }
+    },
+    {
+      "group": 151,
+      "status": "checked",
+      "checked": 10,
+      "expected": 10,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:59.961Z",
+        "query_sha256": "39bf7761296906ca2145e5510068b3331680c0a1c490eeb8672ee6168f11b5e3"
+      }
+    },
+    {
+      "group": 152,
+      "status": "checked",
+      "checked": 8,
+      "expected": 8,
+      "mismatches": [],
+      "release_id": 25,
+      "different_concepts": 0,
+      "legacy_nonempty_checked": 0,
+      "_verification": {
+        "transport": "production via Bertel Supabase MCP; SELECT only",
+        "project_ref": "ryycrdhlkmzpxwwwwupy",
+        "captured_at": "2026-11-10T10:11:59.981Z",
+        "query_sha256": "5582e1b1c85ebbe5766c5fb66d64ff80b3a13973968d81838b586671f5f27db9"
+      }
+    }
+  ]
+}

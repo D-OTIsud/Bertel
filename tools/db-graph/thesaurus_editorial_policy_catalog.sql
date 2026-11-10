@@ -16,6 +16,8 @@ WITH scoped_functions AS (
  SELECT c.*,n.nspname AS schema_name
  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
  WHERE n.nspname='thesaurus' AND c.relkind IN ('r','p')
+), prepared_contract AS MATERIALIZED (
+ SELECT thesaurus.preparation_contract_registry() AS document
 )
 SELECT jsonb_build_object(
  '_capture',jsonb_build_object(
@@ -32,6 +34,11 @@ SELECT jsonb_build_object(
      'thesaurus_complete_editorial_definitions','thesaurus_public_target_lookup_index',
      'thesaurus_admin_rpc_timeout')),'[]'::jsonb),
  'publication_generation',(SELECT current_release_id FROM thesaurus.instance WHERE singleton),
+ 'prepared_function_contracts',COALESCE((SELECT jsonb_agg(jsonb_build_object(
+   'signature',entry.key,'registered_definition_md5',entry.value,
+   'actual_definition_md5',md5(pg_get_functiondef(entry.key::regprocedure)),
+   'matches',entry.value=md5(pg_get_functiondef(entry.key::regprocedure))) ORDER BY entry.key)
+   FROM prepared_contract contract CROSS JOIN LATERAL jsonb_each_text(contract.document->'functions') entry),'[]'::jsonb),
  'functions',COALESCE((SELECT jsonb_agg(jsonb_build_object(
    'signature',f.oid::regprocedure::text,'schema',f.schema_name,'name',f.proname,
    'arguments',pg_get_function_arguments(f.oid),'returns',pg_get_function_result(f.oid),

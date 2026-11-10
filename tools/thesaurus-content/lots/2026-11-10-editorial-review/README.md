@@ -1,5 +1,9 @@
 # Revue éditoriale du 10 novembre 2026
 
+Livré jusqu'à la publication 25 : voir le
+[reçu de production](../../../../docs/releases/2026-11-10-thesaurus-editorial-production.md)
+et ses 152 comparaisons sans divergence sur les 1 477 concepts.
+
 Ce dossier couvre les 1 477 concepts des 78 domaines à partir de la publication 8
 et de l'espace éditorial complet, dont 115 concepts absents de l'instantané courant.
 Les 38 valeurs dépréciées restent dépréciées. L'export privé de travail n'est pas
@@ -13,9 +17,9 @@ versionné ; son empreinte et ses comptes sont conservés dans `review-report.js
 - `review-report.json` sépare les données manquantes au départ, les corrections
   proposées et les limites des contrôles automatiques.
 - `french-names-delta.json` contient le complément validé de 16 noms français.
-  Sa `base` correspond au résultat prévu avant ce complément, après les 19 lots
-  opérateur déjà préparés. Pour cette livraison en cours, importer ce complément
-  après ces lots, puis valider, examiner l'aperçu et publier normalement. Les
+  Sa `base` correspond au résultat prévu avant ce complément, après le lot initial
+  de 1 449 corrections. Ce complément a été publié ensuite, par les étapes séparées
+  de validation, d'aperçu et de publication. Les
   fichiers `corrections.<domaine>.json` incluent déjà ces 16 corrections finales :
   une nouvelle préparation qui les utilise n'a pas à réimporter ce delta.
 

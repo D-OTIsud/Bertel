@@ -1,0 +1,233 @@
+{
+  "format_version": 1,
+  "scope": "targeted-post-publication-catalogue-comparison",
+  "release_id": 25,
+  "phase1_capture": "2026-11-10T07:59:30.195922+00:00",
+  "final_capture": "2026-11-10T10:11:17.808686+00:00",
+  "complete_catalogue_refresh": false,
+  "ready": true,
+  "checks": {
+    "generation_25": true,
+    "all_78_domains_preserved": true,
+    "all_definitions_required": true,
+    "all_four_languages_required": true,
+    "all_78_governed": true,
+    "public_exposure_unchanged": true,
+    "function_security_unchanged": true,
+    "tables_rls_acl_unchanged": true,
+    "no_direct_app_table_access": true,
+    "publisher_role_unchanged": true,
+    "public_renderers_unchanged": true,
+    "activate_definition_unchanged": true,
+    "activate_body_unchanged": true,
+    "facade_body_unchanged": true,
+    "facade_raw_source_unchanged": true,
+    "facade_timeout_30s": true,
+    "private_helpers_remain_private": true,
+    "all_13_prepared_function_contracts_match": true,
+    "publication_index_valid_ready_live": true,
+    "all_eight_native_source_guarded": true,
+    "all_eight_native_source_gates_enabled": true,
+    "only_expected_function_hashes_changed": true,
+    "only_facade_settings_changed": true
+  },
+  "function_hash_changes": [
+    {
+      "signature": "api.thesaurus_admin(text,jsonb)",
+      "body_changed": false,
+      "definition_changed": true,
+      "settings_before": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "settings_after": [
+        "search_path=pg_catalog, thesaurus",
+        "statement_timeout=30s"
+      ]
+    },
+    {
+      "signature": "thesaurus.apply_source(uuid,jsonb)",
+      "body_changed": true,
+      "definition_changed": true,
+      "settings_before": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "settings_after": [
+        "search_path=pg_catalog, thesaurus, public"
+      ]
+    },
+    {
+      "signature": "thesaurus.concept_document(uuid,boolean)",
+      "body_changed": true,
+      "definition_changed": true,
+      "settings_before": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "settings_after": [
+        "search_path=pg_catalog, thesaurus"
+      ]
+    },
+    {
+      "signature": "thesaurus.definition_errors(jsonb,jsonb,text[])",
+      "body_changed": true,
+      "definition_changed": true,
+      "settings_before": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "settings_after": [
+        "search_path=pg_catalog, thesaurus"
+      ]
+    },
+    {
+      "signature": "thesaurus.preparation_contract_registry()",
+      "body_changed": true,
+      "definition_changed": true,
+      "settings_before": [
+        "search_path=pg_catalog"
+      ],
+      "settings_after": [
+        "search_path=pg_catalog"
+      ]
+    },
+    {
+      "signature": "thesaurus.validate_document(uuid,jsonb)",
+      "body_changed": true,
+      "definition_changed": true,
+      "settings_before": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "settings_after": [
+        "search_path=pg_catalog, thesaurus"
+      ]
+    }
+  ],
+  "function_security_changes": [],
+  "newly_observed_signatures": [
+    "thesaurus.guard_prepared_truncate()",
+    "thesaurus.guard_source()",
+    "thesaurus.normalize_editorial_text(text)",
+    "thesaurus.record_owner_mutation()",
+    "thesaurus.source_write_gate()",
+    "thesaurus.take_source_gate()",
+    "thesaurus.take_writer_gate()",
+    "thesaurus.write_fence()"
+  ],
+  "public_domain_changes": [],
+  "governance_changes": [
+    {
+      "domain": "accommodation_family",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "accommodation_unit_type",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "booking_status",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "client_type",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "crm_sentiment",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "demand_topic",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "distribution_channel",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "feedback_type",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "membership_campaign",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "membership_tier",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "mood",
+      "before": false,
+      "after": true
+    },
+    {
+      "domain": "trail_link_role",
+      "before": false,
+      "after": true
+    }
+  ],
+  "vocabulary_columns": [
+    {
+      "name": "is_public",
+      "type": "boolean",
+      "default": "false",
+      "not_null": true
+    },
+    {
+      "name": "is_governed",
+      "type": "boolean",
+      "default": "false",
+      "not_null": true
+    },
+    {
+      "name": "require_definition",
+      "type": "boolean",
+      "default": "true",
+      "not_null": true
+    },
+    {
+      "name": "required_languages",
+      "type": "text[]",
+      "default": "ARRAY['fr'::text, 'en'::text, 'es'::text, 'de'::text]",
+      "not_null": true
+    }
+  ],
+  "vocabulary_constraints": [
+    {
+      "name": "thesaurus_vocabulary_definition_required",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK (require_definition IS TRUE)"
+    },
+    {
+      "name": "thesaurus_vocabulary_editorial_languages",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK (required_languages @> ARRAY['fr'::text, 'en'::text, 'es'::text, 'de'::text])"
+    },
+    {
+      "name": "vocabulary_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (domain)"
+    }
+  ],
+  "publication_index": {
+    "live": true,
+    "name": "thesaurus_public_target_lookup_idx",
+    "ready": true,
+    "valid": true,
+    "method": "btree",
+    "unique": false,
+    "predicate": "is_public",
+    "definition": "CREATE INDEX thesaurus_public_target_lookup_idx ON thesaurus.release_concept USING btree (release_id, ((concept_id)::text)) INCLUDE (concept_id) WHERE is_public"
+  }
+}

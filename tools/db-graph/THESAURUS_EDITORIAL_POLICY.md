@@ -18,6 +18,14 @@ Il observe seulement les trois premières migrations. Le complément final doit
 être capturé après confirmation de l'installation du correctif des recherches
 héritées et de la politique des quatre langues.
 
+La capture finale de la livraison, réalisée après la publication 25, figure dans
+[THESAURUS_EDITORIAL_POLICY_FINAL_CATALOG.json](../../db-graph-out/THESAURUS_EDITORIAL_POLICY_FINAL_CATALOG.json).
+Sa [comparaison avec la phase 1](../../db-graph-out/THESAURUS_EDITORIAL_POLICY_COMPARISON.json)
+distingue les changements attendus des empreintes, la gouvernance désormais
+étendue aux 12 domaines internes et les ACL/expositions publiques conservées.
+Le [postflight éditorial](../../db-graph-out/THESAURUS_EDITORIAL_CONTENT_POSTFLIGHT.json)
+enregistre les 152 réponses minimales homogènes sur les 1 477 concepts.
+
 La requête est étendue pour le relevé final : elle inclut les gardes et triggers
 des huit sources natives, la colonne privée `legacy_search_terms`, la génération
 active et les index de `thesaurus.release_concept`. L'index ciblé

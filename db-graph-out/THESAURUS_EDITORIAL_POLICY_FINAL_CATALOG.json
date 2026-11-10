@@ -1,0 +1,2512 @@
+{
+  "_capture": {
+    "scope": "thesaurus-editorial-policy-and-private-search-contract",
+    "source": "PostgreSQL catalogue SELECT; transport and project verified separately",
+    "captured_at": "2026-11-10T10:11:17.808686+00:00",
+    "database_name": "postgres",
+    "read_only_query": true,
+    "server_version_num": "170006",
+    "concept_rows_included": false,
+    "function_bodies_included": false,
+    "complete_catalogue_refresh": false,
+    "project_ref": "ryycrdhlkmzpxwwwwupy",
+    "transport": "production via Bertel Supabase MCP; catalogue SELECT and immutable contract metadata only",
+    "stage": "after-index-timeout-legacy-phase2-and-final-release25"
+  },
+  "functions": [
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "thesaurus_admin",
+      "owner": "postgres",
+      "schema": "api",
+      "returns": "jsonb",
+      "body_md5": "74693eebd27b41db9afc57237c95ff28",
+      "settings": [
+        "search_path=pg_catalog, thesaurus",
+        "statement_timeout=30s"
+      ],
+      "arguments": "p_action text, p_payload jsonb DEFAULT '{}'::jsonb",
+      "signature": "api.thesaurus_admin(text,jsonb)",
+      "prosrc_md5": "74693eebd27b41db9afc57237c95ff28",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "authenticated"
+      ],
+      "definition_md5": "6885fbe555ffe34ef1af2bb9a6fb01e1",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true,
+        "bertel_thesaurus_publisher": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "name": "thesaurus_public",
+      "owner": "postgres",
+      "schema": "api",
+      "returns": "jsonb",
+      "body_md5": "7b8f189beddeac6b3f2b2f467a65c98f",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_action text, p_release_id bigint DEFAULT NULL::bigint, p_params jsonb DEFAULT '{}'::jsonb",
+      "signature": "api.thesaurus_public(text,bigint,jsonb)",
+      "prosrc_md5": "7b8f189beddeac6b3f2b2f467a65c98f",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "service_role"
+      ],
+      "definition_md5": "2daa0a8c1a7edeace8f7107e86351b56",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": true,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": false
+      }
+    },
+    {
+      "acl": "{bertel_thesaurus_publisher=X/bertel_thesaurus_publisher,postgres=X/bertel_thesaurus_publisher}",
+      "name": "activate",
+      "owner": "bertel_thesaurus_publisher",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "985839358c6e0d68eb7db280f42bb6ed",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public, api, internal, extensions, auth"
+      ],
+      "arguments": "p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT '{}'::jsonb",
+      "signature": "thesaurus.activate(uuid[],text[],text,bigint,jsonb)",
+      "prosrc_md5": "985839358c6e0d68eb7db280f42bb6ed",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "8ef02b665b4af4e45eb3f3d45bb2f75e",
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "admin_dispatch",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "32f1b1b3cfedd47dd338e8713fdf6437",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public, api, auth"
+      ],
+      "arguments": "p_action text, p_payload jsonb DEFAULT '{}'::jsonb",
+      "signature": "thesaurus.admin_dispatch(text,jsonb)",
+      "prosrc_md5": "32f1b1b3cfedd47dd338e8713fdf6437",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "authenticated",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "4d1d3c6a97b687e8dd2bcf73918070ab",
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "apply_source",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "void",
+      "body_md5": "6bb8e65e21cf5d437be1d82eefc435cf",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "arguments": "p_id uuid, p_doc jsonb",
+      "signature": "thesaurus.apply_source(uuid,jsonb)",
+      "prosrc_md5": "6bb8e65e21cf5d437be1d82eefc435cf",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "5b58cfccbeb2bf788a4fd37fced41cc2",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "assert_current_authority",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "void",
+      "body_md5": "9f590d4c60d4d16df5794fbc7bdc1e02",
+      "settings": [
+        "search_path=pg_catalog, public, api, auth, pg_temp"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.assert_current_authority()",
+      "prosrc_md5": "9f590d4c60d4d16df5794fbc7bdc1e02",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "e17f3fa7713fc9d90c4499b90a935b28",
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "assert_preparation_contract",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "void",
+      "body_md5": "97fe83c3bd7bbceb3095282b335e45cc",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.assert_preparation_contract()",
+      "prosrc_md5": "97fe83c3bd7bbceb3095282b335e45cc",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "dc3e264dc164302a60407588623018a5",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "assert_release_definitions",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "void",
+      "body_md5": "5827b114e6436d4a1af92cda344cb41b",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_release_id bigint",
+      "signature": "thesaurus.assert_release_definitions(bigint)",
+      "prosrc_md5": "5827b114e6436d4a1af92cda344cb41b",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "08a37273b9ad160895e32a70da315918",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "concept_document",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "0fc18f9f58bcbce62e512389bb0a314a",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_id uuid",
+      "signature": "thesaurus.concept_document(uuid)",
+      "prosrc_md5": "0fc18f9f58bcbce62e512389bb0a314a",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "3540c7c61a445690fdd6a10703ca8d80",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "concept_document",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "d701242b717044c27cb25ec63ad3ca8d",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_id uuid, p_include_source_fingerprint boolean",
+      "signature": "thesaurus.concept_document(uuid,boolean)",
+      "prosrc_md5": "d701242b717044c27cb25ec63ad3ca8d",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "41a1b4b03128615fccf37374020c6075",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "current_actor",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "uuid",
+      "body_md5": "0fd7e44fab4fb8930faa78f5b2224802",
+      "settings": [
+        "search_path=pg_catalog, auth"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.current_actor()",
+      "prosrc_md5": "0fd7e44fab4fb8930faa78f5b2224802",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "d08a696907ccec05e40a697955ab3b12",
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "definition_errors",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "28a1f334178915d326a8a65f1fb8b0c4",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_labels jsonb, p_definitions jsonb, p_required_languages text[]",
+      "signature": "thesaurus.definition_errors(jsonb,jsonb,text[])",
+      "prosrc_md5": "28a1f334178915d326a8a65f1fb8b0c4",
+      "volatility": "i",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "94a51b0f760b18ff7604c267b3d27ac7",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "guard_immutable",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "trigger",
+      "body_md5": "9fc9d076495f9590f8ac2745ae43975f",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.guard_immutable()",
+      "prosrc_md5": "9fc9d076495f9590f8ac2745ae43975f",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "60abbdc5b46468f69fddcac076bd41bf",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "name": "guard_prepared_truncate",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "trigger",
+      "body_md5": "a2e9f6672e71127001cffaaeaca1d9d2",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, api"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.guard_prepared_truncate()",
+      "prosrc_md5": "a2e9f6672e71127001cffaaeaca1d9d2",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres"
+      ],
+      "definition_md5": "bbd80ac632105d26f0c82be4a400d7ff",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "guard_source",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "trigger",
+      "body_md5": "019744a91ecedeadc998b911cf9ab778",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.guard_source()",
+      "prosrc_md5": "019744a91ecedeadc998b911cf9ab778",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "933c07bf6134b34134045e7b8a911726",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "has_editorial_text",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "boolean",
+      "body_md5": "7514b2e0cf72c33f3169210062ae184b",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "arguments": "p_value jsonb",
+      "signature": "thesaurus.has_editorial_text(jsonb)",
+      "prosrc_md5": "7514b2e0cf72c33f3169210062ae184b",
+      "volatility": "i",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "e7ba4e99dd357c6ca61d8a8773b7b231",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "normalize_editorial_text",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "text",
+      "body_md5": "a176dc52c9532b258a00ed69c40515d3",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "arguments": "p_text text",
+      "signature": "thesaurus.normalize_editorial_text(text)",
+      "prosrc_md5": "a176dc52c9532b258a00ed69c40515d3",
+      "volatility": "i",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "1ffc5d86d936119d27494afca38e49d4",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "preparation_contract_registry",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "ad8a4e17ad945c7a9f31f27b37eae23e",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.preparation_contract_registry()",
+      "prosrc_md5": "ad8a4e17ad945c7a9f31f27b37eae23e",
+      "volatility": "i",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "4920b067adf42ac8dfe0be5b712290fd",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "public_dispatch",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "03fb8e96e1b55d8ed42ce2df19301942",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_action text, p_release_id bigint DEFAULT NULL::bigint, p_params jsonb DEFAULT '{}'::jsonb",
+      "signature": "thesaurus.public_dispatch(text,bigint,jsonb)",
+      "prosrc_md5": "03fb8e96e1b55d8ed42ce2df19301942",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "service_role",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "c868d740d8545560a83818ea0614b2b3",
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": true,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "publication_documents",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)",
+      "body_md5": "eb6a325d74bd3dc1ed24a64b08fe6b47",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.publication_documents()",
+      "prosrc_md5": "eb6a325d74bd3dc1ed24a64b08fe6b47",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "8cbbdd96b535bed2063d58022ab64274",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "publication_documents",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)",
+      "body_md5": "1302cfff941a16e4c1d0220ffba99a85",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_concepts uuid[]",
+      "signature": "thesaurus.publication_documents(uuid[])",
+      "prosrc_md5": "1302cfff941a16e4c1d0220ffba99a85",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "678767bd775985f095c521b8b3eb4628",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "name": "record_owner_mutation",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "trigger",
+      "body_md5": "b91109705c214fdc82e271b16302e10f",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.record_owner_mutation()",
+      "prosrc_md5": "b91109705c214fdc82e271b16302e10f",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres"
+      ],
+      "definition_md5": "686f1975f15f825f9fd3afba679c1151",
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "name": "source_write_gate",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "trigger",
+      "body_md5": "d531e7c34d3d7da8d9775b8d8be4baad",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.source_write_gate()",
+      "prosrc_md5": "d531e7c34d3d7da8d9775b8d8be4baad",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres"
+      ],
+      "definition_md5": "1220c6e3b7d9df11627178e5f762d4ad",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "take_source_gate",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "void",
+      "body_md5": "1f5d67bf72971744c59749dc3a3fd3b9",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.take_source_gate()",
+      "prosrc_md5": "1f5d67bf72971744c59749dc3a3fd3b9",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "anon",
+        "authenticated",
+        "service_role",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "0e724b0b2c43b88745a7d24c5d6e59c7",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "take_writer_gate",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "void",
+      "body_md5": "6a42496fb48b9c18d33c93a5d2162839",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.take_writer_gate()",
+      "prosrc_md5": "6a42496fb48b9c18d33c93a5d2162839",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "anon",
+        "authenticated",
+        "service_role",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "d482fb1dfbf7af80dce61473f415b687",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "validate_document",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "jsonb",
+      "body_md5": "215c245b6b3334049de9ede7c5a44416",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "p_concept uuid, p_doc jsonb",
+      "signature": "thesaurus.validate_document(uuid,jsonb)",
+      "prosrc_md5": "215c245b6b3334049de9ede7c5a44416",
+      "volatility": "s",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "fcd371e61241d74adde1cec05b366979",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "name": "write_fence",
+      "owner": "postgres",
+      "schema": "thesaurus",
+      "returns": "trigger",
+      "body_md5": "19027f5fd78ae829675e7fffbe14d970",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "arguments": "",
+      "signature": "thesaurus.write_fence()",
+      "prosrc_md5": "19027f5fd78ae829675e7fffbe14d970",
+      "volatility": "v",
+      "execute_roles": [
+        "postgres",
+        "bertel_thesaurus_publisher"
+      ],
+      "definition_md5": "80a7f3258e7e2a6421f3e181f69a456d",
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false,
+        "bertel_thesaurus_publisher": true
+      }
+    }
+  ],
+  "migrations": [
+    {
+      "name": "thesaurus_required_definitions",
+      "version": "20261110075054"
+    },
+    {
+      "name": "thesaurus_complete_admin_batches",
+      "version": "20261110075103"
+    },
+    {
+      "name": "thesaurus_simple_business_names",
+      "version": "20261110075111"
+    },
+    {
+      "name": "thesaurus_legacy_search_term_roundtrip",
+      "version": "20261110081126"
+    },
+    {
+      "name": "thesaurus_public_target_lookup_index",
+      "version": "20261110090528"
+    },
+    {
+      "name": "thesaurus_admin_rpc_timeout",
+      "version": "20261110091117"
+    },
+    {
+      "name": "thesaurus_complete_editorial_definitions",
+      "version": "20261110095723"
+    }
+  ],
+  "publisher_role": {
+    "name": "bertel_thesaurus_publisher",
+    "login": false,
+    "inherit": false,
+    "superuser": false,
+    "bypass_rls": false,
+    "memberships": [
+      {
+        "set": false,
+        "admin": false,
+        "member": "postgres",
+        "grantor": "postgres",
+        "inherit": false
+      },
+      {
+        "set": false,
+        "admin": true,
+        "member": "postgres",
+        "grantor": "supabase_admin",
+        "inherit": false
+      }
+    ]
+  },
+  "table_security": [
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.assignment_retention",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.concept",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.instance",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.label",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.localized_field",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.mapping",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=rd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.mutation_journal",
+      "policies": [
+        {
+          "name": "publisher_delete",
+          "qual": "(CURRENT_USER = 'bertel_thesaurus_publisher'::name)",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "DELETE",
+          "permissive": "PERMISSIVE",
+          "with_check": null
+        },
+        {
+          "name": "publisher_read",
+          "qual": "(CURRENT_USER = 'bertel_thesaurus_publisher'::name)",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "SELECT",
+          "permissive": "PERMISSIVE",
+          "with_check": null
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.note",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.outbox",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.ownership_retention",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.relation",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.release",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.release_change",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.release_concept",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.revision",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.source_link",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,bertel_thesaurus_publisher=arwd/postgres}",
+      "owner": "postgres",
+      "table": "thesaurus.vocabulary",
+      "policies": [
+        {
+          "name": "publisher_only",
+          "qual": "true",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "command": "ALL",
+          "permissive": "PERMISSIVE",
+          "with_check": "true"
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "effective_access": {
+        "anon_write": false,
+        "anon_select": false,
+        "service_role_write": false,
+        "authenticated_write": false,
+        "service_role_select": false,
+        "authenticated_select": false
+      }
+    }
+  ],
+  "concept_columns": [
+    {
+      "name": "legacy_search_terms",
+      "type": "text[]",
+      "default": "'{}'::text[]",
+      "not_null": true
+    }
+  ],
+  "vocabulary_columns": [
+    {
+      "name": "is_public",
+      "type": "boolean",
+      "default": "false",
+      "not_null": true
+    },
+    {
+      "name": "is_governed",
+      "type": "boolean",
+      "default": "false",
+      "not_null": true
+    },
+    {
+      "name": "require_definition",
+      "type": "boolean",
+      "default": "true",
+      "not_null": true
+    },
+    {
+      "name": "required_languages",
+      "type": "text[]",
+      "default": "ARRAY['fr'::text, 'en'::text, 'es'::text, 'de'::text]",
+      "not_null": true
+    }
+  ],
+  "publication_indexes": [
+    {
+      "live": true,
+      "name": "release_concept_pkey",
+      "ready": true,
+      "valid": true,
+      "method": "btree",
+      "unique": true,
+      "predicate": null,
+      "definition": "CREATE UNIQUE INDEX release_concept_pkey ON thesaurus.release_concept USING btree (release_id, concept_id)"
+    },
+    {
+      "live": true,
+      "name": "thesaurus_public_target_lookup_idx",
+      "ready": true,
+      "valid": true,
+      "method": "btree",
+      "unique": false,
+      "predicate": "is_public",
+      "definition": "CREATE INDEX thesaurus_public_target_lookup_idx ON thesaurus.release_concept USING btree (release_id, ((concept_id)::text)) INCLUDE (concept_id) WHERE is_public"
+    },
+    {
+      "live": true,
+      "name": "thesaurus_release_domain_idx",
+      "ready": true,
+      "valid": true,
+      "method": "btree",
+      "unique": false,
+      "predicate": "is_public",
+      "definition": "CREATE INDEX thesaurus_release_domain_idx ON thesaurus.release_concept USING btree (release_id, domain, concept_id) WHERE is_public"
+    }
+  ],
+  "vocabulary_policies": [
+    {
+      "domain": "accommodation_family",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "accommodation_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "accommodation_unit_type",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "activity_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "allergen",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "amenity",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "amenity_family",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "assistance_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "bed_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "booking_status",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "classification_scheme",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "classification_value",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "client_type",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "commune",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "contact_kind",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "crm_sentiment",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "cuisine_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "demand_topic",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "destination_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "dietary_tag",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "distribution_channel",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "document_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "environment_tag",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "event_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "feedback_type",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "insurance_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "iti_difficulty",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "iti_open_status",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "iti_practice",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "iti_stage_kind",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "language",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "language_level",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "media_tag",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "media_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "meeting_equipment",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "membership_campaign",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "membership_tier",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "menu_category",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "mood",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "opening_period_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "opening_schedule_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "package_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "partnership_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "payment_method",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "price_kind",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "price_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "price_unit",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "promotion_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "room_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "season_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "service_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "social_network",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "sustainability_action",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "sustainability_category",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_act",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_asc",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_camp",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_com",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_fma",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_hlo",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_hot",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_hpa",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_iti",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_loi",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_org",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_pcu",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_pna",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_prd",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_psv",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_res",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_rva",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_spu",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "taxonomy_vil",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "tourism_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "trail_link_role",
+      "is_public": false,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "transport_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "view_type",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    },
+    {
+      "domain": "weekday",
+      "is_public": true,
+      "is_governed": true,
+      "require_definition": true,
+      "required_languages": [
+        "fr",
+        "en",
+        "es",
+        "de"
+      ]
+    }
+  ],
+  "native_source_guards": [
+    {
+      "table": "public.ref_amenity",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_amenity FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_amenity",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_amenity FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('amenity')",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_classification_scheme",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_classification_scheme FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_classification_scheme",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_classification_scheme FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('classification_scheme')",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_classification_value",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_classification_value FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_classification_value",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_classification_value FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('classification_value')",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_code",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_code FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_code",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_code FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('ref_code')",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_commune",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_commune FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_commune",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_commune FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('commune')",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_language",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_language FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_language",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_language FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('language')",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_sustainability_action",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_sustainability_action FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_sustainability_action",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_sustainability_action FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('sustainability_action')",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_sustainability_action_category",
+      "enabled": "O",
+      "trigger": "thesaurus_source_gate",
+      "function": "thesaurus.source_write_gate()",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON ref_sustainability_action_category FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()",
+      "inherited_from_trigger": "0"
+    },
+    {
+      "table": "public.ref_sustainability_action_category",
+      "enabled": "O",
+      "trigger": "zz_thesaurus_source_guard",
+      "function": "thesaurus.guard_source()",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON ref_sustainability_action_category FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('sustainability_category')",
+      "inherited_from_trigger": "0"
+    }
+  ],
+  "publication_generation": 25,
+  "vocabulary_constraints": [
+    {
+      "name": "thesaurus_vocabulary_definition_required",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK (require_definition IS TRUE)"
+    },
+    {
+      "name": "thesaurus_vocabulary_editorial_languages",
+      "type": "c",
+      "validated": true,
+      "definition": "CHECK (required_languages @> ARRAY['fr'::text, 'en'::text, 'es'::text, 'de'::text])"
+    },
+    {
+      "name": "vocabulary_pkey",
+      "type": "p",
+      "validated": true,
+      "definition": "PRIMARY KEY (domain)"
+    }
+  ],
+  "prepared_function_contracts": [
+    {
+      "matches": true,
+      "signature": "api.phonetic_document(text)",
+      "actual_definition_md5": "6a4ccb61159323386ba4b9d7151d38a3",
+      "registered_definition_md5": "6a4ccb61159323386ba4b9d7151d38a3"
+    },
+    {
+      "matches": true,
+      "signature": "api.refresh_object_filter_caches(text)",
+      "actual_definition_md5": "862a9146be1f2d61df1573f1a3aa15c2",
+      "registered_definition_md5": "862a9146be1f2d61df1573f1a3aa15c2"
+    },
+    {
+      "matches": true,
+      "signature": "api.strip_markdown(text)",
+      "actual_definition_md5": "c93d66b415209642966e1394d5a16528",
+      "registered_definition_md5": "c93d66b415209642966e1394d5a16528"
+    },
+    {
+      "matches": true,
+      "signature": "public.immutable_unaccent(text)",
+      "actual_definition_md5": "8521af3951fc499b21275ed4dca1e948",
+      "registered_definition_md5": "8521af3951fc499b21275ed4dca1e948"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.apply_source(uuid,jsonb)",
+      "actual_definition_md5": "5b58cfccbeb2bf788a4fd37fced41cc2",
+      "registered_definition_md5": "5b58cfccbeb2bf788a4fd37fced41cc2"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.guard_prepared_truncate()",
+      "actual_definition_md5": "bbd80ac632105d26f0c82be4a400d7ff",
+      "registered_definition_md5": "bbd80ac632105d26f0c82be4a400d7ff"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.object_ids_for_row(oid,jsonb,oid[],integer)",
+      "actual_definition_md5": "dca051e214924c31c705bce8671c551a",
+      "registered_definition_md5": "dca051e214924c31c705bce8671c551a"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.owns_preparation_lock(integer,boolean)",
+      "actual_definition_md5": "bb0aabee908a8929616bcf9dd47687b3",
+      "registered_definition_md5": "bb0aabee908a8929616bcf9dd47687b3"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.record_owner_mutation()",
+      "actual_definition_md5": "686f1975f15f825f9fd3afba679c1151",
+      "registered_definition_md5": "686f1975f15f825f9fd3afba679c1151"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.source_write_gate()",
+      "actual_definition_md5": "1220c6e3b7d9df11627178e5f762d4ad",
+      "registered_definition_md5": "1220c6e3b7d9df11627178e5f762d4ad"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.take_source_gate()",
+      "actual_definition_md5": "0e724b0b2c43b88745a7d24c5d6e59c7",
+      "registered_definition_md5": "0e724b0b2c43b88745a7d24c5d6e59c7"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.take_writer_gate()",
+      "actual_definition_md5": "d482fb1dfbf7af80dce61473f415b687",
+      "registered_definition_md5": "d482fb1dfbf7af80dce61473f415b687"
+    },
+    {
+      "matches": true,
+      "signature": "thesaurus.write_fence()",
+      "actual_definition_md5": "80a7f3258e7e2a6421f3e181f69a456d",
+      "registered_definition_md5": "80a7f3258e7e2a6421f3e181f69a456d"
+    }
+  ]
+}

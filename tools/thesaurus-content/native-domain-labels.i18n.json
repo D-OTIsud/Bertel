@@ -12,10 +12,10 @@
     "de": "Beziehungstypen zwischen Einträgen"
   },
   "capacity_metric": {
-    "fr": "Indicateurs de capacité",
-    "en": "Capacity indicators",
-    "es": "Indicadores de capacidad",
-    "de": "Kapazitätskennzahlen"
+    "fr": "Capacité",
+    "en": "Capacity",
+    "es": "Capacidad",
+    "de": "Kapazität"
   },
   "legal_type": {
     "fr": "Informations et justificatifs administratifs",

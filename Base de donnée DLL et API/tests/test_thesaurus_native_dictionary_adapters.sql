@@ -45,6 +45,10 @@ BEGIN
     JOIN thesaurus.vocabulary v ON v.domain=mapping.domain
     JOIN public.ref_catalog_registry r ON r.catalog_key=mapping.catalog_key AND r.label=v.name),
     'All nine native catalog cards must match their reviewed canonical French names';
+  ASSERT (SELECT name='Capacité'
+    AND name_i18n='{"fr":"Capacité","en":"Capacity","es":"Capacidad","de":"Kapazität"}'::jsonb
+    FROM thesaurus.vocabulary WHERE domain='capacity_metric'),
+    'The capacity vocabulary must use the short names in all four languages';
   ASSERT (SELECT count(*)=native_rows FROM thesaurus.source_rows WHERE domain=ANY(expected)),
     'Native adapters must expose each source row exactly once';
   ASSERT (SELECT count(DISTINCT (source_kind,source_id,domain))=native_rows

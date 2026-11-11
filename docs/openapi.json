@@ -654,7 +654,7 @@
         ],
         "operationId": "getThesaurus",
         "summary": "Découvrir les vocabulaires et la publication courante",
-        "description": "Découvre la publication courante et les vocabulaires publics. `lang` localise les noms de domaines. `domains` et `status` sont rejetés.",
+        "description": "Découvre la seule édition publique pré-lancement (édition 1) et les vocabulaires publics. Jusqu’au gel explicite, cette édition reflète le dernier snapshot technique sélectionné ; l’historique contient seulement [1], `previous_release_id` vaut null et `changes` présente tous les concepts publics du snapshot comme ajoutés. `lang` localise les noms de domaines. `domains` et `status` sont rejetés.",
         "parameters": [
 
           {
@@ -693,13 +693,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             },
             "content": {
@@ -726,13 +726,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             }
           },
@@ -791,7 +791,7 @@
         ],
         "operationId": "getThesaurusRelease",
         "summary": "Lire le manifeste d’une publication",
-        "description": "Manifeste immuable de la publication demandée. Les noms de domaines sont localisés dans ce snapshot; metadata_scope vaut release_snapshot et metadata_checksum est facultatif dans les snapshots historiques. domains et status sont rejetés.",
+        "description": "Manifeste du snapshot sélectionné pour cette édition. Avant le gel explicite, l’édition 1 suit le dernier snapshot technique et n’est pas encore un lien historique immuable ; après le gel, le snapshot associé est immuable. Les noms de domaines sont localisés dans ce snapshot; metadata_scope vaut release_snapshot et metadata_checksum est facultatif dans les snapshots historiques. domains et status sont rejetés.",
         "parameters": [
           {
             "name": "releaseId",
@@ -802,7 +802,7 @@
               "minimum": 1,
               "maximum": 9007199254740991
             },
-            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+            "description": "Numéro d’édition publique, qui commence à 1 ; les identifiants techniques des snapshots ne sont pas exposés. En pré-lancement, l’édition 1 suit le snapshot technique courant jusqu’au gel explicite."
           },
           {
             "name": "lang",
@@ -840,13 +840,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             },
             "content": {
@@ -873,13 +873,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             }
           },
@@ -949,7 +949,7 @@
               "minimum": 1,
               "maximum": 9007199254740991
             },
-            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+            "description": "Numéro d’édition publique, qui commence à 1 ; les identifiants techniques des snapshots ne sont pas exposés. En pré-lancement, l’édition 1 suit le snapshot technique courant jusqu’au gel explicite."
           },
           {
             "name": "domains",
@@ -995,7 +995,7 @@
               "type": "string",
               "maxLength": 1500
             },
-            "description": "Curseur signé lié à la publication, langue, filtres et taille de page. Ne pas modifier les paramètres pendant le parcours."
+            "description": "Curseur signé lié à l’édition publique, au snapshot effectivement sélectionné, à la langue, aux filtres et à la taille de page. Ne pas modifier les paramètres pendant le parcours ; un changement du snapshot pré-lancement invalide le curseur."
           },
           {
             "name": "query",
@@ -1031,13 +1031,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             },
             "content": {
@@ -1064,13 +1064,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             }
           },
@@ -1140,7 +1140,7 @@
               "minimum": 1,
               "maximum": 9007199254740991
             },
-            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+            "description": "Numéro d’édition publique, qui commence à 1 ; les identifiants techniques des snapshots ne sont pas exposés. En pré-lancement, l’édition 1 suit le snapshot technique courant jusqu’au gel explicite."
           },
           {
             "name": "conceptId",
@@ -1188,13 +1188,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             },
             "content": {
@@ -1221,13 +1221,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             }
           },
@@ -1334,13 +1334,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             },
             "content": {
@@ -1367,13 +1367,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             }
           },
@@ -1431,8 +1431,8 @@
           "Thésaurus"
         ],
         "operationId": "listThesaurusChanges",
-        "summary": "Lire les changements depuis la publication précédente",
-        "description": "Changements par rapport à previous_release_id. domains et status filtrent les concepts; sans status, tous les états sont inclus.",
+        "summary": "Lire les changements de l’édition publique",
+        "description": "Avant le gel, l’édition 1 n’a pas de prédécesseur : le flux présente chaque concept public du snapshot sélectionné comme `added`, avec `before: null` et `after` contenant le concept. Il ne décrit pas les retouches entre snapshots de préparation. Pour les éditions suivantes, changements par rapport à previous_release_id. domains et status filtrent les concepts; sans status, tous les états sont inclus.",
         "parameters": [
           {
             "name": "releaseId",
@@ -1443,7 +1443,7 @@
               "minimum": 1,
               "maximum": 9007199254740991
             },
-            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+            "description": "Numéro d’édition publique, qui commence à 1 ; les identifiants techniques des snapshots ne sont pas exposés. En pré-lancement, l’édition 1 suit le snapshot technique courant jusqu’au gel explicite."
           },
           {
             "name": "domains",
@@ -1489,7 +1489,7 @@
               "type": "string",
               "maxLength": 1500
             },
-            "description": "Curseur signé lié à la publication, langue, filtres et taille de page. Ne pas modifier les paramètres pendant le parcours."
+            "description": "Curseur signé lié à l’édition publique, au snapshot effectivement sélectionné, à la langue, aux filtres et à la taille de page. Ne pas modifier les paramètres pendant le parcours ; un changement du snapshot pré-lancement invalide le curseur."
           },
           {
             "name": "query",
@@ -1525,13 +1525,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             },
             "content": {
@@ -1558,13 +1558,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             }
           },
@@ -1634,7 +1634,7 @@
               "minimum": 1,
               "maximum": 9007199254740991
             },
-            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+            "description": "Numéro d’édition publique, qui commence à 1 ; les identifiants techniques des snapshots ne sont pas exposés. En pré-lancement, l’édition 1 suit le snapshot technique courant jusqu’au gel explicite."
           },
           {
             "name": "domains",
@@ -1701,13 +1701,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             },
             "content": {
@@ -1773,13 +1773,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Empreinte de la représentation exacte."
+                "description": "Empreinte de la représentation HTTP exacte, incluant la langue et le snapshot effectivement sélectionné."
               },
               "X-Bertel-Vocabulary-Release": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "Publication des données, distincte du contrat API."
+                "description": "Édition publique annoncée dans meta.release_id ; ne révèle pas l’identifiant technique du snapshot."
               }
             }
           },
@@ -2280,16 +2280,16 @@
       },
       "ThesaurusManifest": {
         "type": "object",
-        "description": "Manifeste de publication : domaines, date, empreinte, provenance, licence et attribution. La localisation est une projection HTTP ; les identifiants, as_of et checksums stockés restent inchangés.",
+        "description": "Manifeste d’une édition publique et du snapshot technique qui lui est associé. Avant le gel, l’édition 1 suit le snapshot sélectionné le plus récent ; les éditions suivantes gelées sont immuables. La localisation est une projection HTTP ; les checksums stockés du snapshot restent inchangés.",
         "properties": {
-          "release_id": { "type": "integer", "minimum": 1 },
-          "previous_release_id": { "type": ["integer", "null"] },
+          "release_id": { "type": "integer", "minimum": 1, "description": "Numéro de l’édition publique, distinct de l’identifiant technique interne du snapshot." },
+          "previous_release_id": { "type": ["integer", "null"], "description": "Édition publique précédente ; null pour l’édition 1." },
           "as_of": { "type": "string", "format": "date-time" },
           "checksum": { "type": "string", "description": "Empreinte stockée de la publication ; utiliser l’ETag pour la représentation HTTP localisée." },
           "metadata_scope": { "type": "string", "const": "release_snapshot", "description": "Le manifeste est lu dans la publication sélectionnée. Les traductions HTTP des titres historiques sont qualifiées séparément." },
           "metadata_checksum": { "type": "string", "description": "MD5 des domaines bruts figés en JSONB PostgreSQL, avant localisation HTTP ; absent des anciens manifestes sans cette empreinte." },
           "domains": { "type": "array", "items": { "$ref": "#/components/schemas/ThesaurusVocabulary" } },
-          "releases": { "type": "array", "description": "Présent à la découverte : manifestes récents dont les domaines utilisent la même langue demandée.", "items": { "$ref": "#/components/schemas/ThesaurusManifest" } }
+          "releases": { "type": "array", "description": "Découverte : historique public seulement. Avant le gel du lancement, contient uniquement l’édition 1, marquée courante.", "items": { "$ref": "#/components/schemas/ThesaurusManifest" } }
         },
         "additionalProperties": true
       },

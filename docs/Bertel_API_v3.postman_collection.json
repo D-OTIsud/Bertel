@@ -3045,7 +3045,7 @@
                       "     }",
                       "   }",
                       " });",
-                      " pm.test('Manifeste courant', function () { pm.expect(d.meta.release_id).to.be.a('number').and.at.least(1); pm.expect(d.data).to.be.an('object'); pm.expect(d.data.domains).to.be.an('array'); });",
+                      " pm.test('Manifeste public courant', function () { pm.expect(d.meta.release_id).to.be.a('number').and.at.least(1); pm.expect(d.meta.vocabulary_release).to.eql(d.meta.release_id); pm.expect(d.data).to.be.an('object'); pm.expect(d.data.domains).to.be.an('array'); if (d.meta.release_id === 1) { pm.expect(d.meta.previous_release_id).to.eql(null); pm.expect(d.data.releases).to.be.an('array').and.have.lengthOf(1); pm.expect(d.data.releases[0].release_id).to.eql(1); pm.expect(d.data.releases[0].is_current).to.eql(true); } });",
                       " for (const key of ['thesaurus_concept_id','thesaurus_historical_concept_id','thesaurus_next_cursor','thesaurus_changes_cursor','public_taxonomy_code']) pm.collectionVariables.unset(key);",
                       " pm.collectionVariables.set('thesaurus_release_id', String(d.meta.release_id));",
                       " if (d.meta.previous_release_id != null) pm.collectionVariables.set('thesaurus_previous_release_id', String(d.meta.previous_release_id)); else pm.collectionVariables.unset('thesaurus_previous_release_id');",
@@ -3210,15 +3210,25 @@
               },
               "event": [
                 {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (!pm.collectionVariables.get('thesaurus_previous_release_id')) { console.info('Requête ignorée : aucune édition publique précédente.'); pm.execution.skipRequest(); }"
+                    ]
+                  }
+                },
+                {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 200) { const d = pm.response.json(); pm.test('Publication précédente', function () { pm.expect(d.meta.release_id).to.eql(Number(pm.variables.get('thesaurus_previous_release_id'))); }); }"
+                      "if (pm.response.code === 200) { const d = pm.response.json(); pm.test('Édition publique précédente', function () { pm.expect(d.meta.release_id).to.eql(Number(pm.variables.get('thesaurus_previous_release_id'))); }); }"
                     ]
                   }
                 }
-              ]
+              ],
+              "description": "Ignorée tant que l’édition courante n’a pas de previous_release_id (notamment durant le pré-lancement sur l’édition 1)."
             },
             {
               "name": "Parcourir les concepts — première page",
@@ -3742,13 +3752,14 @@
                     "exec": [
                       "if (pm.response.code === 200) { const d = pm.response.json(); pm.test('Publication épinglée', function () { pm.expect(d.meta.release_id).to.eql(Number(pm.variables.get('thesaurus_release_id'))); pm.expect(d.meta.vocabulary_release).to.eql(d.meta.release_id); });",
                       "  function checkMembershipField(x, field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
-                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { for (const snap of [x.before, x.after]) if (snap) { checkMembershipField(snap, 'member_of'); checkMembershipField(snap, 'members'); pm.expect(snap).not.to.have.property('source_fields'); } pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
+                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { for (const snap of [x.before, x.after]) if (snap) { checkMembershipField(snap, 'member_of'); checkMembershipField(snap, 'members'); pm.expect(snap).not.to.have.property('source_fields'); } pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); if (Number(pm.variables.get('thesaurus_release_id')) === 1) { pm.expect(x.change_type).to.eql('added'); pm.expect(x.before).to.eql(null); } pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
                       "  if (d.meta.next_cursor) pm.collectionVariables.set('thesaurus_changes_cursor', d.meta.next_cursor); else pm.collectionVariables.unset('thesaurus_changes_cursor');",
                       "}"
                     ]
                   }
                 }
-              ]
+              ],
+              "description": "Édition 1 pré-lancement : flux baseline exhaustif en pages, tous les concepts publics sont added et before vaut null. Après le gel, les éditions ultérieures décrivent les changements depuis previous_release_id."
             },
             {
               "name": "Lire les changements — page suivante",
@@ -3806,13 +3817,14 @@
                     "exec": [
                       "if (pm.response.code === 200) { const d = pm.response.json(); pm.test('Publication épinglée', function () { pm.expect(d.meta.release_id).to.eql(Number(pm.variables.get('thesaurus_release_id'))); pm.expect(d.meta.vocabulary_release).to.eql(d.meta.release_id); });",
                       "  function checkMembershipField(x, field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
-                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { for (const snap of [x.before, x.after]) if (snap) { checkMembershipField(snap, 'member_of'); checkMembershipField(snap, 'members'); pm.expect(snap).not.to.have.property('source_fields'); } pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
+                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { for (const snap of [x.before, x.after]) if (snap) { checkMembershipField(snap, 'member_of'); checkMembershipField(snap, 'members'); pm.expect(snap).not.to.have.property('source_fields'); } pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); if (Number(pm.variables.get('thesaurus_release_id')) === 1) { pm.expect(x.change_type).to.eql('added'); pm.expect(x.before).to.eql(null); } pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
                       "  if (d.meta.next_cursor) pm.collectionVariables.set('thesaurus_changes_cursor', d.meta.next_cursor); else pm.collectionVariables.unset('thesaurus_changes_cursor');",
                       "}"
                     ]
                   }
                 }
-              ]
+              ],
+              "description": "Poursuit le même snapshot avec le curseur de pagination ; en pré-lancement, recommencer la synchronisation si une retouche invalide le curseur."
             },
             {
               "name": "Exporter la publication en JSON",

@@ -152,12 +152,21 @@ function sandbox(entry, options = {}) {
 }
 
 check('only reviewed interface surfaces are present', () => {
+  assert.equal(collection.info._postman_id, '2c9f5068-6090-4bff-95af-dbe7b9e61fb7', 'collection ID must match the imported canonical Postman collection');
   for (const entry of entries) {
     assert.ok(rpcName(entry) ? allowedRpc.has(rpcName(entry)) : publicPath(entry) !== undefined, `unreviewed URL: ${rawUrl(entry)}`);
   for (const owner of [collection, entry.item, ...entry.ancestors]) for (const kind of ['prerequest', 'test']) for (const source of scripts(owner, kind)) {
       assert.ok(!/\bpm\.sendRequest\s*\(|\bpm\.execution\.runRequest\s*\(|\bfetch\s*\(/.test(source), 'secondary HTTP calls require explicit review');
       new vm.Script(`(function () {\n${source}\n})();`);
     }
+  }
+});
+check('current documentation links use the canonical Postman collection', () => {
+  const canonical = 'https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/85lc214/bertel-api-v3-0';
+  for (const file of ['guide-partenaires.md', 'README.md', 'index.html', 'doc_api_bertel_v3.html']) {
+    const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
+    assert.ok(source.includes(canonical), `canonical collection link missing from docs/${file}`);
+    assert.ok(!source.includes('fcl0g7z') && !source.includes('15e74f81'), `stale live collection reference in docs/${file}`);
   }
 });
 check('all canonical OpenAPI methods have successful examples', () => {

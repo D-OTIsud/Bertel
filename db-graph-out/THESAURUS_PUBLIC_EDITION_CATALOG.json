@@ -1,0 +1,92 @@
+{
+  "scope": "Public thesaurus edition projection",
+  "table": {
+    "rls": true,
+    "name": "thesaurus.public_launch",
+    "owner": "postgres",
+    "columns": [
+      {
+        "name": "singleton",
+        "type": "boolean",
+        "not_null": true
+      },
+      {
+        "name": "first_release_id",
+        "type": "bigint",
+        "not_null": false
+      }
+    ],
+    "constraints": [
+      {
+        "name": "public_launch_first_release_id_fkey",
+        "definition": "FOREIGN KEY (first_release_id) REFERENCES thesaurus.release(release_id)"
+      },
+      {
+        "name": "public_launch_pkey",
+        "definition": "PRIMARY KEY (singleton)"
+      },
+      {
+        "name": "public_launch_singleton_check",
+        "definition": "CHECK (singleton)"
+      }
+    ],
+    "service_select": false,
+    "authenticated_update": false
+  },
+  "functions": [
+    {
+      "owner": "postgres",
+      "body_md5": "a73809e9137db1664a71a620e398a69f",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "signature": "api.thesaurus_object_release()",
+      "volatility": "s",
+      "public_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": true
+    },
+    {
+      "owner": "postgres",
+      "body_md5": "8dfc9d32bfa92893f2029d1ff1f0b1c6",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "signature": "api.thesaurus_public_edition(text,bigint,jsonb)",
+      "volatility": "s",
+      "public_execute": false,
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": false
+    },
+    {
+      "owner": "postgres",
+      "body_md5": "04725ed9ea918dc63380acfe7bbc90a2",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "signature": "thesaurus.public_edition_dispatch(text,bigint,jsonb)",
+      "volatility": "s",
+      "public_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "owner": "postgres",
+      "body_md5": "2515aecc7392fbb3f9ec720bceb34086",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "signature": "thesaurus.public_edition_manifest(jsonb,bigint)",
+      "volatility": "i",
+      "public_execute": false,
+      "service_execute": false,
+      "security_definer": false,
+      "authenticated_execute": false
+    }
+  ],
+  "captured_at": "2026-11-11T02:23:44.364247+00:00",
+  "migration_version": "20261111022257"
+}

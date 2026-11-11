@@ -579,5 +579,5 @@ Au sein de la v1, les évolutions sont **additives** (de nouvelles clés peuvent
 ## 7. Références
 
 - **OpenAPI 3.1** : [openapi.json](openapi.json) (importable dans Postman, Insomnia, ou un générateur de client) · [rendu lisible](openapi.html)
-- **Collection Postman publique** : [Bertel API v3.0](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/fcl0g7z/bertel-api-v3-0?action=share&creator=24615556) — dossier « 13. API Publique Partenaire »
+- **Collection Postman publique** : [Bertel API v3.0](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/85lc214/bertel-api-v3-0) — dossier « 13. API Publique Partenaire »
 - **Contact** : d.philippe@otisud.com (clés API, questions techniques, demandes d'enrichissement des profils)

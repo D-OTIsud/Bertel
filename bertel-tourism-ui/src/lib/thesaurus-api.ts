@@ -212,6 +212,28 @@ function publicThesaurusManifest(value: unknown, requestedLang: string, discover
   return result;
 }
 
+const EDITORIAL_ENRICHMENT_NOTE = 'Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : ';
+
+/** Keep the generation audit in stored snapshots; expose only its actual external citations. */
+function publicThesaurusNotes(value: unknown, conceptUri: string): JsonObject[] {
+  return (Array.isArray(value) ? value : []).flatMap((item) => {
+    const row = object(item);
+    if (!row || typeof row.lang !== 'string' || typeof row.type !== 'string' || typeof row.value !== 'string') return [];
+    const prefix = `${EDITORIAL_ENRICHMENT_NOTE}${conceptUri}. `;
+    if (row.lang === 'fr' && (row.type === 'history' || row.type === 'source') && row.value.startsWith(prefix)) {
+      const provenance = row.value.slice(prefix.length);
+      if (provenance === 'Aucune source externe consultée pour cette proposition.' && row.source === conceptUri) return [];
+      if (typeof row.source === 'string' && row.source.startsWith(`${conceptUri} ; `)) {
+        const externalSources = row.source.slice(conceptUri.length + 3);
+        if (externalSources && provenance === `Sources externes réellement consultées : ${externalSources}.`) {
+          return [{ lang: row.lang, type: 'source', value: `Sources externes consultées : ${externalSources}.`, source: externalSources }];
+        }
+      }
+    }
+    return [{ lang: row.lang, type: row.type, value: row.value, ...(typeof row.source === 'string' ? { source: row.source } : {}) }];
+  });
+}
+
 /** Explicit public projection: new private fields added to a snapshot never leak by default. */
 export function publicThesaurusConcept(value: unknown, requestedLang = 'fr'): JsonObject {
   const source = object(value);
@@ -239,11 +261,7 @@ export function publicThesaurusConcept(value: unknown, requestedLang = 'fr'): Js
     return row && typeof row.lang === 'string' && typeof row.value === 'string' && (row.kind === 'alt' || row.kind === 'hidden')
       ? [{ lang: row.lang, kind: row.kind, value: row.value }] : [];
   });
-  result.notes = (Array.isArray(source.notes) ? source.notes : []).flatMap((item) => {
-    const row = object(item);
-    if (!row || typeof row.lang !== 'string' || typeof row.type !== 'string' || typeof row.value !== 'string') return [];
-    return [{ lang: row.lang, type: row.type, value: row.value, ...(typeof row.source === 'string' ? { source: row.source } : {}) }];
-  });
+  result.notes = publicThesaurusNotes(source.notes, source.uri);
   result.relations = (Array.isArray(source.relations) ? source.relations : []).flatMap((item) => {
     const row = object(item);
     return row && typeof row.type === 'string' && typeof row.target_id === 'string'

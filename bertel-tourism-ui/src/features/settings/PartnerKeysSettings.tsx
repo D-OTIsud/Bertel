@@ -2,16 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, KeyRound, Plus, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Ban, ChevronRight, KeyRound, Plus, RefreshCw, ShieldAlert } from 'lucide-react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { useSessionStore } from '../../store/session-store';
 import {
-  issuePartnerKey,
   listPartnerKeys,
   revokePartnerKey,
-  type IssuedPartnerKey,
   type PartnerKey,
 } from '../../services/partner-keys';
+import { IssuePartnerKeyModal } from './IssuePartnerKeyModal';
+import { isIdle, lastUseLabel, splitKeys, summarize } from './partner-keys-view';
 import './settings-panels.css';
 
 function formatDate(iso: string | null): string {
@@ -34,9 +34,7 @@ export function PartnerKeysSettings() {
   const [keys, setKeys] = useState<PartnerKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [label, setLabel] = useState('');
-  const [issuing, setIssuing] = useState(false);
-  const [issued, setIssued] = useState<IssuedPartnerKey | null>(null);
+  const [issueIdentity, setIssueIdentity] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; label: string; keyPrefix: string; identity: string } | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
@@ -97,28 +95,9 @@ export function PartnerKeysSettings() {
     setKeys([]);
     setRevokeTarget(null);
     setRevokeError(null);
+    setIssueIdentity(null);
     void load();
   }, [load]);
-
-  const handleIssue = async () => {
-    const trimmed = label.trim();
-    if (!trimmed) {
-      toast.error('Donnez un nom au partenaire (ex. « Portail régional »).');
-      return;
-    }
-    setIssuing(true);
-    try {
-      const result = await issuePartnerKey(trimmed);
-      setIssued(result);
-      setLabel('');
-      toast.success('Clé émise. Copiez-la maintenant — elle ne sera plus affichée.');
-      await load();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setIssuing(false);
-    }
-  };
 
   const handleRevoke = async () => {
     const target = revokeTarget;
@@ -155,155 +134,164 @@ export function PartnerKeysSettings() {
     }
   };
 
-  const copyKey = () => {
-    if (!issued) return;
-    void navigator.clipboard?.writeText(issued.apiKey).then(
-      () => toast.success('Clé copiée dans le presse-papier.'),
-      () => toast.error('Copie impossible — sélectionnez la clé manuellement.'),
-    );
-  };
-
-  const activeKeyCount = keys.filter((key) => key.isActive).length;
+  const now = new Date();
+  const { active, revoked } = splitKeys(keys);
+  const summary = summarize(active, now);
 
   return (
-    <section className="settings-pane settings-admin" aria-labelledby="partner-keys-heading">
+    <section className="settings-pane settings-admin partner-keys" aria-labelledby="partner-keys-heading">
       <header className="settings-pane__head settings-admin__header">
         <div className="settings-admin__heading">
           <span className="settings-admin__icon"><KeyRound size={22} aria-hidden /></span>
           <div>
-            <p className="settings-admin__eyebrow">Intégrations</p>
-            <h2 id="partner-keys-heading">Clés API partenaire</h2>
-            <p>Créez un accès dédié à chaque partenaire et suivez l’utilisation de ses clés.</p>
+            <p className="settings-admin__eyebrow">Intégrations · Super-admin</p>
+            <h2 id="partner-keys-heading" ref={headingRef} tabIndex={-1}>Clés API partenaire</h2>
+            <p>Une clé par partenaire : on retire un accès sans toucher aux autres.</p>
           </div>
         </div>
         <div className="settings-pane__actions">
-          <span className="badge badge--info badge--xs">Super-admin</span>
+          <button type="button" className="primary-button" onClick={() => setIssueIdentity(identity)}>
+            <Plus size={16} aria-hidden /> Émettre une clé
+          </button>
         </div>
       </header>
 
-      <div className="settings-admin__body">
-
-      {/* Clé émise — affichée UNE SEULE FOIS */}
-      {issued && (
-        <div className="settings-admin__note settings-admin__note--success motion-status-enter" role="status">
-          <ShieldAlert size={20} aria-hidden />
-          <div className="settings-admin__key-list">
-            <strong>Clé pour « {issued.label} » — copiez-la maintenant.</strong>
-            <p>
-              Elle ne sera <strong>plus jamais affichée</strong>. Transmettez-la au partenaire par un canal sûr.
-            </p>
-            <code className="mono settings-admin__secret">{issued.apiKey}</code>
-            <div className="settings-admin__actions">
-              <button type="button" className="ghost-button" onClick={copyKey}><Copy size={14} aria-hidden /> Copier</button>
-              <button type="button" className="ghost-button" onClick={() => setIssued(null)}>J’ai copié la clé</button>
+      <section className="partner-keys__list" aria-labelledby="partner-keys-list-heading">
+        <h3 id="partner-keys-list-heading" className="sr-only">Accès partenaires</h3>
+        {error ? (
+          <div className="settings-admin__note settings-admin__note--danger" role="alert">
+            <ShieldAlert size={18} aria-hidden />
+            <div>
+              <strong>Impossible de charger les clés</strong>
+              <p>{error}</p>
+              <button type="button" className="ghost-button" onClick={() => void load()}><RefreshCw size={14} aria-hidden /> Réessayer</button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Émission */}
-      <form className="settings-admin__section" onSubmit={(event) => { event.preventDefault(); void handleIssue(); }}>
-        <div className="settings-admin__section-head">
-          <div>
-            <h3>Nouveau partenaire</h3>
-            <p>Une clé par prestataire permet de retirer un accès sans affecter les autres.</p>
-          </div>
-          <Plus size={18} aria-hidden />
-        </div>
-        <div className="settings-admin__form-grid">
-          <div className="settings-admin__field settings-admin__field--wide">
-            <label htmlFor="partner-label">Nom du partenaire</label>
-            <input
-              id="partner-label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="Nom du prestataire (ex. Portail régional)"
-              aria-describedby="partner-label-help"
-              maxLength={120}
-              disabled={issuing}
-            />
-            <small id="partner-label-help">Choisissez un nom qui vous permettra d’identifier cet accès.</small>
-          </div>
-        </div>
-        <div className="settings-admin__footer">
-          <p>La clé complète sera affichée une seule fois, à sa création.</p>
-          <button type="submit" className="primary-button" disabled={issuing || !label.trim()}>
-            <KeyRound size={16} aria-hidden /> {issuing ? 'Émission…' : 'Émettre une clé'}
-          </button>
-        </div>
-      </form>
-
-      {/* Liste */}
-      <section className="settings-admin__key-list" aria-labelledby="partner-keys-list-heading">
-        <div className="settings-admin__section-head">
-          <div>
-            <h3 id="partner-keys-list-heading" ref={headingRef} tabIndex={-1}>Accès partenaires</h3>
-            <p>Consultez les derniers usages et révoquez les clés qui ne sont plus nécessaires.</p>
-          </div>
-          {!loading && !error && <span className="badge badge--info badge--xs">{activeKeyCount} active{activeKeyCount > 1 ? 's' : ''}</span>}
-        </div>
-      {error ? (
-        <div className="settings-admin__note settings-admin__note--danger" role="alert">
-          <ShieldAlert size={18} aria-hidden />
-          <div>
-            <strong>Impossible de charger les clés</strong>
-            <p>{error}</p>
-            <button type="button" className="ghost-button" onClick={() => void load()}><RefreshCw size={14} aria-hidden /> Réessayer</button>
-          </div>
-        </div>
-      ) : loading ? (
-        <div className="settings-admin__section settings-admin__empty" role="status">Chargement des clés…</div>
-      ) : keys.length === 0 ? (
-        <div className="settings-admin__section settings-admin__empty">
-          <KeyRound size={28} aria-hidden />
-          <strong>Aucune clé partenaire émise pour l’instant.</strong>
-          <p>Ajoutez votre premier partenaire avec le formulaire ci-dessus.</p>
-        </div>
-      ) : (
-        <div className="settings-admin__key-list">
-          {keys.map((key) => (
-            <article key={key.id} className="settings-admin__section">
-              <div className="settings-admin__section-head">
-                <div>
-                  <div className="settings-admin__actions">
-                    <h4>{key.label}</h4>
-                    <span className={key.isActive ? 'badge badge--ok badge--xs' : 'badge badge--danger badge--xs'}>
-                      {key.isActive ? 'Active' : 'Révoquée'}
-                    </span>
-                  </div>
-                  <p className="mono">{key.keyPrefix}…</p>
+        ) : loading ? (
+          <div className="settings-admin__empty" role="status">Chargement des clés…</div>
+        ) : (
+          <>
+            {active.length > 0 ? (
+              <>
+                <div className="partner-keys__summary" aria-live="polite">
+                  <span className="badge badge--ok badge--xs">{summary.activeCount} active{summary.activeCount > 1 ? 's' : ''}</span>
+                  <span className="partner-keys__separator" aria-hidden>·</span>
+                  <span>{summary.usedLast7Days} utilisée{summary.usedLast7Days > 1 ? 's' : ''} ces 7 derniers jours</span>
+                  {summary.idleCount > 0 && (
+                    <>
+                      <span className="partner-keys__separator" aria-hidden>·</span>
+                      <span className="badge badge--warn badge--xs" title="Aucun appel depuis plus de 30 jours ou jamais utilisée">
+                        {summary.idleCount} inactive{summary.idleCount > 1 ? 's' : ''} &gt; 30 j
+                      </span>
+                    </>
+                  )}
                 </div>
-                {key.isActive && (
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={(event) => {
-                      if (revokeLockRef.current) return;
-                      openerRef.current = event.currentTarget;
-                      restoreFocusRef.current = true;
-                      setRevokeError(null);
-                      setRevokeTarget({ id: key.id, label: key.label, keyPrefix: key.keyPrefix, identity });
-                    }}
-                    disabled={revokingId === key.id}
-                  >
-                    {revokingId === key.id ? 'Révocation…' : 'Révoquer'}
+                <table className="partner-keys__table">
+                  <caption className="sr-only">Clés partenaires actives</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Partenaire</th>
+                      <th scope="col">Dernier usage</th>
+                      <th scope="col" className="partner-keys__created">Créée le</th>
+                      <th scope="col" className="partner-keys__expires">Expiration</th>
+                      <th scope="col"><span className="sr-only">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {active.map((key) => {
+                      const lastUse = lastUseLabel(key.lastUsedAt, now);
+                      const idle = isIdle(key, now);
+                      const usedAt = key.lastUsedAt ? Date.parse(key.lastUsedAt) : NaN;
+                      const age = now.getTime() - usedAt;
+                      const recent = age >= 0 && age <= 7 * 24 * 60 * 60 * 1000;
+                      return (
+                        <tr key={key.id}>
+                          <td className="partner-keys__name" title={`Clé ${key.keyPrefix}…`}>{key.label}</td>
+                          <td className="partner-keys__usage">
+                            {idle ? (
+                              <span className="badge badge--warn badge--xs">
+                                {lastUse.startsWith('il y a ') ? `Inactive depuis ${lastUse.slice(7)}` : lastUse}
+                              </span>
+                            ) : (
+                              <span className="partner-keys__last-use">
+                                {recent && <span className="partner-keys__live-dot" aria-hidden />}
+                                {lastUse}
+                              </span>
+                            )}
+                          </td>
+                          <td className="partner-keys__created">{formatDate(key.createdAt)}</td>
+                          <td className="partner-keys__expires">{key.expiresAt ? formatDate(key.expiresAt) : 'Sans'}</td>
+                          <td className="partner-keys__actions">
+                            <button
+                              type="button"
+                              className="partner-keys__revoke"
+                              aria-label={`Révoquer la clé ${key.label}`}
+                              title="Révoquer"
+                              onClick={(event) => {
+                                if (revokeLockRef.current) return;
+                                openerRef.current = event.currentTarget;
+                                restoreFocusRef.current = true;
+                                setRevokeError(null);
+                                setRevokeTarget({ id: key.id, label: key.label, keyPrefix: key.keyPrefix, identity });
+                              }}
+                              disabled={revokingId === key.id}
+                              aria-busy={revokingId === key.id}
+                            >
+                              <Ban size={16} aria-hidden />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            ) : (
+              <div className="settings-admin__section settings-admin__empty">
+                <KeyRound size={28} aria-hidden />
+                <strong>{revoked.length > 0 ? 'Aucune clé partenaire active.' : 'Aucune clé partenaire émise pour l’instant.'}</strong>
+                <p>Émettez une clé pour donner accès à un partenaire.</p>
+                <div className="partner-keys__empty-action">
+                  <button type="button" className="primary-button" onClick={() => setIssueIdentity(identity)}>
+                    <Plus size={16} aria-hidden /> Émettre une clé
                   </button>
-                )}
+                </div>
               </div>
-              <dl className="settings-admin__key-meta">
-                <div><dt>Créée le</dt><dd>{formatDate(key.createdAt)}</dd></div>
-                <div><dt>Dernier usage</dt><dd>{key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Pas encore utilisée'}</dd></div>
-                <div><dt>Expiration</dt><dd>{key.expiresAt ? formatDate(key.expiresAt) : 'Sans expiration'}</dd></div>
-                {key.revokedAt && (
-                  <div><dt>Révoquée le</dt><dd>{formatDate(key.revokedAt)}</dd></div>
-                )}
-              </dl>
-            </article>
-          ))}
-        </div>
-      )}
+            )}
+            {revoked.length > 0 && (
+              <details className="partner-keys__history">
+                <summary>
+                  <ChevronRight size={14} className="partner-keys__chevron" aria-hidden />
+                  Historique — {revoked.length} clé{revoked.length > 1 ? 's' : ''} révoquée{revoked.length > 1 ? 's' : ''}
+                </summary>
+                <table className="partner-keys__history-table">
+                  <caption className="sr-only">Clés partenaires révoquées</caption>
+                  <tbody>
+                    {revoked.map((key) => (
+                      <tr key={key.id}>
+                        <td className="partner-keys__name" title={`Clé ${key.keyPrefix}…`}>{key.label}</td>
+                        <td className="partner-keys__history-use">
+                          {key.expiresAt && Date.parse(key.expiresAt) <= now.getTime()
+                            ? 'Expirée'
+                            : key.lastUsedAt ? `Dernier usage ${lastUseLabel(key.lastUsedAt, now)}` : 'Jamais utilisée'}
+                        </td>
+                        <td>Révoquée le {formatDate(key.revokedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="partner-keys__history-foot">Conservé pour la traçabilité. Une clé révoquée ne peut pas être réactivée.</p>
+              </details>
+            )}
+          </>
+        )}
       </section>
-      </div>
+      <IssuePartnerKeyModal
+        key={identity}
+        open={issueIdentity === identity}
+        onOpenChange={(open) => setIssueIdentity(open ? identity : null)}
+        onIssued={() => { if (isCurrentIdentity(identity)) void load(); }}
+      />
       <ConfirmDialog
         open={revokeTarget !== null && revokeTarget.identity === identity}
         title="Révoquer la clé partenaire ?"

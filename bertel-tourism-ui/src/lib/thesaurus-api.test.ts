@@ -594,6 +594,79 @@ it('projects public fields without leaking private additions', () => {
   expect(projected).not.toHaveProperty('legacy_search_terms');
 });
 
+const editorialTrace = (type: 'source' | 'history', externalSources?: string) => ({
+  lang: 'fr', type,
+  value: `Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : ${concept.uri}. ${externalSources ? `Sources externes réellement consultées : ${externalSources}.` : 'Aucune source externe consultée pour cette proposition.'}`,
+  source: externalSources ? `${concept.uri} ; ${externalSources}` : concept.uri,
+});
+
+it.each(['source', 'history'] as const)('keeps %s generation traces internal while preserving business notes and original snapshots', (type) => {
+  const businessHistory = { lang: 'fr', type: 'history', value: 'Ancien code remplacé en novembre 2026.', source: 'Décision métier' };
+  const externalSource = { lang: 'fr', type: 'source', value: 'Définition du référentiel.', source: 'https://example.org/reference' };
+  const input = { ...concept, notes: [...concept.notes, editorialTrace(type), businessHistory, externalSource] };
+  const original = JSON.stringify(input);
+  expect(publicThesaurusConcept(input).notes).toEqual([...concept.notes, businessHistory, externalSource]);
+  expect(JSON.stringify(input)).toBe(original);
+});
+
+it('retains actual external citations without the generated editorial disclaimer', () => {
+  const source = 'https://www.legislation.gov.uk/eur/2011/1169/annex/II';
+  const trace = editorialTrace('history', source);
+  const input = { ...concept, notes: [trace] };
+  expect(publicThesaurusConcept(input).notes).toEqual([
+    { lang: 'fr', type: 'source', value: `Sources externes consultées : ${source}.`, source },
+  ]);
+  expect(input.notes).toEqual([trace]);
+});
+
+it('preserves unmatched editorial text, sources and notes about other concepts', () => {
+  const trace = editorialTrace('history');
+  const notes = [
+    { ...trace, value: `${trace.value} Une réserve métier reste à vérifier.` },
+    { ...trace, value: trace.value.replace(concept.uri, concept.uri.replace(ID, OTHER)) },
+    { ...trace, source: 'https://example.org/reference' },
+    { ...trace, type: 'scope' },
+    { ...editorialTrace('history', 'https://example.org/reference'), source: 'Autre provenance' },
+  ];
+  expect(publicThesaurusConcept({ ...concept, notes }).notes).toEqual(notes);
+});
+
+it.each(['concepts', 'concept', 'resolve', 'export', 'changes'] as const)('omits generation boilerplate on the %s response without changing stored data', async (action) => {
+  const snapshot = { ...concept, notes: [...concept.notes, editorialTrace('history')] };
+  const data = action === 'changes'
+    ? [{ concept_id: ID, change_type: 'modified', before: snapshot, after: snapshot }]
+    : action === 'concept' || action === 'resolve' ? snapshot : [snapshot];
+  const upstream = response(data);
+  const original = JSON.stringify(upstream);
+  rpc.mockResolvedValue(upstream);
+  const result = await handleThesaurusRequest(req(), {
+    action, ...(action !== 'resolve' ? { releaseId: '1' } : {}),
+    ...(action === 'concept' || action === 'resolve' ? { conceptId: ID } : {}),
+  });
+  expect(result.status).toBe(200);
+  const body = await result.json();
+  const projected = action === 'changes' ? [body.data[0].before, body.data[0].after]
+    : Array.isArray(body.data) ? body.data : [body.data];
+  for (const item of projected) expect(item.notes).toEqual(concept.notes);
+  expect(JSON.stringify(body)).not.toContain('Note éditoriale locale');
+  expect(JSON.stringify(upstream)).toBe(original);
+});
+
+it('applies the same editorial note projection to the standalone JSON-LD export', async () => {
+  const citation = 'https://example.org/reference';
+  rpc.mockResolvedValue(response([{ ...concept, notes: [...concept.notes, editorialTrace('source'), editorialTrace('history', citation)] }]));
+  const result = await handleThesaurusRequest(req('?format=jsonld'), { action: 'export', releaseId: '1' });
+  expect(result.status).toBe(200);
+  const document = await result.json();
+  const node = document['@graph'][0];
+  expect(node.notes).toEqual([...concept.notes,
+    { lang: 'fr', type: 'source', value: `Sources externes consultées : ${citation}.`, source: citation },
+  ]);
+  expect(node['skos:scopeNote']).toEqual([{ '@value': concept.notes[0].value, '@language': 'fr' }]);
+  expect(node).not.toHaveProperty('skos:historyNote');
+  expect(JSON.stringify(document)).not.toContain('Note éditoriale locale');
+});
+
 it('preserves opaque scope qualifiers for two concepts sharing a domain and code', async () => {
   rpc.mockResolvedValue(response([
     { ...concept, domain: 'classification_value', code: 'gold', context_key: 'scheme-a' },

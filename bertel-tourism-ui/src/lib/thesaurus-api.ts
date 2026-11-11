@@ -26,7 +26,9 @@ interface Cursor {
   release: number;
   scope: string;
   after: string;
+  snapshot?: string;
 }
+interface CursorPosition { after: string; snapshot: string }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const LIFECYCLES = new Set(['active', 'deprecated', 'retired']);
@@ -68,7 +70,7 @@ export function encodeThesaurusCursor(cursor: Cursor): string {
   return `${payload}.${signature}`;
 }
 
-export function decodeThesaurusCursor(token: string, release: number, scope: string): string {
+export function decodeThesaurusCursor(token: string, release: number, scope: string): CursorPosition {
   if (token.length > 1500 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)) throw new Error('invalid_cursor');
   const [payload, signature] = token.split('.');
   const expected = createHmac('sha256', cursorSecret()).update(payload).digest();
@@ -79,10 +81,11 @@ export function decodeThesaurusCursor(token: string, release: number, scope: str
   const row = object(decoded);
   if (!row || row.version !== 1 || row.release !== release || row.scope !== scope
     || typeof row.after !== 'string' || !UUID.test(row.after)
-    || Object.keys(row).some((key) => !['version', 'release', 'scope', 'after'].includes(key))) {
+    || typeof row.snapshot !== 'string' || !/^[0-9a-f]{32}$/.test(row.snapshot)
+    || Object.keys(row).some((key) => !['version', 'release', 'scope', 'after', 'snapshot'].includes(key))) {
     throw new Error('invalid_cursor');
   }
-  return row.after.toLowerCase();
+  return { after: row.after.toLowerCase(), snapshot: row.snapshot };
 }
 
 function parseList(value: string | null, kind: 'domain' | 'status'): string[] {
@@ -346,7 +349,8 @@ export function thesaurusJsonLd(values: unknown[]): JsonObject {
 
 function scopeFor(target: ThesaurusTarget, query: Query): string {
   return digest({ action: target.action, domains: query.domains, status: query.status,
-    lang: query.lang, query: query.query, page_size: query.pageSize, format: query.format });
+    lang: query.lang, query: query.query, page_size: query.pageSize, format: query.format,
+    series: 'official' });
 }
 
 /** All admission occurs before parsing a cursor, loading a snapshot or returning 304. */
@@ -377,11 +381,14 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   if (target.conceptId !== undefined && !UUID.test(target.conceptId)) return fail(400, 'invalid_concept_id');
   let query: Query;
   let after: string | null = null;
+  let cursorSnapshot: string | null = null;
   try {
     query = parseQuery(new URL(req.url), target.action);
     if (query.cursor) {
       if (release === null) throw new Error('invalid_cursor');
-      after = decodeThesaurusCursor(query.cursor, release, scopeFor(target, query));
+      const position = decodeThesaurusCursor(query.cursor, release, scopeFor(target, query));
+      after = position.after;
+      cursorSnapshot = position.snapshot ?? null;
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : '';
@@ -390,12 +397,15 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   }
   const params: JsonObject = { domains: query.domains.length ? query.domains : null,
     status: query.status.length ? query.status : null, lang: query.lang, query: query.query,
-    page_size: query.pageSize, after, concept_id: target.conceptId?.toLowerCase() ?? null };
+    page_size: query.pageSize, after, cursor_snapshot: cursorSnapshot,
+    concept_id: target.conceptId?.toLowerCase() ?? null };
   let result;
   try {
-    result = await callPublicRpc('thesaurus_public', { p_action: target.action, p_release_id: release, p_params: params });
+    result = await callPublicRpc('thesaurus_public_edition', { p_action: target.action, p_release_id: release, p_params: params });
   } catch { return fail(502, 'upstream_error'); }
   if (!result.ok) {
+    const errorBody = object(result.body);
+    if (result.status === 400 && errorBody?.error === 'invalid_cursor') return fail(400, 'invalid_cursor');
     await audit(result.status);
     return NextResponse.json(result.body, { status: result.status, headers });
   }
@@ -406,6 +416,11 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   }
   const actualRelease = Number(rpcMeta.release_id);
   if (release !== null && release !== actualRelease) return fail(502, 'invalid_snapshot');
+  const snapshotValue = rpcMeta.cursor_snapshot;
+  if (typeof snapshotValue !== 'string' || !/^[0-9a-f]{32}$/.test(snapshotValue)) {
+    return fail(502, 'invalid_snapshot');
+  }
+  const responseSnapshot = snapshotValue;
   const meta: JsonObject = { contract_version: PUBLIC_API_CONTRACT_VERSION, release_id: actualRelease,
     vocabulary_release: actualRelease, previous_release_id: rpcMeta.previous_release_id ?? null,
     as_of: rpcMeta.as_of ?? null };
@@ -437,7 +452,8 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
       const nextAfter = rpcMeta.next_after;
       if (nextAfter != null && (typeof nextAfter !== 'string' || !UUID.test(nextAfter))) throw new Error('invalid_snapshot');
       meta.next_cursor = typeof nextAfter === 'string'
-        ? encodeThesaurusCursor({ version: 1, release: actualRelease, scope: scopeFor(target, query), after: nextAfter }) : null;
+        ? encodeThesaurusCursor({ version: 1, release: actualRelease, scope: scopeFor(target, query), after: nextAfter,
+          snapshot: responseSnapshot }) : null;
     }
     if (target.action === 'export' && query.format === 'jsonld') data = thesaurusJsonLd(data as unknown[]);
   } catch (error) {
@@ -450,7 +466,8 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   const standaloneJsonLd = target.action === 'export' && query.format === 'jsonld';
   const responseText = standaloneJsonLd ? canonicalThesaurusJson(data) : text;
   const contentType = standaloneJsonLd ? 'application/ld+json; charset=utf-8' : 'application/json; charset=utf-8';
-  const etag = `"${createHash('sha256').update(contentType).update(':').update(responseText).digest('hex')}"`;
+  const etag = `"${createHash('sha256').update(`official:${actualRelease}:${responseSnapshot ?? ''}:`)
+    .update(contentType).update(':').update(responseText).digest('hex')}"`;
   const responseHeaders = { ...headers, ETag: etag,
     'X-Bertel-Vocabulary-Release': String(actualRelease), 'Content-Type': contentType };
   const candidates = req.headers.get('if-none-match')?.split(',').map((part) => part.trim()) ?? [];

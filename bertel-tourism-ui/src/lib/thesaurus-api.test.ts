@@ -7,6 +7,7 @@ jest.mock('./public-api', () => ({
   PUBLIC_API_CONTRACT_VERSION: '1.0.0',
 }));
 
+import { createHash } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { admitPartner, logPartnerCall } from './partner-auth';
 import { callPublicRpc } from './public-api';
@@ -24,6 +25,7 @@ const rpc = callPublicRpc as jest.Mock;
 const audit = logPartnerCall as jest.Mock;
 const ID = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
+const SNAPSHOT = '0123456789abcdef0123456789abcdef';
 const concept = {
   concept_id: ID, uri: `https://bertel.example/api/public/thesaurus/concepts/${ID}`,
   domain: 'taxonomy_hlo', code: 'appartement', context_key: '', name: 'Appartement',
@@ -42,7 +44,7 @@ function req(query = '', headers: Record<string, string> = {}) {
 }
 function response(data: unknown = [concept], extraMeta = {}) {
   return { ok: true, status: 200, body: { meta: { release_id: 1, previous_release_id: null,
-    as_of: '2026-11-06T12:00:00Z', total: 1, next_after: null, ...extraMeta }, data } };
+    as_of: '2026-11-06T12:00:00Z', total: 1, next_after: null, cursor_snapshot: SNAPSHOT, ...extraMeta }, data } };
 }
 
 function manifestReq(query = '', headers: Record<string, string> = {}) {
@@ -75,14 +77,52 @@ it('canonicalizes keys without changing list order', () => {
   expect(canonicalThesaurusJson([2, 1])).toBe('[2,1]');
 });
 
+it('keeps official-edition cursors and validators separate from prelaunch releases with the same number', async () => {
+  const official = { action: 'concepts', releaseId: '1' } as const;
+  const oldScope = createHash('sha256').update(canonicalThesaurusJson({
+    action: 'concepts', domains: [], status: [], lang: 'fr', query: null, page_size: 1, format: 'json',
+  })).digest('hex');
+  const oldCursor = encodeThesaurusCursor({ version: 1, release: 1, scope: oldScope, after: ID });
+  rpc.mockResolvedValue(response([concept], { next_after: ID }));
+
+  const first = await handleThesaurusRequest(req('?page_size=1'), official);
+  const oldEtag = `"${createHash('sha256').update(first.headers.get('content-type')!)
+    .update(':').update(await first.text()).digest('hex')}"`;
+  const newPage = await handleThesaurusRequest(req('?page_size=1', {
+    'if-none-match': oldEtag,
+  }), official);
+  const newCursor = (await newPage.json()).meta.next_cursor;
+
+  expect(newPage.status).toBe(200);
+  expect(newPage.headers.get('X-Bertel-Vocabulary-Release')).toBe('1');
+  expect(newPage.headers.get('etag')).not.toBe(oldEtag);
+  expect(newCursor).not.toBe(oldCursor);
+  expect(newPage.headers.get('etag')).not.toContain(SNAPSHOT);
+  expect(rpc).toHaveBeenLastCalledWith('thesaurus_public_edition', expect.objectContaining({
+    p_action: 'concepts', p_release_id: 1,
+  }));
+
+  const mismatch = await handleThesaurusRequest(req(`?page_size=1&cursor=${oldCursor}`), official);
+  expect(mismatch.status).toBe(400);
+  await expect(mismatch.json()).resolves.toEqual({ error: 'invalid_cursor' });
+
+  const next = await handleThesaurusRequest(req(`?page_size=1&cursor=${newCursor}`), official);
+  expect(next.status).toBe(200);
+  expect(rpc).toHaveBeenLastCalledWith('thesaurus_public_edition', expect.objectContaining({
+    p_params: expect.objectContaining({ after: ID, cursor_snapshot: SNAPSHOT }),
+  }));
+});
+
 it('signs deterministic cursors and rejects tampering, another release and another filter scope', () => {
-  const data = { version: 1 as const, release: 1, scope: 'scope', after: ID };
+  const data = { version: 1 as const, release: 1, scope: 'scope', after: ID, snapshot: SNAPSHOT };
   const token = encodeThesaurusCursor(data);
   expect(encodeThesaurusCursor(data)).toBe(token);
-  expect(decodeThesaurusCursor(token, 1, 'scope')).toBe(ID);
+  expect(decodeThesaurusCursor(token, 1, 'scope')).toEqual({ after: ID, snapshot: SNAPSHOT });
   expect(() => decodeThesaurusCursor(token, 2, 'scope')).toThrow('invalid_cursor');
   expect(() => decodeThesaurusCursor(token, 1, 'different')).toThrow('invalid_cursor');
   expect(() => decodeThesaurusCursor(`${token.slice(0, -2)}XX`, 1, 'scope')).toThrow('invalid_cursor');
+  const legacy = encodeThesaurusCursor({ version: 1, release: 1, scope: 'scope', after: ID });
+  expect(() => decodeThesaurusCursor(legacy, 1, 'scope')).toThrow('invalid_cursor');
 });
 
 it('treats an empty optional cursor secret as unset and uses the server-only fallback', () => {
@@ -90,8 +130,8 @@ it('treats an empty optional cursor secret as unset and uses the server-only fal
   try {
     process.env.THESAURUS_CURSOR_SECRET = '  ';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-server-only-fallback';
-    const cursor = encodeThesaurusCursor({ version: 1, release: 1, scope: 'scope', after: ID });
-    expect(decodeThesaurusCursor(cursor, 1, 'scope')).toBe(ID);
+    const cursor = encodeThesaurusCursor({ version: 1, release: 1, scope: 'scope', after: ID, snapshot: SNAPSHOT });
+    expect(decodeThesaurusCursor(cursor, 1, 'scope')).toEqual({ after: ID, snapshot: SNAPSHOT });
     expect(cursor).not.toContain('test-server-only-fallback');
   } finally {
     if (previousServiceKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -131,13 +171,38 @@ it('normalizes filters and pins every continuation to the same immutable release
   expect(firstBody.meta.vocabulary_release).toBe(1);
   rpc.mockClear();
   await handleThesaurusRequest(req(`?domains=taxonomy_hot,taxonomy_hlo&lang=fr&page_size=1&cursor=${firstBody.meta.next_cursor}`), { action: 'concepts', releaseId: '1' });
-  expect(rpc).toHaveBeenCalledWith('thesaurus_public', {
-    p_action: 'concepts', p_release_id: 1, p_params: expect.objectContaining({ after: ID, domains: ['taxonomy_hlo', 'taxonomy_hot'] }),
+  expect(rpc).toHaveBeenCalledWith('thesaurus_public_edition', {
+    p_action: 'concepts', p_release_id: 1, p_params: expect.objectContaining({ after: ID,
+      cursor_snapshot: SNAPSHOT, domains: ['taxonomy_hlo', 'taxonomy_hot'] }),
   });
   rpc.mockClear();
   const mismatch = await handleThesaurusRequest(req(`?domains=taxonomy_hlo&lang=fr&page_size=1&cursor=${firstBody.meta.next_cursor}`), { action: 'concepts', releaseId: '1' });
   expect(mismatch.status).toBe(400);
   expect(rpc).not.toHaveBeenCalled();
+});
+
+it('binds mutable-edition validators to the selected stored snapshot without exposing its key', async () => {
+  rpc.mockResolvedValueOnce(response([concept], { cursor_snapshot: SNAPSHOT }))
+    .mockResolvedValueOnce(response([concept], { cursor_snapshot: 'fedcba9876543210fedcba9876543210' }));
+  const first = await handleThesaurusRequest(req(), { action: 'concepts', releaseId: '1' });
+  const firstText = await first.text();
+  const second = await handleThesaurusRequest(req(), { action: 'concepts', releaseId: '1' });
+  expect(second.headers.get('etag')).not.toBe(first.headers.get('etag'));
+  expect(firstText).not.toContain(SNAPSHOT);
+  expect(firstText).not.toContain('cursor_snapshot');
+});
+
+it('returns a safe invalid_cursor envelope when the selected mutable snapshot changed', async () => {
+  const technicalSnapshotId = 'internal-manifest-id=do-not-expose';
+  rpc.mockResolvedValueOnce(response([concept], { next_after: ID }));
+  const first = await handleThesaurusRequest(req('?page_size=1'), { action: 'concepts', releaseId: '1' });
+  const cursor = (await first.json()).meta.next_cursor;
+  rpc.mockResolvedValue({ ok: false, status: 400, body: { error: 'invalid_cursor', detail: technicalSnapshotId } });
+  const result = await handleThesaurusRequest(req(`?page_size=1&cursor=${encodeURIComponent(cursor)}`), { action: 'concepts', releaseId: '1' });
+  expect(result.status).toBe(400);
+  const body = await result.json();
+  expect(body).toEqual({ error: 'invalid_cursor' });
+  expect(JSON.stringify(body)).not.toContain(technicalSnapshotId);
 });
 
 it('does not accept a snapshot for a different requested release', async () => {
@@ -159,7 +224,7 @@ it.each([
     ...activityVocabulary, name, name_i18n: { fr: 'Types d’activité', en: 'Activity types' },
     requested_lang: requested, effective_lang: effective, name_metadata_scope: 'reviewed_legacy_dictionary',
   }]);
-  expect(rpc).toHaveBeenCalledWith('thesaurus_public', {
+  expect(rpc).toHaveBeenCalledWith('thesaurus_public_edition', {
     p_action: 'manifest', p_release_id: null, p_params: expect.objectContaining({ lang: requested }),
   });
 });
@@ -193,7 +258,7 @@ it('localizes embedded and pinned release manifests without altering published s
   const expectedPinned = { ...body.data.releases[0] };
   delete expectedPinned.is_current;
   expect((await pinned.json()).data).toEqual(expectedPinned);
-  expect(rpc).toHaveBeenLastCalledWith('thesaurus_public', {
+  expect(rpc).toHaveBeenLastCalledWith('thesaurus_public_edition', {
     p_action: 'release', p_release_id: 2, p_params: expect.objectContaining({ lang: 'en' }),
   });
   expect(snapshot).toEqual(original);

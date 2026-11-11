@@ -855,6 +855,7 @@ COMMIT;
 
 \echo '== Frozen multilingual vocabulary metadata and ordinary metadata publication =='
 \ir thesaurus_domain_metadata_localization.sql
+\ir thesaurus_public_launch_editions.sql
 \ir tests/test_thesaurus_domain_metadata_localization.sql
 
 \echo '== Native dictionaries: six scoped public adapters and three private role adapters =='

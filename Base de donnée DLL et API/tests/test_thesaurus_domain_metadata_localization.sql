@@ -103,6 +103,8 @@ DECLARE
   initial_manifest jsonb;
   first_manifest jsonb;
   second_manifest jsonb;
+  edition_result jsonb;
+  first_cursor_snapshot text;
   initial_release bigint;
   first_release bigint;
   second_release bigint;
@@ -189,6 +191,34 @@ BEGIN
     'First immutable release manifest and checksum must remain unchanged';
 
   first_metadata_checksum:=first_manifest->>'metadata_checksum';
+  ASSERT NOT has_table_privilege('service_role','thesaurus.public_launch','INSERT')
+    AND NOT has_function_privilege('authenticated','api.thesaurus_public_edition(text,bigint,jsonb)','EXECUTE')
+    AND has_function_privilege('service_role','api.thesaurus_public_edition(text,bigint,jsonb)','EXECUTE'),
+    'Only the server reader may request official editions; application roles cannot establish the launch';
+  BEGIN
+    PERFORM api.thesaurus_public_edition('manifest',NULL,'{}');
+    RAISE EXCEPTION 'Official editions were served before the launch anchor was established';
+  EXCEPTION WHEN SQLSTATE 'PT503' THEN NULL; END;
+  INSERT INTO thesaurus.public_launch DEFAULT VALUES;
+  edition_result:=api.thesaurus_public_edition('manifest',NULL,'{}');
+  first_cursor_snapshot:=edition_result#>>'{meta,cursor_snapshot}';
+  ASSERT edition_result#>>'{meta,release_id}'='1'
+    AND edition_result#>'{meta,previous_release_id}'='null'
+    AND jsonb_array_length(edition_result#>'{data,releases}')=1
+    AND edition_result#>>'{data,releases,0,release_id}'='1'
+    AND edition_result#>>'{data,metadata_checksum}'=first_metadata_checksum
+    AND first_cursor_snapshot ~ '^[a-f0-9]{32}$'
+    AND api.thesaurus_object_release()=1
+    AND edition_result#>>'{data,changed_count}'='1',
+    'First official discovery must project the selected release as edition 1 with no prelaunch history';
+  edition_result:=api.thesaurus_public_edition('changes',1,'{"page_size":1}');
+  ASSERT edition_result#>>'{meta,total}'='1'
+    AND edition_result#>>'{data,0,change_type}'='added'
+    AND edition_result#>'{data,0,before}'='null',
+    'The baseline edition must expose its public concept as an initial addition';
+
+  -- A technical sequence gap must not consume an official edition number.
+  PERFORM nextval(pg_get_serial_sequence('thesaurus.release','release_id'));
   UPDATE thesaurus.vocabulary SET name_i18n=name_i18n||'{"en":"Reviewed metadata domain labels"}'::jsonb
   WHERE domain=test_domains[1];
   second_result:=api.thesaurus_admin('bootstrap',jsonb_build_object(
@@ -211,6 +241,31 @@ BEGIN
     AND (SELECT manifest=initial_manifest AND checksum=initial_checksum
       FROM thesaurus.release WHERE release_id=initial_release),
     'Older release manifests must remain immutable after repeated metadata edits';
+  edition_result:=api.thesaurus_public_edition('manifest',NULL,'{}');
+  ASSERT second_release>first_release+1
+    AND edition_result#>>'{meta,release_id}'='1'
+    AND edition_result#>'{meta,previous_release_id}'='null'
+    AND jsonb_array_length(edition_result#>'{data,releases}')=1
+    AND edition_result#>>'{data,releases,0,metadata_checksum}'=second_manifest->>'metadata_checksum'
+    AND edition_result#>>'{meta,cursor_snapshot}'<>first_cursor_snapshot
+    AND api.thesaurus_object_release()=1
+    AND api.thesaurus_generation()=second_release,
+    'A retouch and internal sequence gap must leave public discovery and object metadata at edition 1';
+  edition_result:=api.thesaurus_public_edition('release',1,'{}');
+  ASSERT edition_result#>>'{data,metadata_checksum}'=second_manifest->>'metadata_checksum'
+    AND edition_result#>>'{data,checksum}'=concept_checksum
+    AND (api.thesaurus_public('release',initial_release,'{}')->'data')=initial_manifest,
+    'During preparation edition 1 must follow the current content without changing technical history';
+  BEGIN
+    PERFORM api.thesaurus_public_edition('release',2,'{}');
+    RAISE EXCEPTION 'Unpublished official edition was readable';
+  EXCEPTION WHEN SQLSTATE 'PT404' THEN NULL; END;
+  BEGIN
+    PERFORM api.thesaurus_public_edition('concepts',1,jsonb_build_object('cursor_snapshot',first_cursor_snapshot));
+    RAISE EXCEPTION 'Pagination continued against a different technical snapshot';
+  EXCEPTION WHEN SQLSTATE 'PT400' THEN
+    ASSERT SQLERRM='invalid_cursor', 'A stale edition cursor must be rejected explicitly';
+  END;
 
   -- CHECK rejects malformed, missing, blank and French-mismatched translations.
   FOR bad IN SELECT value FROM jsonb_array_elements(jsonb_build_array(
@@ -255,6 +310,18 @@ BEGIN
     'The two metadata-only releases must contain no concept release changes';
   ASSERT (SELECT count(*)=initial_revision_count FROM thesaurus.revision),
     'Metadata bootstrap must leave the revision count unchanged';
+
+  UPDATE thesaurus.public_launch SET first_release_id=second_release WHERE singleton;
+  PERFORM nextval(pg_get_serial_sequence('thesaurus.release','release_id'));
+  PERFORM api.thesaurus_admin('bootstrap',jsonb_build_object('domains',to_jsonb(test_domains),
+    'expected_release_id',second_release,'idempotency_key','localized-domain-metadata-after-freeze'));
+  edition_result:=api.thesaurus_public_edition('manifest',NULL,'{}');
+  ASSERT edition_result#>>'{meta,release_id}'='2'
+    AND edition_result#>>'{meta,previous_release_id}'='1'
+    AND jsonb_array_length(edition_result#>'{data,releases}')=2
+    AND edition_result#>>'{data,releases,1,metadata_checksum}'=second_manifest->>'metadata_checksum'
+    AND api.thesaurus_object_release()=2,
+    'Only a publication after explicit freeze may become edition 2, even when the technical sequence has gaps';
   RAISE NOTICE 'Localized domain metadata: fresh protected bootstrap, metadata-only republish, checksum separation, immutable history, translation validation, exposure and ACL passed';
 END
 $localized_domain_metadata_contract$;

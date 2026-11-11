@@ -152,12 +152,21 @@ function sandbox(entry, options = {}) {
 }
 
 check('only reviewed interface surfaces are present', () => {
+  assert.equal(collection.info._postman_id, '2c9f5068-6090-4bff-95af-dbe7b9e61fb7', 'collection ID must match the imported canonical Postman collection');
   for (const entry of entries) {
     assert.ok(rpcName(entry) ? allowedRpc.has(rpcName(entry)) : publicPath(entry) !== undefined, `unreviewed URL: ${rawUrl(entry)}`);
   for (const owner of [collection, entry.item, ...entry.ancestors]) for (const kind of ['prerequest', 'test']) for (const source of scripts(owner, kind)) {
       assert.ok(!/\bpm\.sendRequest\s*\(|\bpm\.execution\.runRequest\s*\(|\bfetch\s*\(/.test(source), 'secondary HTTP calls require explicit review');
       new vm.Script(`(function () {\n${source}\n})();`);
     }
+  }
+});
+check('current documentation links use the canonical Postman collection', () => {
+  const canonical = 'https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/85lc214/bertel-api-v3-0';
+  for (const file of ['guide-partenaires.md', 'README.md', 'index.html', 'doc_api_bertel_v3.html']) {
+    const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
+    assert.ok(source.includes(canonical), `canonical collection link missing from docs/${file}`);
+    assert.ok(!source.includes('fcl0g7z') && !source.includes('15e74f81'), `stale live collection reference in docs/${file}`);
   }
 });
 check('all canonical OpenAPI methods have successful examples', () => {
@@ -396,19 +405,39 @@ check('manifest discovery captures a fresh release and invalidates dependent sta
   const s = sandbox(entry, {
     collection: { thesaurus_release_id: '17', thesaurus_previous_release_id: '16', thesaurus_next_cursor: 'stale' },
     environment: { thesaurus_release_id: 'stale-environment' },
-    body: { meta: { contract_version: '1.0.0', release_id: 42, previous_release_id: 39, vocabulary_release: 42 }, data: { domains: [
+    body: { meta: { contract_version: '1.0.0', release_id: 1, previous_release_id: null, vocabulary_release: 1 }, data: { domains: [
       { domain: 'opening_schedule_type', name: 'Types d’horaires', requested_lang: 'fr', effective_lang: 'fr',
         name_i18n: { fr: 'Types d’horaires', en: 'Opening schedule types', es: 'Tipos de horario', de: 'Öffnungszeitarten' } },
-    ] } },
+    ], releases: [{ release_id: 1, is_current: true, metadata_scope: 'release_snapshot', domains: [] }] } },
   }).pre().post();
   assert.deepEqual(s.state.failures, []);
-  assert.equal(s.pm.collectionVariables.get('thesaurus_release_id'), '42');
-  assert.equal(s.pm.collectionVariables.get('thesaurus_previous_release_id'), '39');
+  assert.equal(s.pm.collectionVariables.get('thesaurus_release_id'), '1');
+  assert.equal(s.pm.collectionVariables.get('thesaurus_previous_release_id'), undefined);
   assert.equal(s.pm.collectionVariables.get('thesaurus_etag'), '"fixture-etag"');
   assert.equal(s.pm.collectionVariables.get('thesaurus_next_cursor'), undefined);
   assert.equal(s.pm.collectionVariables.get('thesaurus_concept_id'), undefined);
   assert.equal(s.pm.environment.get('thesaurus_release_id'), 'stale-environment');
   assert.equal(s.pm.environment.writes.length, 0);
+});
+check('pre-launch previous-edition request skips only when no public predecessor exists', () => {
+  const entry = publicEntries.find((e) => e.item.name === 'Lire la publication précédente');
+  assert.ok(entry);
+  const noPrevious = sandbox(entry, { collection: { thesaurus_previous_release_id: '' } }).pre();
+  assert.equal(noPrevious.state.skipped, true);
+  const hasPrevious = sandbox(entry, { collection: { thesaurus_previous_release_id: '1' } }).pre();
+  assert.equal(hasPrevious.state.skipped, false);
+});
+check('edition 1 changes contract exposes baseline concepts as additions', () => {
+  const entry = publicEntries.find((e) => e.item.name === 'Lire les changements — première page');
+  assert.ok(entry);
+  const valid = sandbox(entry, { collection: { thesaurus_release_id: '1' }, body: { meta: { contract_version: '1.0.0', release_id: 1, vocabulary_release: 1, previous_release_id: null, total: 1, next_cursor: null }, data: [
+    { concept_id: '00000000-0000-4000-8000-000000000001', change_type: 'added', before: null, after: { concept_id: '00000000-0000-4000-8000-000000000001' } },
+  ] } }).pre().post();
+  assert.deepEqual(valid.state.failures, []);
+  const invalid = sandbox(entry, { collection: { thesaurus_release_id: '1' }, body: { meta: { contract_version: '1.0.0', release_id: 1, vocabulary_release: 1, previous_release_id: null, total: 1, next_cursor: null }, data: [
+    { concept_id: '00000000-0000-4000-8000-000000000001', change_type: 'modified', before: { concept_id: '00000000-0000-4000-8000-000000000001' }, after: { concept_id: '00000000-0000-4000-8000-000000000001' } },
+  ] } }).pre().post();
+  assert.ok(invalid.state.failures.length > 0, 'edition 1 must reject non-baseline changes');
 });
 check('empty terminal concept pages clear stale cursors and concept dependencies', () => {
   const entry = publicEntries.find((e) => /\/thesaurus\/releases\/\{\{[^}]+\}\}\/concepts$/.test(publicPath(e)) && /page_size=2/.test(rawUrl(e)) && !/cursor=/.test(rawUrl(e)));

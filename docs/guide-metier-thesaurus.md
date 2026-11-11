@@ -47,7 +47,9 @@ Le bouton **Soumettre à validation** lance immédiatement les contrôles du sys
 
 Les intitulés des domaines sont rédigés en français et constituent la base commune de l'affichage métier. Ils nomment les rubriques dans lesquelles travailler ; ils sont distincts du libellé préféré et des traductions d'un concept. Par exemple, **Hôtellerie** est le domaine et « Hôtel familial » est une notion de ce domaine.
 
-**Repère de production — publication 26.** La publication courante a été créée le 10 novembre 2026 à 21:20:40 UTC. Son périmètre partenaire compte 1 496 concepts publics dans 72 domaines publics, soit six domaines publics et 134 concepts publics ajoutés au périmètre précédent. Elle porte 239 liens natifs entre actions de développement durable et groupes, dont deux entre catégories. Les publications jusqu'à la 25 conservent leurs snapshots et empreintes historiques ; leurs champs ne sont pas réécrits par cette publication.
+**Repère technique historique — snapshot 26.** Le snapshot technique 26 a été créé le 10 novembre 2026 à 21:20:40 UTC. Son périmètre partenaire comptait 1 496 concepts publics dans 72 domaines publics, soit six domaines publics et 134 concepts publics ajoutés au périmètre technique précédent. Il portait 239 liens natifs entre actions de développement durable et groupes, dont deux entre catégories. Les snapshots techniques antérieurs et leurs empreintes historiques restent inchangés ; leurs champs ne sont pas réécrits.
+
+**Série de l’API partenaire au pré-lancement.** Jusqu’au gel explicite du lancement, l’API expose seulement l’édition publique 1, à l’URL habituelle, en la faisant suivre du dernier snapshot technique sélectionné. Elle n’expose pas les numéros techniques ni leur historique ; `previous_release_id` reste `null` et le flux de changements énumère les concepts publics du snapshot comme ajoutés. Après le gel, l’édition 1 devient le baseline immuable.
 
 | Rubrique | La choisir pour… | À distinguer de… |
 |---|---|---|

@@ -26,7 +26,7 @@ export const PUBLIC_RPC_ALLOWLIST = new Set<string>([
   'list_reference_bundle',
   'list_catalog',
   'public_catalog_domains',
-  'thesaurus_public', // Immutable public thesaurus snapshots; service-role-only dispatcher.
+  'thesaurus_public_edition', // Public edition reader; service-role-only dispatcher.
   'list_deleted_objects_since', // C-4 tombstone feed (service-role only in DB)
   'get_object_i18n_all',        // C-5 i18n=all block (service-role only in DB)
   'get_object_jsonld',          // I4 schema.org JSON-LD block (service-role only in DB)
@@ -72,7 +72,10 @@ export async function callPublicRpc(rpcName: string, params: Record<string, unkn
   if (error) {
     // The thesaurus dispatcher uses explicit, non-sensitive domain errors. Other RPCs keep
     // their historical generic 502 behavior; never forward raw SQL messages or details.
-    if (rpcName === 'thesaurus_public') {
+    if (rpcName === 'thesaurus_public_edition') {
+      if (error.code === 'PT400' && error.message === 'invalid_cursor') {
+        return { ok: false, status: 400, body: { error: 'invalid_cursor' } };
+      }
       const errors: Record<string, { status: number; error: string }> = {
         PT400: { status: 400, error: 'invalid_parameters' },
         PT404: { status: 404, error: 'not_found' },

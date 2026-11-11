@@ -144,7 +144,11 @@ la présence de fiches correspondant à l’ensemble des autres critères.
 ## Parcourir le thésaurus
 
 Le thésaurus apporte des identités stables, les textes multilingues, les synonymes,
-les relations et les versions historiques. Le catalogue fournit les choix actifs
+les relations et les éditions publiques. Avant le gel explicite du lancement, la série
+reste à l'édition 1 et reflète le dernier snapshot technique ; elle n'expose pas les
+numéros de préparation ni les versions historiques internes. Après le gel, cette
+édition devient le baseline immuable et les publications suivantes avancent la série.
+Le catalogue fournit les choix actifs
 du moment. Le [guide partenaires](guide-partenaires.md) détaille ces contrats ; le
 [guide métier](thesaurus.html) explique l’entretien du contenu.
 
@@ -160,13 +164,18 @@ du moment. Le [guide partenaires](guide-partenaires.md) détaille ces contrats ;
 5. **Télécharger l’export JSON** ou le document **JSON-LD/SKOS** de la publication.
    Le second répond en `application/ld+json` et décrit les relations sémantiques.
 6. **Lire les changements** depuis la publication précédente, avec leur propre
-   curseur. Les concepts dépréciés ou retirés restent utiles pour les anciennes fiches.
+   curseur. Avant le gel, l'édition 1 n'a pas de prédécesseur : tous les concepts
+   publics du snapshot courant sont `added` (`before: null`). La requête de publication
+   précédente est ignorée. Les curseurs sont liés au snapshot effectivement sélectionné;
+   après une retouche pré-lancement, recommencer le parcours. Les concepts dépréciés
+   ou retirés restent utiles pour les anciennes fiches.
 7. **Rejouer une lecture avec l’ETag capturé**. Un `304` attendu ne contient pas de
    corps ; la clé partenaire et le quota sont toujours contrôlés.
 
-Les curseurs du thésaurus sont liés à la publication, aux filtres, à la langue et à
-la taille de page. Conserver ces paramètres jusqu’à la fin du parcours. Une nouvelle
-publication n’altère pas les pages de la version choisie.
+Les curseurs du thésaurus sont liés à l'édition publique, au snapshot sélectionné, aux
+filtres, à la langue et à la taille de page. Conserver ces paramètres jusqu'à la fin du
+parcours. Une retouche pré-lancement peut invalider les pages de l'édition 1 ; après le
+gel, une nouvelle édition n'altère pas les snapshots historiques.
 
 Les exemples d’erreurs vérifient leurs statuts attendus, notamment les paramètres
 invalides ou un concept inconnu. Leur réponse d’erreur attendue constitue la réussite

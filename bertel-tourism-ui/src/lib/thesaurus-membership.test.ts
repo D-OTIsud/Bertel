@@ -45,6 +45,7 @@ const request = (path: string, headers: Record<string, string> = {}) => new Next
 });
 const response = (data: unknown) => ({ ok: true, status: 200, body: { meta: {
   release_id: 5, previous_release_id: 4, as_of: '2026-11-10T00:00:00Z', total: 2, next_after: null,
+  cursor_snapshot: '11111111111111111111111111111111',
 }, data } });
 
 beforeEach(() => {
@@ -136,7 +137,7 @@ test('filtered JSON-LD constructs a frozen membership target URI without fetchin
   expect(document['@graph']).toHaveLength(1);
   expect(document['@graph'][0]['bertel:memberOf']).toEqual([{ '@id': group.uri }]);
   expect(rpc).toHaveBeenCalledTimes(1);
-  expect(rpc).toHaveBeenCalledWith('thesaurus_public', expect.objectContaining({
+  expect(rpc).toHaveBeenCalledWith('thesaurus_public_edition', expect.objectContaining({
     p_action: 'export', p_params: expect.objectContaining({ domains: ['sustainability_action'] }),
   }));
 });

@@ -23,7 +23,7 @@ const concept = {
 };
 const domain = { domain: 'taxonomy_hlo', name: names.fr, name_i18n: names, source_kind: 'ref_code' };
 const baseMeta = { release_id: 7, previous_release_id: 6, as_of: '2026-11-10T00:00:00Z',
-  total: 1, next_after: null, metadata_checksum: 'metadata-md5' };
+  total: 1, next_after: null, cursor_snapshot: '0123456789abcdef0123456789abcdef', metadata_checksum: 'metadata-md5' };
 const rpcResponse = (data: unknown) => ({ ok: true, status: 200, body: { meta: baseMeta, data } });
 const urlFor: Record<ThesaurusAction, string> = {
   manifest: '/api/public/thesaurus',
@@ -60,6 +60,7 @@ test.each(Object.keys(urlFor) as ThesaurusAction[])('documents the actual respon
   expect(result.status).toBe(200);
   const body = await result.json();
   expect(body.meta).toMatchObject({ release_id: 7, vocabulary_release: 7, metadata_checksum: 'metadata-md5' });
+  expect(body.meta).not.toHaveProperty('cursor_snapshot');
   expect(body).toHaveProperty('data');
   if (action === 'manifest' || action === 'release') {
     expect(body.data.metadata_scope).toBe('release_snapshot');
@@ -80,7 +81,7 @@ test.each(['concepts', 'changes', 'export'] as const)('applies filters only on s
     urlFor[action] + '?domains=taxonomy_res,taxonomy_hlo,taxonomy_res&status=retired,active&lang=en-GB' + pagingParams,
   ), { action, releaseId: '7' });
   expect(result.status).toBe(200);
-  expect(rpc).toHaveBeenCalledWith('thesaurus_public', { p_action: action, p_release_id: 7,
+  expect(rpc).toHaveBeenCalledWith('thesaurus_public_edition', { p_action: action, p_release_id: 7,
     p_params: expect.objectContaining({ domains: ['taxonomy_hlo', 'taxonomy_res'], status: ['active', 'retired'], lang: 'en-GB', page_size: pageSize }) });
 });
 

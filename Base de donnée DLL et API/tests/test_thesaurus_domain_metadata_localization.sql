@@ -105,6 +105,7 @@ DECLARE
   second_manifest jsonb;
   edition_result jsonb;
   first_cursor_snapshot text;
+  baseline_concept_id text;
   initial_release bigint;
   first_release bigint;
   second_release bigint;
@@ -212,7 +213,9 @@ BEGIN
     AND edition_result#>>'{data,changed_count}'='1',
     'First official discovery must project the selected release as edition 1 with no prelaunch history';
   edition_result:=api.thesaurus_public_edition('changes',1,'{"page_size":1}');
+  baseline_concept_id:=edition_result#>>'{data,0,concept_id}';
   ASSERT edition_result#>>'{meta,total}'='1'
+    AND baseline_concept_id IS NOT NULL
     AND edition_result#>>'{data,0,change_type}'='added'
     AND edition_result#>'{data,0,before}'='null',
     'The baseline edition must expose its public concept as an initial addition';
@@ -261,7 +264,9 @@ BEGIN
     RAISE EXCEPTION 'Unpublished official edition was readable';
   EXCEPTION WHEN SQLSTATE 'PT404' THEN NULL; END;
   BEGIN
-    PERFORM api.thesaurus_public_edition('concepts',1,jsonb_build_object('cursor_snapshot',first_cursor_snapshot));
+    PERFORM api.thesaurus_public_edition('concepts',1,jsonb_build_object(
+      'after',baseline_concept_id,'cursor_snapshot',first_cursor_snapshot
+    ));
     RAISE EXCEPTION 'Pagination continued against a different technical snapshot';
   EXCEPTION WHEN SQLSTATE 'PT400' THEN
     ASSERT SQLERRM='invalid_cursor', 'A stale edition cursor must be rejected explicitly';

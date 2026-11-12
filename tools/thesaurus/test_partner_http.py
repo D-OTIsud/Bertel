@@ -208,7 +208,7 @@ class PartnerHttpTests(unittest.TestCase):
         with mock.patch.object(sys, "argv", argv), \
                 mock.patch("urllib.request.urlopen", side_effect=self.api.urlopen), \
                 contextlib.redirect_stdout(out):
-            runpy.run_path(str(SCRIPT), run_name="__main__")
+            self.last_namespace = runpy.run_path(str(SCRIPT), run_name="__main__")
         return out.getvalue()
 
     def read_report(self):
@@ -297,15 +297,40 @@ class PartnerHttpTests(unittest.TestCase):
         self.run_phase("start")
         self.api.current = 3
         self.api.generation = "g2"
-        with self.assertRaises(AssertionError):
-            self.run_phase("continue")
+        with self.assertRaisesRegex(AssertionError, "Pinned manifest changed on a newer edition"):
+            self.run_phase("continue", "--continuation-mode", "snapshot-changed")
 
     def test_continue_rejects_old_cursor_accepted_after_snapshot_move(self):
         self.run_phase("start")
         self.api.generation = "g2"
         self.api.accept_stale_cursors = True
         with self.assertRaises(AssertionError):
-            self.run_phase("continue")
+            self.run_phase("continue", "--continuation-mode", "snapshot-changed")
+
+    def test_start_rejects_semantic_changes_or_total_drift_on_later_compact_pages(self):
+        for field, changed in [("name", "Wrong label"), ("assignable", True), ("total", 900)]:
+            with self.subTest(field=field):
+                self.api = FakeAPI()
+
+                def mutate(kind, body, field=field, changed=changed):
+                    if kind == "list" and body["data"] and body["data"][0]["concept_id"] == C3:
+                        if field == "total":
+                            body["meta"][field] = changed
+                        else:
+                            body["data"][0][field] = changed
+                    return body
+
+                self.api.transform = mutate
+                with self.assertRaises(AssertionError):
+                    self.run_phase("start")
+
+    def test_comparison_accepts_omitted_blank_legacy_descriptions(self):
+        self.run_phase("start")
+        row = {key: value for key, value in COMPACT[C1].items() if key not in ("description", "definition_lang")}
+        for description in (None, "", "   "):
+            with self.subTest(description=description):
+                full = {**FULL[0], "description": description}
+                self.last_namespace["check_compact_matches_full"](row, full)
 
 
 if __name__ == "__main__":

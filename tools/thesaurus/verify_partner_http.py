@@ -127,8 +127,11 @@ def check_compact_domains(compact_domains, full_domains):
 def check_compact_matches_full(row, full):
     for name in ("concept_id", "domain", "code", "lifecycle", "assignable", "name", "effective_lang"):
         assert row[name] == full.get(name), "compact field differs from full: " + name
-    for name in ("valid_from", "valid_to", "context_key", "description", *COMPACT_ROW_LISTS):
+    for name in ("valid_from", "valid_to", "context_key", *COMPACT_ROW_LISTS):
         assert row.get(name) == (full.get(name) or None), "compact optional field differs from full: " + name
+    description = full.get("description")
+    expected_description = description if isinstance(description, str) and description.strip() else None
+    assert row.get("description") == expected_description, "compact description differs from full"
     if "description" in row:
         assert row["definition_lang"] == full.get("definition_lang"), "compact definition language differs from full"
 
@@ -210,6 +213,9 @@ if args.phase == "start":
     while cursor:
         page, _ = request(f"{frozen_path}/concepts{compact_suffix}&" + urlencode({"cursor": cursor}))
         check_compact_list(page, release)
+        assert page["meta"]["total"] == first["meta"]["total"], "compact total changed during pagination"
+        for row in page["data"]:
+            check_compact_matches_full(row, full_by_id[row["concept_id"]])
         compact_seen.extend(row["concept_id"] for row in page["data"])
         cursor = page["meta"]["next_cursor"]
     assert len(compact_seen) == len(set(compact_seen)), "compact pagination duplicated identities"

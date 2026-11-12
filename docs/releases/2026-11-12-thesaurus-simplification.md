@@ -1,6 +1,6 @@
-# Thésaurus — simplification (préparation, non déployée)
+# Thésaurus — simplification livrée le 12 novembre 2026
 
-**Statut : candidat implémenté, revu et validé par la CI GitHub, non déployé.** La branche est poussée pour validation ; aucun merge, déploiement ni import dans le workspace Postman public n'a été effectué. Aucune clé réelle utilisée. Les contrôles d'API portent sur des réponses simulées ; ils ne constituent pas une nouvelle recette authentifiée de production.
+**Statut : intégré par la PR 240 et déployé sur l'application et la documentation.** Le commit servi est `e48ece594f7a54c52ff162d035ece2ad0d86f18f`. Les contrôles locaux et CI ci-dessous précèdent la livraison ; les preuves de production figurent en section 8. Aucun import dans le workspace Postman public ni nouvelle recette authentifiée de l'API partenaire n'a été effectué. Aucune clé partenaire réelle utilisée ou créée.
 
 - Base : `221195b8` (merge PR #239).
 - Branche : `codex/thesaurus-simplification`.
@@ -24,7 +24,7 @@ Le schéma SQL, les données publiées, l'administration et les autres contrats 
 
 L'implémentation principale et la première revue ont été déléguées à **Claude Haiku 5.5**, avec plafond de 0,35 USD de coût estimé par lot. La coordination a terminé les corrections de cohérence des exemples, champs absents, scénario de continuation et habillage mobile des URL longues. Le total rapporté par les huit exécutions réussies, sonde comprise, est **0,704562 USD au tarif de référence estimé** ; il ne représente ni une facture ni une mesure du solde de crédits de l'abonnement.
 
-## 2. Contrat implémenté (additif, non déployé)
+## 2. Contrat livré (additif)
 
 Option `view=compact`, uniquement sur :
 
@@ -86,7 +86,7 @@ La suite complète et les E2E ci-dessous décrivent la première validation loca
 | Graphe de code | Mise à jour AST locale terminée : **25 795 nœuds, 43 103 arêtes, 1 597 communautés**, sans appel de modèle. Le rendu HTML du graphe est volontairement omis par la limite de taille de l'outil. |
 | Image Docker documentaire | Docker absent sur l'hôte local ; **construction réussie dans la CI GitHub Documentation** sur `b26c892f`, sans publication d'image ni déploiement. |
 | Phases HTTP authentifiées sur recette/production | Non exécutées ; les scénarios sont vérifiés avec un serveur simulé dans les tests hors ligne |
-| Déploiement applicatif/documentaire et workspace Postman | Non exécutés ; état et références à consigner lors d'une diffusion autorisée |
+| Déploiement applicatif/documentaire et workspace Postman | Application et documentation livrées et vérifiées (section 8) ; fichiers Postman distribués par le site documentaire, sans import dans le workspace public |
 
 ### Revue personnelle finale
 
@@ -149,3 +149,30 @@ Retour arrière :
 - Le gain mesuré porte sur la réponse HTTP, non sur le coût SQL : le RPC charge encore les manifestes complets.
 - La vue compacte ne modifie pas les curseurs ni les ETag existants ; les validateurs compacts sont distincts.
 - Aucune donnée réelle de production n'est citée ici.
+
+## 8. Livraison de production
+
+La [PR 240](https://github.com/D-OTIsud/Bertel/pull/240) est fusionnée dans `master` au commit `e48ece594f7a54c52ff162d035ece2ad0d86f18f`, arbre `dec2c3f91f031b1c26d5efe37704dc5819420acb`. Les deux ressources Coolify ont été relues en mode manuel, avec files vides. L'application a été livrée avant la documentation, sans migration ni modification des données du thésaurus.
+
+### Application
+
+- [Archive qualifiée](https://github.com/D-OTIsud/Bertel/actions/runs/43251495328), tentative 1, profil `protocol-v1` : gardes, construction non-démo, outils natifs, smoke et qualification des quatre modes runtime réussis. Artefact `13960860607`, 94 928 123 octets, SHA-256 `b182f2be2765270414a605b43f0cd8a4598f784546ba7a32a91a6dd212168828`.
+- Image physique vérifiée : `sha256:94a061abe1fdf6033527d70492b69b9f149e99fb188c95b6b7db534a0220ecf5`, Linux/amd64, utilisateur `node`, configuration et onze couches RootFS conformes à l'archive. Réception, import, tag exact et smoke hôte isolé réussis ; aucun secret de service fourni au smoke.
+- [Déploiement applicatif](https://coolify.otisud.re/project/qw40sk0s4w8sc0gkggokwso4/environment/mo4o40c8o8occs40o4cs0ks4/application/r48k844wg04kks848s00wco4/deployment/lxhdslrjma0zh2kzfury0wig) terminé en 18 secondes. Le conteneur effectif porte l'image attendue et `SOURCE_COMMIT=e48ece594f7a54c52ff162d035ece2ad0d86f18f` ; état `healthy` relevé à 16:01:28 UTC.
+- `/api/health`, `/api/ready`, `/api/app-version` et `/runtime-config.js` répondent 200 : santé correcte, disponibilité `live`, contrats client/écriture 2/2. La configuration publique conserve son empreinte `7fe2834caefc75655f1bb96d263b62de8085d0e431a2561111dad1fc953e6547`.
+- Les deux sondes de santé sur les boucles locales IPv4 et IPv6 réussissent. Les publications restent exclusivement `127.0.0.1:8081` et `[::1]:8081`. La connexion extérieure IPv4 à 8081 est refusée ; aucun enregistrement DNS IPv6 public n'est disponible pour cette sonde extérieure.
+
+### Documentation
+
+- [Déploiement documentaire](https://coolify.otisud.re/project/qw40sk0s4w8sc0gkggokwso4/environment/mo4o40c8o8occs40o4cs0ks4/application/fws8g8k4ok0osogcwccowssc/deployment/fddnswjrilhm5mlil4lv3rli) terminé sur le même commit. Le conteneur et son `SOURCE_COMMIT` ont été relus ; image `sha256:6f488d9138df11565286ba57c3382367730bbb1cfe11ab8bc8361a484e5e1cea`.
+- Recette HTTP du 12 novembre, 16:03:59–16:04:34 UTC : les **16 fichiers publics** correspondent exactement à la source, après normalisation des seules fins de ligne CRLF. Les **sept fichiers inchangés** correspondent aussi à la sauvegarde HTTP antérieure.
+- Les deux nouveaux fichiers partenaires répondent 200 avec du JSON valide : collection de 112 084 octets et environnement de 405 octets. Avant livraison, ces URL renvoyaient l'index HTML de repli ; ce faux positif a été distingué d'un fichier JSON réellement publié.
+- Les quatre chemins contrôlés hors de l'image publique répondent réellement **404** : source du guide métier, générateur, reçu de livraison et plan interne. Aucun repli SPA n'a été accepté pour conclure ces quatre contrôles.
+
+### CI du commit livré et retour préparé
+
+[Frontend](https://github.com/D-OTIsud/Bertel/actions/runs/43251447311), [Documentation](https://github.com/D-OTIsud/Bertel/actions/runs/43251447183), [Storybook Security](https://github.com/D-OTIsud/Bertel/actions/runs/43251447277), [Publication safety](https://github.com/D-OTIsud/Bertel/actions/runs/43251447123) et [Thesaurus tool archive boundary](https://github.com/D-OTIsud/Bertel/actions/runs/43251447051) réussissent sur le commit intégré, en plus du workflow d'archive.
+
+Le retour applicatif précédent est préservé : source `221195b83048e37020fe769c4bf9a7bdcab89dc2`, branche `codex/rollback-thesaurus-simplification-20261112`, image `sha256:e6539a3c6edb99a9551515f906c8326a6508085e5e535f40850f1381393b75e1`, archive conservée et ancien smoke isolé confirmé. Le retour documentaire conserve la source `2dfb7f140f42ec84667fc221515d00a549bddcbb` et l'image `sha256:5551713e5a93ae90ab7cfdc72e1f40d6925b0eedee16f7c2019deb8d670bdd20`. Aucun retour arrière n'a été exécuté. Les gardes de la section 5 restent applicables après adoption du compact.
+
+Les reçus opérateur, journaux et captures détaillés restent privés. Cette livraison ne révoque ni ne régénère les secrets runtime. Les anciennes clés de recette ont déjà été révoquées et supprimées ; aucun parcours HTTP partenaire authentifié n'est donc revendiqué ici. Le présent ajout ne modifie aucun fichier servi ni code applicatif et ne nécessite pas un nouveau déploiement.

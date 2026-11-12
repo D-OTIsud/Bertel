@@ -656,7 +656,6 @@
         "summary": "Découvrir les vocabulaires et la publication courante",
         "description": "Découvre la seule édition publique pré-lancement (édition 1) et les vocabulaires publics. Jusqu’au gel explicite, cette édition reflète le dernier snapshot technique sélectionné ; l’historique contient seulement [1], `previous_release_id` vaut null et `changes` présente tous les concepts publics du snapshot comme ajoutés. `lang` localise les noms de domaines. `domains` et `status` sont rejetés.",
         "parameters": [
-
           {
             "name": "lang",
             "in": "query",
@@ -674,6 +673,18 @@
               "type": "string"
             },
             "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "description": "Absent : réponse complète historique. `compact` : projection de consultation, seule valeur acceptée sur cette opération. Les autres opérations du thésaurus n’acceptent pas ce paramètre.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact"
+              ]
+            }
           }
         ],
         "responses": {
@@ -705,7 +716,72 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                  "description": "Sans view : enveloppe complète du manifeste. Avec view=compact : découverte compacte.",
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ThesaurusFullManifestEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ThesaurusCompactDiscovery"
+                    }
+                  ]
+                },
+                "examples": {
+                  "full": {
+                    "summary": "Manifeste complet (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "vocabulary_release": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z"
+                      },
+                      "data": {
+                        "release_id": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z",
+                        "checksum": "exemple",
+                        "metadata_scope": "release_snapshot",
+                        "domains": [
+                          {
+                            "domain": "exemple",
+                            "name": "Exemple",
+                            "effective_lang": "fr",
+                            "name_i18n": {
+                              "fr": "Exemple"
+                            },
+                            "requested_lang": "fr"
+                          }
+                        ],
+                        "releases": [],
+                        "license": "Licence Ouverte / Etalab 2.0",
+                        "attribution": "OTI du Sud"
+                      }
+                    }
+                  },
+                  "compact": {
+                    "summary": "Découverte compacte (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z"
+                      },
+                      "data": {
+                        "license": null,
+                        "attribution": null,
+                        "domains": [
+                          {
+                            "domain": "exemple",
+                            "name": "Exemple",
+                            "effective_lang": "fr"
+                          }
+                        ]
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -821,6 +897,18 @@
               "type": "string"
             },
             "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "description": "Absent : réponse complète historique. `compact` : projection de consultation, seule valeur acceptée sur cette opération. Les autres opérations du thésaurus n’acceptent pas ce paramètre.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact"
+              ]
+            }
           }
         ],
         "responses": {
@@ -852,7 +940,72 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                  "description": "Sans view : enveloppe complète du manifeste. Avec view=compact : manifeste compact.",
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ThesaurusFullManifestEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ThesaurusCompactManifest"
+                    }
+                  ]
+                },
+                "examples": {
+                  "full": {
+                    "summary": "Manifeste complet (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "vocabulary_release": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z"
+                      },
+                      "data": {
+                        "release_id": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z",
+                        "checksum": "exemple",
+                        "metadata_scope": "release_snapshot",
+                        "domains": [
+                          {
+                            "domain": "exemple",
+                            "name": "Exemple",
+                            "effective_lang": "fr",
+                            "name_i18n": {
+                              "fr": "Exemple"
+                            },
+                            "requested_lang": "fr"
+                          }
+                        ],
+                        "releases": [],
+                        "license": "Licence Ouverte / Etalab 2.0",
+                        "attribution": "OTI du Sud"
+                      }
+                    }
+                  },
+                  "compact": {
+                    "summary": "Manifeste compact (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z"
+                      },
+                      "data": {
+                        "license": null,
+                        "attribution": null,
+                        "domains": [
+                          {
+                            "domain": "exemple",
+                            "name": "Exemple",
+                            "effective_lang": "fr"
+                          }
+                        ]
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1012,6 +1165,18 @@
               "type": "string"
             },
             "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "description": "Absent : réponse complète historique. `compact` : projection de consultation, seule valeur acceptée sur cette opération. Les autres opérations du thésaurus n’acceptent pas ce paramètre.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact"
+              ]
+            }
           }
         ],
         "responses": {
@@ -1043,7 +1208,71 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                  "description": "Sans view : page complète de concepts. Avec view=compact : page compacte.",
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ThesaurusFullConceptsPageEnvelope"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ThesaurusCompactConceptsPage"
+                    }
+                  ]
+                },
+                "examples": {
+                  "full": {
+                    "summary": "Page complète (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "vocabulary_release": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z",
+                        "page_size": 25,
+                        "total": 1,
+                        "next_cursor": null
+                      },
+                      "data": [
+                        {
+                          "concept_id": "00000000-0000-4000-8000-000000000001",
+                          "uri": "https://example.invalid/thesaurus/concept/exemple",
+                          "domain": "exemple",
+                          "code": "exemple-concept",
+                          "preferred_labels": {
+                            "fr": "Concept d'exemple"
+                          },
+                          "definitions": {},
+                          "requested_lang": "fr",
+                          "effective_lang": "fr",
+                          "definition_lang": null,
+                          "lifecycle": "active",
+                          "assignable": true
+                        }
+                      ]
+                    }
+                  },
+                  "compact": {
+                    "summary": "Page compacte (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "total": 1,
+                        "next_cursor": null
+                      },
+                      "data": [
+                        {
+                          "concept_id": "00000000-0000-4000-8000-000000000001",
+                          "domain": "exemple",
+                          "code": "exemple-concept",
+                          "name": "Concept d'exemple",
+                          "effective_lang": "fr",
+                          "lifecycle": "active",
+                          "assignable": true
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             }
@@ -1200,7 +1429,36 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                  "$ref": "#/components/schemas/ThesaurusFullConceptEnvelope"
+                },
+                "examples": {
+                  "concept": {
+                    "summary": "Concept complet (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "vocabulary_release": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z"
+                      },
+                      "data": {
+                        "concept_id": "00000000-0000-4000-8000-000000000001",
+                        "uri": "https://example.invalid/thesaurus/concept/exemple",
+                        "domain": "exemple",
+                        "code": "exemple-concept",
+                        "preferred_labels": {
+                          "fr": "Concept d'exemple"
+                        },
+                        "definitions": {},
+                        "requested_lang": "fr",
+                        "effective_lang": "fr",
+                        "definition_lang": null,
+                        "lifecycle": "active",
+                        "assignable": true
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1346,7 +1604,36 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                  "$ref": "#/components/schemas/ThesaurusFullConceptEnvelope"
+                },
+                "examples": {
+                  "concept": {
+                    "summary": "Concept complet (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "vocabulary_release": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z"
+                      },
+                      "data": {
+                        "concept_id": "00000000-0000-4000-8000-000000000001",
+                        "uri": "https://example.invalid/thesaurus/concept/exemple",
+                        "domain": "exemple",
+                        "code": "exemple-concept",
+                        "preferred_labels": {
+                          "fr": "Concept d'exemple"
+                        },
+                        "definitions": {},
+                        "requested_lang": "fr",
+                        "effective_lang": "fr",
+                        "definition_lang": null,
+                        "lifecycle": "active",
+                        "assignable": true
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1537,7 +1824,46 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                  "$ref": "#/components/schemas/ThesaurusFullChangesPageEnvelope"
+                },
+                "examples": {
+                  "changes": {
+                    "summary": "Changements (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "vocabulary_release": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z",
+                        "page_size": 25,
+                        "total": 1,
+                        "next_cursor": null
+                      },
+                      "data": [
+                        {
+                          "concept_id": "00000000-0000-4000-8000-000000000001",
+                          "change_type": "added",
+                          "before": null,
+                          "after": {
+                            "concept_id": "00000000-0000-4000-8000-000000000001",
+                            "uri": "https://example.invalid/thesaurus/concept/exemple",
+                            "domain": "exemple",
+                            "code": "exemple-concept",
+                            "preferred_labels": {
+                              "fr": "Concept d'exemple"
+                            },
+                            "definitions": {},
+                            "requested_lang": "fr",
+                            "effective_lang": "fr",
+                            "definition_lang": null,
+                            "lifecycle": "active",
+                            "assignable": true
+                          }
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             }
@@ -1713,7 +2039,38 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                  "$ref": "#/components/schemas/ThesaurusFullExportEnvelope"
+                },
+                "examples": {
+                  "export": {
+                    "summary": "Export JSON (exemple synthétique)",
+                    "value": {
+                      "meta": {
+                        "contract_version": "1.0.0",
+                        "release_id": 1,
+                        "vocabulary_release": 1,
+                        "previous_release_id": null,
+                        "as_of": "2026-01-01T00:00:00Z"
+                      },
+                      "data": [
+                        {
+                          "concept_id": "00000000-0000-4000-8000-000000000001",
+                          "uri": "https://example.invalid/thesaurus/concept/exemple",
+                          "domain": "exemple",
+                          "code": "exemple-concept",
+                          "preferred_labels": {
+                            "fr": "Concept d'exemple"
+                          },
+                          "definitions": {},
+                          "requested_lang": "fr",
+                          "effective_lang": "fr",
+                          "definition_lang": null,
+                          "lifecycle": "active",
+                          "assignable": true
+                        }
+                      ]
+                    }
+                  }
                 }
               },
               "application/ld+json": {
@@ -1737,16 +2094,30 @@
                             "type": "array",
                             "items": {
                               "type": "object",
-                              "required": ["@id"],
-                              "properties": {"@id": {"type": "string", "format": "uri"}}
+                              "required": [
+                                "@id"
+                              ],
+                              "properties": {
+                                "@id": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              }
                             }
                           },
                           "bertel:member": {
                             "type": "array",
                             "items": {
                               "type": "object",
-                              "required": ["@id"],
-                              "properties": {"@id": {"type": "string", "format": "uri"}}
+                              "required": [
+                                "@id"
+                              ],
+                              "properties": {
+                                "@id": {
+                                  "type": "string",
+                                  "format": "uri"
+                                }
+                              }
                             }
                           }
                         }
@@ -2809,6 +3180,514 @@
           "address":    { "type": "object", "description": "schema.org PostalAddress.", "additionalProperties": true },
           "geo":        { "type": "object", "description": "schema.org GeoCoordinates.", "additionalProperties": true },
           "sameAs":     { "type": "array", "items": { "type": "string", "format": "uri" }, "description": "Profils/réseaux publics (http/https)." }
+        },
+        "additionalProperties": true
+      },
+      "ThesaurusCompactDomain": {
+        "type": "object",
+        "required": [
+          "domain",
+          "name",
+          "effective_lang"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "effective_lang": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusCompactReleaseSummary": {
+        "type": "object",
+        "required": [
+          "release_id",
+          "previous_release_id",
+          "as_of"
+        ],
+        "properties": {
+          "release_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "previous_release_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusCompactManifestMeta": {
+        "type": "object",
+        "required": [
+          "contract_version",
+          "release_id",
+          "previous_release_id",
+          "as_of"
+        ],
+        "properties": {
+          "contract_version": {
+            "type": "string"
+          },
+          "release_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "previous_release_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusCompactListMeta": {
+        "type": "object",
+        "required": [
+          "contract_version",
+          "release_id",
+          "total",
+          "next_cursor"
+        ],
+        "properties": {
+          "contract_version": {
+            "type": "string"
+          },
+          "release_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusCompactConcept": {
+        "type": "object",
+        "required": [
+          "concept_id",
+          "domain",
+          "code",
+          "name",
+          "effective_lang",
+          "lifecycle",
+          "assignable"
+        ],
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effective_lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lifecycle": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "assignable": {
+            "type": "boolean"
+          },
+          "context_key": {
+            "type": "string",
+            "description": "Clé opaque, présente seulement lorsqu’elle est non vide."
+          },
+          "description": {
+            "type": "string",
+            "description": "Présente avec definition_lang lorsqu’une description existe."
+          },
+          "definition_lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "valid_from": {
+            "type": "string"
+          },
+          "valid_to": {
+            "type": "string"
+          },
+          "broader": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "member_of": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "replaced_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusCompactDiscovery": {
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusCompactManifestMeta"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "license",
+              "attribution",
+              "domains"
+            ],
+            "properties": {
+              "license": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "attribution": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "domains": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ThesaurusCompactDomain"
+                }
+              },
+              "releases": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ThesaurusCompactReleaseSummary"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusCompactManifest": {
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusCompactManifestMeta"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "license",
+              "attribution",
+              "domains"
+            ],
+            "properties": {
+              "license": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "attribution": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "domains": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ThesaurusCompactDomain"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusCompactConceptsPage": {
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusCompactListMeta"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThesaurusCompactConcept"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ThesaurusFullMeta": {
+        "type": "object",
+        "description": "Métadonnées complètes de la représentation pleine. Les champs requis sont toujours émis (valeur null si absente côté source).",
+        "required": [
+          "contract_version",
+          "release_id",
+          "vocabulary_release",
+          "previous_release_id",
+          "as_of"
+        ],
+        "properties": {
+          "contract_version": {
+            "type": "string",
+            "const": "1.0.0"
+          },
+          "release_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "vocabulary_release": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "previous_release_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "Null pour l'édition 1."
+          },
+          "as_of": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "metadata_checksum": {
+            "type": "string",
+            "description": "Optionnel : MD5 de domains::text JSONB du snapshot."
+          }
+        },
+        "additionalProperties": true
+      },
+      "ThesaurusFullPagedMeta": {
+        "type": "object",
+        "description": "Métadonnées complètes d'une page : pagination toujours émise.",
+        "required": [
+          "contract_version",
+          "release_id",
+          "vocabulary_release",
+          "previous_release_id",
+          "as_of",
+          "page_size",
+          "total",
+          "next_cursor"
+        ],
+        "properties": {
+          "contract_version": {
+            "type": "string",
+            "const": "1.0.0"
+          },
+          "release_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "vocabulary_release": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "previous_release_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "Null pour l'édition 1."
+          },
+          "as_of": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "metadata_checksum": {
+            "type": "string",
+            "description": "Optionnel : MD5 de domains::text JSONB du snapshot."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "ThesaurusFullManifestEnvelope": {
+        "type": "object",
+        "description": "Enveloppe complète d'un manifeste de publication.",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusFullMeta"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ThesaurusManifest"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ThesaurusFullConceptEnvelope": {
+        "type": "object",
+        "description": "Enveloppe complète d'un concept.",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusFullMeta"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ThesaurusConcept"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ThesaurusFullConceptsPageEnvelope": {
+        "type": "object",
+        "description": "Page complète de concepts d'une publication.",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusFullPagedMeta"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThesaurusConcept"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "ThesaurusFullChangesPageEnvelope": {
+        "type": "object",
+        "description": "Page complète des changements d'une édition.",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusFullPagedMeta"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThesaurusChange"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "ThesaurusFullExportEnvelope": {
+        "type": "object",
+        "description": "Export JSON filtré d'une publication (format json ; JSON-LD reste autonome).",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ThesaurusFullMeta"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThesaurusConcept"
+            }
+          }
         },
         "additionalProperties": true
       }

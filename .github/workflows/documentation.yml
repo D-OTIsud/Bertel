@@ -7,6 +7,13 @@ on:
       - 'tools/thesaurus-content/**'
       - 'bertel-tourism-ui/src/app/api/public/**'
       - 'db-graph-out/graph.json'
+      - 'bertel-tourism-ui/src/lib/thesaurus-api.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-api.test.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-compact-projection.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-compact-view.test.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-vocabulary-labels.ts'
+      - 'tools/thesaurus/verify_partner_http.py'
+      - 'tools/thesaurus/test_partner_http.py'
       - '.github/workflows/documentation.yml'
   pull_request:
     paths:
@@ -14,6 +21,13 @@ on:
       - 'tools/thesaurus-content/**'
       - 'bertel-tourism-ui/src/app/api/public/**'
       - 'db-graph-out/graph.json'
+      - 'bertel-tourism-ui/src/lib/thesaurus-api.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-api.test.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-compact-projection.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-compact-view.test.ts'
+      - 'bertel-tourism-ui/src/lib/thesaurus-vocabulary-labels.ts'
+      - 'tools/thesaurus/verify_partner_http.py'
+      - 'tools/thesaurus/test_partner_http.py'
       - '.github/workflows/documentation.yml'
 
 permissions:
@@ -46,5 +60,7 @@ jobs:
           node tools/thesaurus-content/catalog-coverage.mjs
       - name: Check Postman route coverage and scripts without sending requests
         run: node docs/postman.check.js
+      - name: Test partner HTTP verification without network or credentials
+        run: python3 -I tools/thesaurus/test_partner_http.py
       - name: Build the documentation image with its explicit public file list
         run: docker build --tag bertel-documentation-ci ./docs

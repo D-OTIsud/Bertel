@@ -50,6 +50,8 @@ docker run -p 8080:80 bertel-api-docs
 - `Bertel_API_v3.postman_collection.json` - Collection Postman
 - `Bertel_API_v3.postman_environment.json` - Environnement Postman
 - `README_Postman.md` - Guide d'utilisation Postman
+- `Bertel_Partenaires.postman_collection.json` - Collection Postman partenaires (téléchargeable)
+- `Bertel_Partenaires.postman_environment.json` - Environnement Postman partenaires
 
 > ⚠️ Le `Dockerfile` copie une liste **explicite** de fichiers (plus de `COPY *.md`) : les
 > documents internes du dossier (audits sécurité/DB, plans, specs, RGPD…) ne sont pas servis

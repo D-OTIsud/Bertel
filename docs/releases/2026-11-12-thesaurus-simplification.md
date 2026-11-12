@@ -1,6 +1,6 @@
 # Thésaurus — simplification (préparation, non déployée)
 
-**Statut : candidat implémenté et contrôlé localement, non déployé.** Aucune publication externe, aucun déploiement et aucune clé réelle utilisée. Les contrôles d'API portent sur des réponses simulées ; ils ne constituent pas une nouvelle recette authentifiée de production.
+**Statut : candidat implémenté, revu et validé par la CI GitHub, non déployé.** La branche est poussée pour validation ; aucun merge, déploiement ni import dans le workspace Postman public n'a été effectué. Aucune clé réelle utilisée. Les contrôles d'API portent sur des réponses simulées ; ils ne constituent pas une nouvelle recette authentifiée de production.
 
 - Base : `221195b8` (merge PR #239).
 - Branche : `codex/thesaurus-simplification`.
@@ -66,25 +66,53 @@ python -I tools/thesaurus/verify_partner_http.py ... --phase final
 - Les phases `quota` et `revoked` supposent un état provoqué ; elles ne sont pas des vérifications de lecture en production.
 - Les anciens outils SQL de `tools/thesaurus/` sont archivés et ne sont pas rejoués.
 
-### Résultats
+### Résultats locaux
+
+La suite complète et les E2E ci-dessous décrivent la première validation locale. Les contrôles ciblés, Postman, HTTP et OpenAPI ont été rejoués après la revue personnelle finale sur `b26c892f` ; les résultats GitHub sont consignés séparément.
 
 | Contrôle | Résultat |
 |---|---|
-| Suite frontend complète, candidat après corrections | **635 suites et 7 174 tests réussis**, un test ignoré |
-| Tests API ciblés après corrections | **105 tests réussis**, dont projections, langues, curseurs, ETag, paramètres et réponses historiques |
+| Suite frontend complète, première validation locale | **635 suites et 7 174 tests réussis**, un test ignoré |
+| Tests API ciblés après revue finale | **107 tests réussis**, dont projections, langues, curseurs, ETag, paramètres, réponses historiques et traductions absentes/nulles dans les snapshots figés |
 | Vérification TypeScript | Réussie |
-| Construction applicative | **Réussie sur le candidat final**, en mode démo de CI |
-| Tests unitaires hors ligne (`test_partner_http.py`) | **10 tests réussis**, sans réseau ni clé réelle |
-| Contrôles Postman | **38 contrôles réussis**, 112 requêtes canoniques et 33 requêtes partenaires |
+| Construction applicative | **Réussie lors de la première validation locale**, en mode démo de CI |
+| Tests unitaires hors ligne (`test_partner_http.py`) | **12 tests réussis**, sans réseau ni clé réelle |
+| Contrôles Postman | **44 contrôles réussis**, 112 requêtes canoniques et 33 requêtes partenaires |
 | Exemples JSON et schémas OpenAPI | **13 exemples validés** localement avec Ajv 2020-12 : dix OpenAPI et trois réponses Postman. Ce contrôle supplémentaire utilise les outils installés du checkout ; le contrôleur Postman versionné reste un contrôle structurel, non un validateur JSON Schema général. |
 | Rendus documentaires | Contrôles partenaires et métier réussis ; 41 ancres uniques et 54 liens locaux valides dans le guide statique |
 | Outils de contenu | Trois validations de contenu/catalogue et **40 tests réussis** |
 | E2E Chromium | Premier passage : 45 réussis, deux ignorés, deux échecs sur les cartes à 1 180 px. Les deux mêmes cas passent ensuite en série sur la base inchangée et le candidat : échecs intermittents du passage parallèle, sans modification de l'interface cartographique. |
 | Lecture bureau/mobile | Trois pages contrôlées à 390 et 1 280 px, sans erreur JavaScript. Les deux guides tiennent à 390 px après retour à la ligne des URL inline ; navigation clavier fonctionnelle. L'index technique présente toujours le même débordement de sommaire que la base inchangée (936 px), hors de la surface modifiée. |
 | Graphe de code | Mise à jour AST locale terminée : **25 795 nœuds, 43 103 arêtes, 1 597 communautés**, sans appel de modèle. Le rendu HTML du graphe est volontairement omis par la limite de taille de l'outil. |
-| Image Docker documentaire | **Non exécutée : Docker absent sur cet hôte.** Les sources de `COPY` et l'exclusion des documents internes sont contrôlées ; le build demeure requis dans la CI de diffusion. |
+| Image Docker documentaire | Docker absent sur l'hôte local ; **construction réussie dans la CI GitHub Documentation** sur `b26c892f`, sans publication d'image ni déploiement. |
 | Phases HTTP authentifiées sur recette/production | Non exécutées ; les scénarios sont vérifiés avec un serveur simulé dans les tests hors ligne |
 | Déploiement applicatif/documentaire et workspace Postman | Non exécutés ; état et références à consigner lors d'une diffusion autorisée |
+
+### Revue personnelle finale
+
+La revue finale a été effectuée par Codex directement, sans nouvel appel à Claude. Les corrections sont regroupées dans `b26c892f0e702d18687ae57e585f2e0d310ae825` :
+
+- La requête Postman de page suivante conserve désormais `view=compact` : auparavant, elle envoyait un curseur compact avec la vue complète, provoquant `400 invalid_cursor`.
+- Le banc de contrôle Postman exécute les scripts de la collection concernée. Il vérifie le parcours première page/page suivante, nettoie les identifiants après une page vide et empêche un ancien ETag d'environnement de masquer celui de la collection.
+- Les scripts acceptent les métadonnées nulles permises par le contrat, les listes de domaines vides et le repli français des anciens snapshots. Ils continuent de rejeter une traduction incorrecte lorsqu'une traduction publiée existe.
+- Le schéma OpenAPI conserve le caractère optionnel et nullable de `name_i18n` dans les vocabulaires historiques. Deux tests API couvrent les snapshots dont cette valeur est absente ou nulle ; le guide précise la différence entre métadonnées complètes et compactes.
+- Le vérificateur HTTP compare toutes les pages compactes à l'export complet et contrôle la stabilité du total. Les tests d'invalidation de snapshot exercent maintenant explicitement le scénario attendu, au lieu d'échouer sur une précondition du mode figé.
+
+Les contrôles de publication (16 tests et vérification du diff) et `git diff --check` réussissent également. Aucun défaut concret ne reste identifié dans le périmètre revu ; la recette HTTP authentifiée reste une étape distincte, non exécutée ici.
+
+### CI GitHub de la revue finale
+
+Exécutions sur le commit applicatif `b26c892f0e702d18687ae57e585f2e0d310ae825`, branche `codex/thesaurus-simplification` :
+
+| Workflow | Résultat |
+|---|---|
+| [Frontend CI](https://github.com/D-OTIsud/Bertel/actions/runs/43246571266) | Réussi : types, **635 suites et 7 176 tests unitaires réussis** (un ignoré), build et **47 E2E Chromium réussis** (deux ignorés) |
+| [Documentation](https://github.com/D-OTIsud/Bertel/actions/runs/43246571724) | Réussi, y compris les 44 contrôles Postman, les 12 tests HTTP hors ligne et le build Docker documentaire |
+| [Storybook Security](https://github.com/D-OTIsud/Bertel/actions/runs/43246571315) | Réussi, construction et contrôles de sécurité dans un navigateur réel |
+| [Publication safety](https://github.com/D-OTIsud/Bertel/actions/runs/43246571330) | Réussi |
+| [Thesaurus tool archive boundary](https://github.com/D-OTIsud/Bertel/actions/runs/43246571425) | Réussi |
+
+Ces workflows valident le code et construisent les artefacts de contrôle ; ils ne déploient pas le candidat.
 
 ### Mesures du corps HTTP sur un corpus synthétique
 

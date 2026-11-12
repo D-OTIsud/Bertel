@@ -47,9 +47,9 @@ Le bouton **Soumettre à validation** lance immédiatement les contrôles du sys
 
 Les intitulés des domaines sont rédigés en français et constituent la base commune de l'affichage métier. Ils nomment les rubriques dans lesquelles travailler ; ils sont distincts du libellé préféré et des traductions d'un concept. Par exemple, **Hôtellerie** est le domaine et « Hôtel familial » est une notion de ce domaine.
 
-**Repère technique historique — snapshot 26.** Le snapshot technique 26 a été créé le 10 novembre 2026 à 21:20:40 UTC. Son périmètre partenaire comptait 1 496 concepts publics dans 72 domaines publics, soit six domaines publics et 134 concepts publics ajoutés au périmètre technique précédent. Il portait 239 liens natifs entre actions de développement durable et groupes, dont deux entre catégories. Les snapshots techniques antérieurs et leurs empreintes historiques restent inchangés ; leurs champs ne sont pas réécrits.
+**Repère technique.** Les snapshots techniques antérieurs et leurs empreintes restent inchangés ; leurs champs ne sont pas réécrits. Les numéros techniques ne sont pas exposés aux partenaires.
 
-**Série de l’API partenaire au pré-lancement.** Jusqu’au gel explicite du lancement, l’API expose seulement l’édition publique 1, à l’URL habituelle, en la faisant suivre du dernier snapshot technique sélectionné. Elle n’expose pas les numéros techniques ni leur historique ; `previous_release_id` reste `null` et le flux de changements énumère les concepts publics du snapshot comme ajoutés. Après le gel, l’édition 1 devient le baseline immuable.
+**Pré-lancement.** Jusqu’au gel explicite du lancement, l’API expose l’édition publique 1, qui suit le dernier snapshot technique sélectionné ; `previous_release_id` reste `null`. Après le gel, l’édition 1 devient le baseline immuable. Le détail figure dans le [guide partenaires](guide-partenaires.md#35-thésaurus-versionné).
 
 | Rubrique | La choisir pour… | À distinguer de… |
 |---|---|---|
@@ -119,8 +119,6 @@ Chaque concept doit avoir une définition expliquant sa notion particulière et 
 
 > Petit hôtel indépendant exploité par une famille. Il reste dans la catégorie des hôtels ; le terme ne désigne pas simplement un hôtel proposant des services aux familles avec enfants.
 
-L'analogie avec une auberge aide à comprendre la taille ou l'ambiance, mais ne suffit pas à faire d'« auberge » un synonyme exact.
-
 **Exemple — Tarif pour personnes en situation de handicap**
 
 > Tarif adapté proposé aux personnes en situation de handicap, selon les conditions annoncées par le prestataire.
@@ -154,7 +152,7 @@ Une note historique ne rend pas automatiquement le concept « Déprécié ». Le
 
 Les champs français sont dans **Libellé préféré (fr)** et **Définition (fr)**. Pour une langue absente, saisir son code dans **Ajouter une langue**, puis **Ajouter** : `en` pour l'anglais, `es` pour l'espagnol, `de` pour l'allemand.
 
-Renseigner le libellé et la définition dans chacune des quatre langues obligatoires : **FR / EN / ES / DE**. Ces champs sont présents dans l'éditeur et les langues obligatoires ne peuvent pas être retirées. Une langue supplémentaire reste possible ; elle doit elle aussi avoir un libellé et une définition. Relire les synonymes et les notes nécessaires dans chaque langue. Une traduction du nom seul ne remplace pas la traduction de sa définition.
+Renseigner le libellé et la définition dans les quatre langues obligatoires **FR / EN / ES / DE** ; une langue supplémentaire doit aussi avoir les deux. Relire les synonymes et les notes de chaque langue : une traduction du nom seul ne remplace pas celle de la définition.
 
 Une traduction doit garder le même sens et les mêmes exclusions. Pour le concept de produits locaux réunionnais, conserver aussi la portée géographique : **Produits locaux de La Réunion**, **Local products from Réunion**, **Productos locales de La Reunión** et **Lokale Produkte aus La Réunion**. Ces traductions ne doivent pas introduire une notion d'autochtonie ou d'espèce indigène.
 
@@ -399,8 +397,6 @@ La [revue intégrale du 10 novembre 2026](audits/2026-11-10-thesaurus-editorial-
 - [ ] Les données restent déclaratives quand elles proviennent des professionnels.
 - [ ] Les dépendances, avertissements, différences avant/après et fiches affectées ont été examinés.
 - [ ] Les remplacements et la reprise des fiches sont prévus si une valeur devient historique.
-
-Après publication, relever la version, contrôler les tâches d'actualisation et vérifier les exemples concernés.
 
 ## 14. Références et périmètre du guide
 

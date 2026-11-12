@@ -119,7 +119,8 @@ function headerBag(initial = []) {
   };
 }
 function sandbox(entry, options = {}) {
-  const config = Object.fromEntries((collection.variable || []).map((v) => [v.key, v.value]));
+  const root = entry.collection || collection;
+  const config = Object.fromEntries((root.variable || []).map((v) => [v.key, v.value]));
   const vars = scope({ ...config, ...fixtureVariables, ...options.collection });
   const globals = scope(options.globals || {});
   const env = scope(options.noEnvironment ? {} : { base_url: 'https://supabase.unit.invalid/rest/v1', public_base_url: 'https://app.unit.invalid',
@@ -147,8 +148,8 @@ function sandbox(entry, options = {}) {
       new vm.Script(`(function () {\n${source}\n})();`, { filename: `${owner.name || 'collection'}:${kind}` }).runInNewContext({ pm, console: { log() {}, info() {}, warn() {}, error() {} }, URL }, { timeout: 1000 });
     }
   }
-  return { pm, state, pre() { for (const owner of [collection, ...entry.ancestors, entry.item]) { run(owner, 'prerequest'); if (state.skipped) break; } return this; },
-    post({ globalOnly = false } = {}) { for (const owner of globalOnly ? [collection] : [collection, ...entry.ancestors, entry.item]) run(owner, 'test'); return this; } };
+  return { pm, state, pre() { for (const owner of [root, ...entry.ancestors, entry.item]) { run(owner, 'prerequest'); if (state.skipped) break; } return this; },
+    post({ globalOnly = false } = {}) { for (const owner of globalOnly ? [root] : [root, ...entry.ancestors, entry.item]) run(owner, 'test'); return this; } };
 }
 
 check('only reviewed interface surfaces are present', () => {
@@ -483,4 +484,294 @@ check('discovery language scripts detect French returned for a translated domain
   }
 });
 
-console.log(`Postman checks PASS: ${passed} offline checks; ${Object.keys(openapi.paths).length} OpenAPI paths; ${entries.length} requests. No HTTP or database execution.`);
+// Partner distribution: lean path, parity with the canonical collection, synthetic samples.
+const partnerCollection = readJson('Bertel_Partenaires.postman_collection.json');
+const partnerEnvironment = readJson('Bertel_Partenaires.postman_environment.json');
+const partnerText = fs.readFileSync(path.join(__dirname, 'Bertel_Partenaires.postman_collection.json'), 'utf8');
+const partnerEntries = [];
+function visitPartner(items, ancestors = []) {
+  for (const item of items) {
+    if (item.item) visitPartner(item.item, [...ancestors, item]);
+    else if (item.request) partnerEntries.push({ item, ancestors, collection: partnerCollection });
+  }
+}
+visitPartner(partnerCollection.item);
+const COMPACT_VIEW = /([?&])view=compact(&|$)/;
+const APPROVED_COMPACT_PATHS = ['/thesaurus', '/thesaurus/releases/{{thesaurus_release_id}}', '/thesaurus/releases/{{thesaurus_release_id}}/concepts'];
+const withoutCompactView = (url) => url.replace(COMPACT_VIEW, (match, sep, next) => (next ? sep : '')).replace(/\?$/, '');
+const executable = (owner) => JSON.stringify([scripts(owner, 'prerequest'), scripts(owner, 'test')]);
+const canonicalGet = (url) => entries.find((e) => rawUrl(e) === url && e.item.request.method === 'GET');
+const compactExamples = (entry) => (entry.item.response || []).map((r) => ({ name: r.name, body: JSON.parse(r.body) }));
+
+check('partner collection has its own identity and no canonical secrets', () => {
+  assert.match(partnerCollection.info._postman_id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  assert.notEqual(partnerCollection.info._postman_id, collection.info._postman_id);
+  for (const forbidden of ['{{base_url}}', '{{apikey}}', '{{authorization}}']) assert.ok(!partnerText.includes(forbidden), `${forbidden} in partner collection`);
+  assert.doesNotMatch(partnerText, /bk_live_[A-Za-z0-9]{6,}/, 'a partner key value is distributed');
+  assert.ok(!partnerEntries.some((e) => /^(400|401|404) /.test(e.item.name)), 'partner collection must stay on the lean path');
+});
+
+check('partner environment holds only user configuration', () => {
+  assert.deepEqual(partnerEnvironment.values.map((v) => v.key).sort(), ['partner_key', 'public_base_url']);
+  assert.equal(partnerEnvironment.values.find((v) => v.key === 'partner_key').value, '');
+});
+
+check('partner main thesaurus path is exactly discover (compact), list (compact) and concept detail (full)', () => {
+  const [first] = partnerCollection.item;
+  assert.match(first.name, /^1\./);
+  assert.equal(first.item.length, 3, 'main path must hold exactly three calls');
+  assert.deepEqual(first.item.map((e) => rawUrl({ item: e }).includes('view=compact')), [true, true, false]);
+  assert.match(first.item[0].name, /vue compacte/);
+  assert.match(first.item[1].name, /vue compacte/);
+  assert.match(first.item[2].name, /complète/);
+});
+
+const isConditional = (entry) => (entry.item.request.header || []).some((h) => h.key === 'If-None-Match');
+const COMPACT_PATH_SET = new Set(APPROVED_COMPACT_PATHS);
+
+check('partner advanced path keeps the compact manifest and a 304 re-read with its own ETag', () => {
+  const advanced = partnerCollection.item.find((f) => /^5\./.test(f.name));
+  const [manifest, conditional] = advanced.item;
+  assert.ok(rawUrl({ item: manifest }).includes('/thesaurus/releases/{{thesaurus_release_id}}?view=compact'), 'compact manifest not in Advanced');
+  assert.equal(conditional.request.method, 'GET');
+  assert.equal(rawUrl({ item: conditional }), rawUrl({ item: manifest }), '304 must use the same compact representation');
+  const header = (e, key) => (e.request.header || []).find((h) => h.key === key)?.value;
+  assert.equal(header(conditional, 'If-None-Match'), '{{thesaurus_compact_etag}}');
+  assert.ok(!JSON.stringify(conditional).includes('{{thesaurus_etag}}'), '304 must not reuse the full manifest ETag');
+  assert.ok(!JSON.stringify(manifest).includes('{{thesaurus_etag}}'), 'compact manifest must not use the full ETag');
+  const compactPaths = new Set(partnerEntries.filter((e) => COMPACT_VIEW.test(rawUrl(e))).map(publicPath));
+  assert.deepEqual([...compactPaths].sort(), [...COMPACT_PATH_SET].sort(), 'all three compact operations must be represented');
+});
+
+check('partner compact view appears only on the approved discovery and list operations', () => {
+  for (const entry of partnerEntries) {
+    const url = rawUrl(entry);
+    if (!COMPACT_VIEW.test(url)) continue;
+    assert.equal(url.match(/view=/g).length, 1, `${entry.item.name}: repeated view`);
+    assert.ok(APPROVED_COMPACT_PATHS.includes(publicPath(entry)), `${entry.item.name}: compact view not approved on ${publicPath(entry)}`);
+  }
+});
+
+// Presentation (name, description, folder, order) may differ; method, auth, path, headers and query may not.
+const requestShape = ({ item }) => {
+  const url = rawUrl({ item });
+  const [path, search = ''] = url.split('?');
+  return {
+    method: item.request.method,
+    auth: item.request.auth?.type ?? null,
+    path,
+    headers: (item.request.header || []).filter((h) => !h.disabled).map((h) => [h.key.toLowerCase(), h.value]).sort(),
+    query: [...new URLSearchParams(search)].map(([k, v]) => `${k}=${v}`).sort(),
+  };
+};
+const withoutViewQuery = (shape) => ({ ...shape, query: shape.query.filter((q) => q !== 'view=compact') });
+
+check('partner shared requests match the canonical request beyond scripts', () => {
+  for (const entry of partnerEntries) {
+    const url = rawUrl(entry);
+    const base = withoutCompactView(url);
+    const twin = canonicalGet(base);
+    assert.ok(twin, `${entry.item.name}: no canonical request for ${base}`);
+    if (!COMPACT_VIEW.test(url)) {
+      assert.deepEqual(requestShape(entry), requestShape(twin), `${entry.item.name}: method/auth/headers/query diverge from canonical`);
+      assert.equal(executable(entry.item), executable(twin.item), `${entry.item.name}: scripts diverge from canonical`);
+      continue;
+    }
+    // Compact requests deliberately carry their own scripts; the request identity must still match apart from view=compact.
+    const identity = ({ method, auth, path, query }) => ({ method, auth, path, query });
+    assert.deepEqual(identity(withoutViewQuery(requestShape(entry))), identity(requestShape(twin)), `${entry.item.name}: compact identity diverges`);
+    assert.notEqual(executable(entry.item), executable(twin.item), `${entry.item.name}: compact request must use its own scripts`);
+  }
+});
+
+check('partner synthetic samples are labelled and pass the compact invariants', () => {
+  const compactEntries = partnerEntries.filter((e) => COMPACT_VIEW.test(rawUrl(e)) && !isConditional(e) && !rawUrl(e).includes('cursor='));
+  assert.equal(compactEntries.length, 3);
+  assert.deepEqual(new Set(compactEntries.map(publicPath)), COMPACT_PATH_SET);
+  for (const entry of compactEntries) {
+    assert.ok(entry.item.response.length >= 1, `${entry.item.name}: missing synthetic sample`);
+    for (const example of compactExamples(entry)) {
+      assert.match(example.name, /synthétique/);
+      const s = sandbox(entry, { body: example.body, status: 200, collection: { thesaurus_release_id: String(example.body.meta.release_id) } }).pre().post();
+      assert.deepEqual(s.state.failures, [], `${entry.item.name}: ${example.name}`);
+    }
+  }
+});
+
+check('partner compact scripts clear stale variables and reject wrong shapes', () => {
+  const discover = partnerEntries.find((e) => publicPath(e) === '/thesaurus' && COMPACT_VIEW.test(rawUrl(e)));
+  const [discoverSample] = compactExamples(discover);
+  const stale = { thesaurus_concept_id: 'stale', thesaurus_next_cursor: 'stale', thesaurus_historical_concept_id: 'stale', thesaurus_compact_etag: '"stale"' };
+  const cleared = sandbox(discover, { body: discoverSample.body, status: 200, collection: stale }).pre().post();
+  assert.deepEqual(cleared.state.failures, []);
+  for (const key of Object.keys(stale)) assert.equal(cleared.pm.collectionVariables.has(key), false, `${key} not cleared`);
+  const { data } = discoverSample.body;
+  const i18nDomain = { ...discoverSample.body, data: { ...data, domains: [{ ...data.domains[0], name_i18n: {} }] } };
+  assert.ok(sandbox(discover, { body: i18nDomain, status: 200 }).pre().post().state.failures.length > 0, 'name_i18n leak accepted');
+
+  const manifest = partnerEntries.find((e) => publicPath(e) === '/thesaurus/releases/{{thesaurus_release_id}}' && COMPACT_VIEW.test(rawUrl(e)) && !isConditional(e));
+  const [manifestSample] = compactExamples(manifest);
+  const releaseId = String(manifestSample.body.meta.release_id);
+  const m = sandbox(manifest, { body: manifestSample.body, status: 200, collection: { thesaurus_release_id: releaseId, thesaurus_compact_etag: '"stale"', thesaurus_etag: '"full-etag"' } }).pre().post();
+  assert.deepEqual(m.state.failures, []);
+  assert.equal(m.pm.collectionVariables.get('thesaurus_compact_etag'), '"fixture-etag"', 'compact ETag not refreshed');
+  assert.equal(m.pm.collectionVariables.get('thesaurus_etag'), '"full-etag"', 'compact manifest overwrote the full ETag');
+  const releasesLeak = { ...manifestSample.body, data: { ...manifestSample.body.data, releases: [] } };
+  assert.ok(sandbox(manifest, { body: releasesLeak, status: 200, collection: { thesaurus_release_id: releaseId } }).pre().post().state.failures.length > 0, 'releases leak accepted');
+});
+
+check('partner compact 304 re-read accepts an empty body, rejects a body, and skips without an ETag', () => {
+  const conditional = partnerEntries.find(isConditional);
+  const collection = { thesaurus_compact_etag: '"compact-etag"' };
+  const ok = sandbox(conditional, { status: 304, rawBody: '', collection }).pre().post();
+  assert.deepEqual(ok.state.failures, []);
+  assert.equal(ok.state.jsonCalls, 0);
+  assert.ok(sandbox(conditional, { status: 304, rawBody: '{}', collection }).pre().post().state.failures.length > 0, '304 with body accepted');
+  assert.ok(sandbox(conditional, { status: 200, rawBody: '{}', collection }).pre().post().state.failures.length > 0, '200 accepted on 304 re-read');
+  assert.equal(sandbox(conditional, { status: 304, rawBody: '', collection: { thesaurus_compact_etag: '' } }).pre().state.skipped, true, 'missing prerequisite not skipped');
+});
+
+check('thesaurus operations use exact precise envelopes, without generic anyOf or ThesaurusEnvelope', () => {
+  const expected = {
+    '/thesaurus': ['ThesaurusFullManifestEnvelope', 'ThesaurusCompactDiscovery'],
+    '/thesaurus/releases/{releaseId}': ['ThesaurusFullManifestEnvelope', 'ThesaurusCompactManifest'],
+    '/thesaurus/releases/{releaseId}/concepts': ['ThesaurusFullConceptsPageEnvelope', 'ThesaurusCompactConceptsPage'],
+    '/thesaurus/releases/{releaseId}/concepts/{conceptId}': ['ThesaurusFullConceptEnvelope'],
+    '/thesaurus/concepts/{conceptId}': ['ThesaurusFullConceptEnvelope'],
+    '/thesaurus/releases/{releaseId}/changes': ['ThesaurusFullChangesPageEnvelope'],
+    '/thesaurus/releases/{releaseId}/export': ['ThesaurusFullExportEnvelope'],
+  };
+  for (const [route, names] of Object.entries(expected)) {
+    const schema = openapi.paths[route].get.responses['200'].content['application/json'].schema;
+    const refs = schema.oneOf ? schema.oneOf.map((s) => s.$ref) : [schema.$ref];
+    assert.deepEqual(refs, names.map((n) => `#/components/schemas/${n}`), route);
+    assert.equal(schema.anyOf, undefined, `${route}: generic anyOf`);
+    assert.ok(!JSON.stringify(schema).includes('#/components/schemas/ThesaurusEnvelope"'), `${route}: generic envelope`);
+  }
+});
+
+check('thesaurus named examples carry exactly the full or compact meta keys', () => {
+  const FULL_KEYS = ['contract_version', 'release_id', 'vocabulary_release', 'previous_release_id', 'as_of'];
+  const PAGED_KEYS = ['page_size', 'total', 'next_cursor'];
+  const COMPACT_KEYS = ['contract_version', 'release_id', 'previous_release_id', 'as_of', 'total', 'next_cursor'];
+  let count = 0;
+  for (const [route, spec] of Object.entries(openapi.paths)) {
+    if (!route.includes('thesaur') || !spec.get) continue;
+    const media = spec.get.responses['200'].content?.['application/json'];
+    for (const [name, example] of Object.entries(media?.examples || {})) {
+      count += 1;
+      const meta = example.value.meta;
+      const keys = Object.keys(meta).sort();
+      if ('vocabulary_release' in meta) {
+        assert.ok(FULL_KEYS.every((k) => k in meta), `${route} ${name}: full meta incomplete`);
+        assert.ok(!keys.some((k) => ['total', 'next_cursor'].includes(k) && !('page_size' in meta)), `${route} ${name}: paged keys without page_size`);
+        if (keys.includes('page_size')) assert.ok(PAGED_KEYS.every((k) => k in meta), `${route} ${name}: paged meta incomplete`);
+      } else {
+        assert.ok(!('vocabulary_release' in meta), `${route} ${name}: compact meta leaks vocabulary_release`);
+        assert.ok(keys.every((k) => COMPACT_KEYS.includes(k)), `${route} ${name}: compact meta has unexpected key`);
+      }
+    }
+  }
+  assert.equal(count, 10, 'expected full and compact examples on the three compact operations plus concept, changes and export');
+});
+
+check('partner compact list script rejects a row that leaks the complete representation', () => {
+  const entry = partnerEntries.find((e) => publicPath(e) === '/thesaurus/releases/{{thesaurus_release_id}}/concepts' && COMPACT_VIEW.test(rawUrl(e)));
+  const [sample] = compactExamples(entry);
+  const leaked = { ...sample.body, data: [{ ...sample.body.data[0], preferred_labels: {} }] };
+  const s = sandbox(entry, { body: leaked, status: 200, collection: { thesaurus_release_id: '6' } }).pre().post();
+  assert.ok(s.state.failures.length > 0);
+});
+
+check('partner pagination keeps the compact representation and consumes its captured cursor', () => {
+  const first = partnerEntries.find((e) => COMPACT_VIEW.test(rawUrl(e)) && publicPath(e).endsWith('/concepts') && !rawUrl(e).includes('cursor='));
+  const next = partnerEntries.find((e) => rawUrl(e).includes('cursor={{thesaurus_next_cursor}}'));
+  const query = (entry) => new URLSearchParams(rawUrl(entry).split('?')[1]);
+  const initialQuery = [...query(first)].sort();
+  const continuedQuery = [...query(next)].filter(([key]) => key !== 'cursor').sort();
+  assert.deepEqual(continuedQuery, initialQuery, 'pagination changed the cursor scope');
+  const body = structuredClone(compactExamples(first)[0].body);
+  body.meta.next_cursor = 'compact-next-page';
+  const initial = sandbox(first, { body, collection: { thesaurus_release_id: String(body.meta.release_id) } }).pre().post();
+  assert.deepEqual(initial.state.failures, []);
+  const captured = { thesaurus_release_id: initial.pm.collectionVariables.get('thesaurus_release_id'),
+    thesaurus_next_cursor: initial.pm.collectionVariables.get('thesaurus_next_cursor') };
+  const terminal = structuredClone(body);
+  terminal.meta.next_cursor = null;
+  const continued = sandbox(next, { body: terminal, collection: captured }).pre().post();
+  assert.equal(continued.state.skipped, false);
+  assert.equal(continued.pm.variables.get('thesaurus_next_cursor'), 'compact-next-page');
+  assert.deepEqual(continued.state.failures, [], 'next-page script expected the rich representation');
+});
+
+check('partner empty compact pages clear the concept and cursor before the next request', () => {
+  for (const entry of partnerEntries.filter((e) => COMPACT_VIEW.test(rawUrl(e)) && publicPath(e).endsWith('/concepts'))) {
+    const body = { meta: { contract_version: '1.0.0', release_id: 42, total: 0, next_cursor: null }, data: [] };
+    const cleared = sandbox(entry, { body, collection: { thesaurus_release_id: '42', thesaurus_concept_id: 'stale-id', thesaurus_next_cursor: 'stale-cursor' } }).pre().post();
+    assert.deepEqual(cleared.state.failures, []);
+    assert.equal(cleared.pm.collectionVariables.get('thesaurus_concept_id'), undefined);
+    assert.equal(cleared.pm.collectionVariables.get('thesaurus_next_cursor'), undefined);
+    const detail = partnerEntries.find((e) => rawUrl(e).includes('/concepts/{{thesaurus_concept_id}}'));
+    const follow = sandbox(detail, { collection: { thesaurus_concept_id: undefined }, environment: { thesaurus_concept_id: 'stale-environment-id' } }).pre();
+    assert.equal(follow.state.skipped, true, 'stale environment ID survived an empty page');
+  }
+});
+
+check('partner 304 uses its own collection ETag even when the environment contains stale state', () => {
+  const conditional = partnerEntries.find(isConditional);
+  const run = sandbox(conditional, { status: 304, rawBody: '', collection: { thesaurus_compact_etag: '"fresh-compact"' },
+    environment: { thesaurus_compact_etag: '"stale-environment"' } }).pre().post();
+  assert.equal(run.state.skipped, false);
+  assert.equal(run.pm.variables.get('thesaurus_compact_etag'), '"fresh-compact"');
+  assert.deepEqual(run.state.failures, []);
+});
+
+check('partner compact scripts accept nullable metadata and empty vocabularies', () => {
+  const discovery = partnerEntries.find((e) => publicPath(e) === '/thesaurus' && COMPACT_VIEW.test(rawUrl(e)));
+  const body = structuredClone(compactExamples(discovery)[0].body);
+  body.data.license = null;
+  body.data.attribution = null;
+  for (const domains of [[], [{ domain: 'activity_type', name: null, effective_lang: null }]]) {
+    body.data.domains = domains;
+    const run = sandbox(discovery, { body }).pre().post();
+    assert.deepEqual(run.state.failures, []);
+  }
+});
+
+check('canonical and partner full detail scripts preserve historical scalar fallbacks', () => {
+  const canonical = publicEntries.find((e) => /\/concepts\/\{\{thesaurus_concept_id\}\}/.test(rawUrl(e)) && /lang=fr/.test(rawUrl(e)));
+  const partner = partnerEntries.find((e) => /\/concepts\/\{\{thesaurus_concept_id\}\}/.test(rawUrl(e)) && /lang=fr/.test(rawUrl(e)));
+  const id = fixtureVariables.thesaurus_concept_id;
+  const body = { meta: { contract_version: '1.0.0', release_id: 42, vocabulary_release: 42 }, data: {
+    concept_id: id, preferred_labels: {}, definitions: {}, name: 'Titre historique', description: 'Définition historique',
+    effective_lang: 'fr', definition_lang: 'fr', lifecycle: 'active', assignable: true,
+  } };
+  for (const entry of [canonical, partner]) {
+    assert.ok(entry);
+    const run = sandbox(entry, { body }).pre().post();
+    assert.deepEqual(run.state.failures, []);
+    const falseTranslation = structuredClone(body);
+    falseTranslation.data.effective_lang = 'en';
+    assert.ok(sandbox(entry, { body: falseTranslation }).pre().post().state.failures.length > 0);
+  }
+});
+
+check('discovery scripts accept custom French-only titles and frozen maps that are absent or null', () => {
+  const canonical = publicEntries.find((e) => rawUrl(e).endsWith('/thesaurus?lang=en'));
+  const partner = partnerEntries.find((e) => rawUrl(e).endsWith('/thesaurus?lang=en'));
+  const vocabularySchema = openapi.components.schemas.ThesaurusVocabulary;
+  assert.ok(!vocabularySchema.required.includes('name_i18n'), 'the schema requires an absent frozen map');
+  assert.ok(vocabularySchema.properties.name_i18n.type.includes('null'), 'the schema rejects a null frozen map');
+  for (const names of [{ fr: 'Activités locales' }, null, undefined]) {
+    const domain = { domain: 'activity_type', name: 'Activités locales', requested_lang: 'en', effective_lang: 'fr',
+      ...(names === undefined ? {} : { name_i18n: names }) };
+    const body = { meta: { contract_version: '1.0.0', release_id: 42, vocabulary_release: 42 },
+      data: { domains: [domain], releases: [] } };
+    for (const entry of [canonical, partner]) {
+      assert.ok(entry);
+      assert.deepEqual(sandbox(entry, { body }).pre().post().state.failures, []);
+    }
+  }
+});
+
+console.log(`Postman checks PASS: ${passed} offline checks; ${Object.keys(openapi.paths).length} OpenAPI paths; ${entries.length} requests; ${partnerEntries.length} partner requests. No HTTP or database execution.`);

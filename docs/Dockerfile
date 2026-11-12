@@ -17,6 +17,7 @@ COPY api-audit/2026-07-03-i4-interop-profiles.md /usr/share/nginx/html/api-audit
 
 # Contrat OpenAPI + artefacts Postman
 COPY openapi.json Bertel_API_v3.postman_collection.json Bertel_API_v3.postman_environment.json /usr/share/nginx/html/
+COPY Bertel_Partenaires.postman_collection.json Bertel_Partenaires.postman_environment.json /usr/share/nginx/html/
 
 # Configuration Nginx pour SPA
 COPY nginx.conf /etc/nginx/conf.d/default.conf

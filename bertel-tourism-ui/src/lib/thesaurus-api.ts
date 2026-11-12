@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { admitPartner, logPartnerCall } from './partner-auth';
 import { callPublicRpc, PUBLIC_API_CONTRACT_VERSION, publicHeaders } from './public-api';
 import { THESAURUS_VOCABULARY_LABELS } from './thesaurus-vocabulary-labels';
+import { compactConcept, compactManifestData } from './thesaurus-compact-projection';
 
 export type ThesaurusAction = 'manifest' | 'release' | 'concepts' | 'concept' | 'changes' | 'export' | 'resolve';
 export interface ThesaurusTarget {
@@ -20,6 +21,7 @@ interface Query {
   pageSize: number;
   format: 'json' | 'jsonld';
   cursor: string | null;
+  view: 'full' | 'compact';
 }
 interface Cursor {
   version: 1;
@@ -109,6 +111,7 @@ function parseQuery(url: URL, action: ThesaurusAction): Query {
   if (action === 'manifest' || action === 'release') {
     supported.delete('domains'); supported.delete('status');
   }
+  if (COMPACT_VIEW_ACTIONS.has(action)) supported.add('view');
   for (const name of url.searchParams.keys()) {
     if (!supported.has(name) || url.searchParams.getAll(name).length !== 1) throw new Error('invalid_parameters');
   }
@@ -126,11 +129,25 @@ function parseQuery(url: URL, action: ThesaurusAction): Query {
   if (format !== 'json' && format !== 'jsonld') throw new Error('invalid_parameters');
   const cursor = url.searchParams.get('cursor');
   if (cursor !== null && !cursor) throw new Error('invalid_cursor');
+  // Only the explicit compact view changes the representation; absence keeps the historical full view.
+  const rawView = url.searchParams.get('view');
+  if (rawView !== null && rawView !== 'compact') throw new Error('invalid_parameters');
   return {
     domains: parseList(url.searchParams.get('domains'), 'domain'),
     status: parseList(url.searchParams.get('status'), 'status'),
     lang, query, pageSize: Number(rawSize), format, cursor,
+    view: rawView === 'compact' ? 'compact' : 'full',
   };
+}
+
+/** Compact views exist only for discovery, release manifests and concept lists. */
+const COMPACT_VIEW_ACTIONS: ReadonlySet<ThesaurusAction> = new Set(['manifest', 'release', 'concepts']);
+
+/** Compact envelope metadata keeps only the fields needed to locate and continue the representation. */
+function compactEnvelopeMeta(action: ThesaurusAction, meta: JsonObject): JsonObject {
+  const base = { contract_version: meta.contract_version, release_id: meta.release_id };
+  if (action === 'concepts') return { ...base, total: meta.total, next_cursor: meta.next_cursor };
+  return { ...base, previous_release_id: meta.previous_release_id, as_of: meta.as_of };
 }
 
 function stringMap(value: unknown): Record<string, string> {
@@ -366,9 +383,10 @@ export function thesaurusJsonLd(values: unknown[]): JsonObject {
 }
 
 function scopeFor(target: ThesaurusTarget, query: Query): string {
+  // The view marker is added only for compact requests, so historical cursor scopes keep their digest.
   return digest({ action: target.action, domains: query.domains, status: query.status,
     lang: query.lang, query: query.query, page_size: query.pageSize, format: query.format,
-    series: 'official' });
+    series: 'official', ...(query.view === 'compact' ? { view: 'compact' } : {}) });
 }
 
 /** All admission occurs before parsing a cursor, loading a snapshot or returning 304. */
@@ -447,12 +465,16 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   try {
     if (target.action === 'manifest' || target.action === 'release') {
       data = publicThesaurusManifest(data, query.lang, target.action === 'manifest' ? actualRelease : null);
+      if (query.view === 'compact') data = compactManifestData(data as JsonObject, target.action === 'manifest');
     } else if (target.action === 'concept' || target.action === 'resolve') {
       if (data === null) return fail(404, 'not_found');
       data = publicThesaurusConcept(data, query.lang);
     } else if (target.action === 'concepts' || target.action === 'export') {
       if (!Array.isArray(data)) throw new Error('invalid_snapshot');
-      data = data.map((item) => publicThesaurusConcept(item, query.lang));
+      data = data.map((item) => {
+        const concept = publicThesaurusConcept(item, query.lang);
+        return query.view === 'compact' ? compactConcept(concept) : concept;
+      });
     } else if (target.action === 'changes') {
       if (!Array.isArray(data)) throw new Error('invalid_snapshot');
       data = data.map((item) => {
@@ -478,13 +500,16 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
     return fail(error instanceof Error && error.message === 'cursor_configuration' ? 500 : 502,
       error instanceof Error && error.message === 'cursor_configuration' ? 'server_misconfigured' : 'invalid_snapshot');
   }
-  const envelope = { meta, data };
+  const envelopeMeta = query.view === 'compact' ? compactEnvelopeMeta(target.action, meta) : meta;
+  const envelope = { meta: envelopeMeta, data };
   const text = canonicalThesaurusJson(envelope);
   // A JSON-LD export is a standalone RDF document, with version data in HTTP headers.
   const standaloneJsonLd = target.action === 'export' && query.format === 'jsonld';
   const responseText = standaloneJsonLd ? canonicalThesaurusJson(data) : text;
   const contentType = standaloneJsonLd ? 'application/ld+json; charset=utf-8' : 'application/json; charset=utf-8';
-  const etag = `"${createHash('sha256').update(`official:${actualRelease}:${responseSnapshot ?? ''}:`)
+  // Compact representations get their own validator; full ones keep the historical prefix exactly.
+  const viewTag = query.view === 'compact' ? 'view=compact:' : '';
+  const etag = `"${createHash('sha256').update(`official:${actualRelease}:${responseSnapshot ?? ''}:${viewTag}`)
     .update(contentType).update(':').update(responseText).digest('hex')}"`;
   const responseHeaders = { ...headers, ETag: etag,
     'X-Bertel-Vocabulary-Release': String(actualRelease), 'Content-Type': contentType };

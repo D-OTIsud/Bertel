@@ -499,6 +499,17 @@ it('localizes a standalone release only from its frozen maps and omits discovery
   expect(body.data).not.toHaveProperty('is_current');
 });
 
+it.each([undefined, null])('preserves a missing or null frozen vocabulary map (%s) without inventing translations', async (name_i18n) => {
+  const vocabulary = { ...activityVocabulary, ...(name_i18n === undefined ? {} : { name_i18n }) };
+  rpc.mockResolvedValue(response({ release_id: 1, metadata_checksum: 'frozen-meta', domains: [vocabulary] }));
+  const result = await handleThesaurusRequest(manifestReq('?lang=en'), { action: 'release', releaseId: '1' });
+  expect(result.status).toBe(200);
+  const { data } = await result.json();
+  expect(data.domains[0]).toMatchObject({ name: activityVocabulary.name, effective_lang: 'fr', name_metadata_scope: 'legacy_scalar' });
+  expect(Object.hasOwn(data.domains[0], 'name_i18n')).toBe(name_i18n !== undefined);
+  if (name_i18n === null) expect(data.domains[0].name_i18n).toBeNull();
+});
+
 it.each(['manifest', 'release'] as const)('returns the actual requested domain translation for every supported language on %s', async (action) => {
   const names = { fr: 'Types d’horaires', en: 'Opening schedule types', es: 'Tipos de horario', de: 'Öffnungszeitarten' };
   const historicRules = { require_definition: false, required_languages: ['fr'] };

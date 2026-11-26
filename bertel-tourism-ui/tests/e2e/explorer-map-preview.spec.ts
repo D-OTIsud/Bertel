@@ -38,7 +38,16 @@ test('links sustained result hover and selection to the actual map popup', async
   await expect(popup).not.toBeVisible();
 
   const list = result.locator('..');
-  await list.evaluate((element) => { element.scrollTop = 15; element.dispatchEvent(new Event('scroll')); });
+  // Start the quiet-period checks after the real browser scroll event. Dispatching
+  // a synthetic duplicate races the later native event, which correctly restarts intent.
+  await list.evaluate((element) => new Promise<void>((resolve) => {
+    const maxScroll = element.scrollHeight - element.clientHeight;
+    if (maxScroll <= 0) throw new Error('The result list must scroll for this check');
+    element.addEventListener('scroll', () => resolve(), { once: true });
+    element.scrollTop = element.scrollTop < maxScroll
+      ? Math.min(element.scrollTop + 15, maxScroll)
+      : Math.max(element.scrollTop - 15, 0);
+  }));
   await page.waitForTimeout(1600);
   await expect(popup).not.toBeVisible();
   await expect(popup).toBeVisible({ timeout: 3000 });
@@ -66,8 +75,10 @@ test('links sustained result hover and selection to the actual map popup', async
 
   // A keyboard preview leaves focus on the result, rather than MapLibre stealing it.
   await page.keyboard.press('Escape');
+  await page.mouse.move(100, 50);
   await result.focus();
   await expect(popup).toBeVisible({ timeout: 4500 });
+  await expect(popup.locator('.map-hover-card__name')).toHaveText('Hotel Basalte & Lagon');
   await expect(result).toBeFocused();
   expect(errors).toEqual([]);
 });

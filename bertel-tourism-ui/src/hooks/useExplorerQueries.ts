@@ -639,6 +639,7 @@ export function usePublishObjectWorkspaceMutation(objectId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    onMutate: () => ({ objectId }),
     mutationFn: async (publish: boolean) => {
       if (!objectId) {
         throw new Error("Aucune fiche active pour gerer la publication.");
@@ -649,15 +650,17 @@ export function usePublishObjectWorkspaceMutation(objectId: string | null) {
       }
       return publishObjectWorkspace(objectId, publish);
     },
-    onSuccess: () => {
-      if (!objectId) {
+    onSuccess: (_result, _publish, context) => {
+      const publishedObjectId = context?.objectId;
+      if (!publishedObjectId) {
         return;
       }
 
       // Fire-and-forget: the editor updates its own status via setSavedStatus — don't hold
       // the publish spinner on the heavy workspace refetch.
-      void queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
-      void queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+      void queryClient.invalidateQueries({ queryKey: ['object-workspace', publishedObjectId] });
+      void queryClient.invalidateQueries({ queryKey: ['object-detail', publishedObjectId] });
+      void queryClient.invalidateQueries({ queryKey: ['object-lifecycle-details', publishedObjectId] });
     },
   });
 }
@@ -666,21 +669,26 @@ export function useSetObjectStatusMutation(objectId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (status: ObjectLifecycleStatus) => {
+    onMutate: () => ({ objectId }),
+    mutationFn: async (input: ObjectLifecycleStatus | { status: ObjectLifecycleStatus; reason: string }) => {
       if (!objectId) {
         throw new Error("Aucune fiche active pour gerer le statut.");
       }
 
-      return setObjectStatus(objectId, status);
+      return typeof input === 'string'
+        ? setObjectStatus(objectId, input)
+        : setObjectStatus(objectId, input.status, input.reason);
     },
-    onSuccess: async () => {
-      if (!objectId) {
+    onSuccess: async (_status, _target, context) => {
+      const changedObjectId = context?.objectId;
+      if (!changedObjectId) {
         return;
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', changedObjectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', changedObjectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-lifecycle-details', changedObjectId] }),
       ]);
     },
   });
@@ -859,6 +867,7 @@ export function useRestoreObjectVersionMutation(objectId: string | null) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['object-versions', restoredObjectId] }),
         queryClient.invalidateQueries({ queryKey: ['object-detail', restoredObjectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-lifecycle-details', restoredObjectId] }),
       ]);
       // The workspace loader reuses object-detail. Mark/refetch that dependency
       // first, otherwise a fresh cached A can rebuild the workspace after restore B.

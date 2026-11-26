@@ -11,6 +11,12 @@ export interface ObjectVersionRow {
   changedFields: string[];
 }
 
+export interface ObjectLifecycleDetails {
+  createdAt: string;
+  createdByName: string;
+  changeReason: string;
+}
+
 /** One canonical field that changed between two snapshots. */
 export interface ObjectVersionDiffField {
   key: string;
@@ -161,6 +167,33 @@ export async function getObjectVersionSnapshot(
     p_version_number: versionNumber,
   }).abortSignal(signal), "Impossible de charger cette version.");
   return data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
+}
+
+/** Resolve only the latest status transition, so an earlier archive/unpublish episode is never reused. */
+export async function getObjectLifecycleDetails(
+  objectId: string,
+  expectedStatus: 'archived' | 'hidden',
+): Promise<ObjectLifecycleDetails | null> {
+  const pageSize = 50;
+  for (let offset = 0; ; offset += pageSize) {
+    const versions = await getObjectVersions(objectId, pageSize, offset);
+    const transition = versions.find((version) => (
+      version.changeType === 'update' && version.changedFields.includes('status')
+    ));
+    if (transition) {
+      const snapshot = await getObjectVersionSnapshot(objectId, transition.versionNumber);
+      return snapshot?.status === expectedStatus
+        ? {
+            createdAt: transition.createdAt,
+            createdByName: transition.createdByName,
+            changeReason: transition.changeReason,
+          }
+        : null;
+    }
+    if (versions.length < pageSize) {
+      return null;
+    }
+  }
 }
 
 /** api.rpc_restore_object_version — restores canonical fields and appends a new version. */

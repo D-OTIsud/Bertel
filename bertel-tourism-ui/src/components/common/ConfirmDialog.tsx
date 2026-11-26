@@ -47,6 +47,7 @@ export function ConfirmDialog({
   tone = 'default',
   busy = false,
   confirmGate,
+  justification,
   attestation,
   className,
   appearance = 'default',
@@ -70,6 +71,8 @@ export function ConfirmDialog({
    * (le mot-clé `SUPPRIMER` doit être tapé tel quel).
    */
   confirmGate?: { expected: string[]; label: ReactNode };
+  /** Controlled, required explanation for a lifecycle change. */
+  justification?: { label: string; value: string; onChange: (value: string) => void };
   /**
    * 18a/D9 — DÉCLARATION cochée, distincte de la confirmation. Le serveur ne peut pas vérifier
    * un report fait à la main dans l'éditeur ; il ne peut que l'IMPUTER (attested_by/attested_at).
@@ -104,16 +107,23 @@ export function ConfirmDialog({
   // `aria-live` n'annonce rien et l'écran a l'air en panne. C'est le clic qui doit provoquer
   // la réponse, pas le montage.
   const [blockedAttempt, setBlockedAttempt] = useState(false);
+  const [justificationError, setJustificationError] = useState(false);
+  const justificationRef = useRef<HTMLTextAreaElement | null>(null);
   // Deux ConfirmDialog coexistent pendant le fondu de sortie : des id figés se dupliqueraient
   // dans le document, et `htmlFor` pointerait sur la mauvaise case.
   const fieldId = useId();
   const attestationInputId = `${fieldId}-attestation`;
   const attestationHintId = `${fieldId}-attestation-hint`;
+  const justificationInputId = `${fieldId}-justification`;
+  const justificationLabelId = `${fieldId}-justification-label`;
+  const justificationErrorId = `${fieldId}-justification-error`;
+  const justificationFormId = `${fieldId}-justification-form`;
   // Réinitialise la saisie à la fermeture pour que la prochaine ouverture reparte propre.
   useEffect(() => {
     if (!open) {
       setGateValue('');
       setBlockedAttempt(false);
+      setJustificationError(false);
     }
   }, [open]);
 
@@ -126,6 +136,22 @@ export function ConfirmDialog({
   // 18a/D9 : une attestation `required` non cochée bloque au même titre qu'un gate manqué.
   const attestationMissing = Boolean(attestation?.required) && !attestation?.checked;
   const confirmBlocked = busy || !gatePass || attestationMissing;
+  const justificationInvalid = Boolean(justificationError && justification && !justification.value.trim());
+  useEffect(() => {
+    if (justificationInvalid) justificationRef.current?.focus();
+  }, [justificationInvalid]);
+  function requestConfirmation() {
+    if (confirmBlocked) {
+      setBlockedAttempt(true);
+      return;
+    }
+    if (justification && !justification.value.trim()) {
+      setJustificationError(true);
+      justificationRef.current?.focus();
+      return;
+    }
+    onConfirm();
+  }
   // D10/A4 : la raison du blocage reste joignable — « en cours » (sr-only), le hint du gate,
   // ou celui de l'attestation.
   const confirmReasonId = busy
@@ -142,7 +168,7 @@ export function ConfirmDialog({
       title={title}
       open={open}
       className={className}
-      onOpenChange={(next) => { if (!next) onCancel(); }}
+      onOpenChange={(next) => { if (!next && !busy) onCancel(); }}
       footer={
         <>
           <button type="button" data-confirm-cancel className={appearance === 'editor' ? 'btn' : 'ghost-button'} onClick={onCancel} disabled={busy}>
@@ -154,17 +180,12 @@ export function ConfirmDialog({
             </span>
           )}
           <button
-            type="button"
+            type={justification ? 'submit' : 'button'}
+            form={justification ? justificationFormId : undefined}
             className={appearance === 'editor' ? (tone === 'danger' ? 'btn danger' : 'btn primary') : (tone === 'danger' ? 'primary-button primary-button--danger' : 'primary-button')}
             aria-disabled={confirmBlocked || undefined}
             aria-describedby={confirmReasonId}
-            onClick={() => {
-              if (confirmBlocked) {
-                setBlockedAttempt(true);
-                return;
-              }
-              onConfirm();
-            }}
+            onClick={justification ? undefined : requestConfirmation}
           >
             {confirmLabel}
           </button>
@@ -174,6 +195,34 @@ export function ConfirmDialog({
       {appearance === 'editor'
         ? <DialogDescription asChild><p className="confirm-dialog__message">{message}</p></DialogDescription>
         : <div className="confirm-message">{message}</div>}
+      {justification && (
+        <form id={justificationFormId} noValidate aria-labelledby={justificationLabelId}
+          onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); requestConfirmation(); }}
+          className="mt-3 space-y-1">
+          <label id={justificationLabelId} htmlFor={justificationInputId} className="block text-sm font-medium text-ink-2">
+            {justification.label} <span>(obligatoire)</span>
+          </label>
+          <textarea
+            ref={justificationRef}
+            id={justificationInputId}
+            name="justification"
+            rows={4}
+            required
+            disabled={busy}
+            value={justification.value}
+            onChange={(event) => {
+              if (event.target.value.trim()) setJustificationError(false);
+              justification.onChange(event.target.value);
+            }}
+            aria-invalid={justificationInvalid}
+            aria-describedby={justificationInvalid ? justificationErrorId : undefined}
+            className="w-full resize-y rounded-shellLg border border-line bg-surface px-3 py-2 text-base text-ink"
+          />
+          {justificationInvalid && (
+            <p id={justificationErrorId} role="alert" className="text-sm text-ink-2">Un motif est obligatoire pour confirmer cette action.</p>
+          )}
+        </form>
+      )}
       {attestation && (
         <div className="confirm-attestation">
           <label htmlFor={attestationInputId} className="confirm-attestation__label">

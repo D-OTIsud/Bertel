@@ -5,6 +5,7 @@ import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionPublication } from './SectionPublication';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 import { useSetObjectStatusMutation } from '../../../hooks/useExplorerQueries';
+import { useObjectLifecycleDetailsQuery } from '../../../hooks/useObjectLifecycleDetailsQuery';
 import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
 
 // §21 fires a lifecycle mutation on confirm — mock the hook so tests assert the
@@ -12,6 +13,7 @@ import type { ObjectWorkspacePermissions } from '../../../services/object-worksp
 jest.mock('../../../hooks/useExplorerQueries', () => ({
   useSetObjectStatusMutation: jest.fn(),
 }));
+jest.mock('../../../hooks/useObjectLifecycleDetailsQuery', () => ({ useObjectLifecycleDetailsQuery: jest.fn() }));
 
 // §108 — the hard-delete button loads a session token + the modal posts to the delete route.
 // Mock both so §21 visibility tests never touch the network.
@@ -23,6 +25,7 @@ const mutateAsync = jest.fn().mockResolvedValue(undefined);
 beforeEach(() => {
   mutateAsync.mockClear();
   (useSetObjectStatusMutation as jest.Mock).mockReturnValue({ mutateAsync, isPending: false });
+  (useObjectLifecycleDetailsQuery as jest.Mock).mockReturnValue({ data: null, isPending: false, isError: false });
 });
 
 /** Like `allowAll` but the `publication` module is read-only (no publish_object). */
@@ -94,6 +97,57 @@ describe('SectionPublication (§21)', () => {
     expect(result.current.dirtySections.publication).toBe(true);
   });
 
+  it('shows archive author, local date and multiline reason even in read-only mode', () => {
+    (useObjectLifecycleDetailsQuery as jest.Mock).mockReturnValue({
+      data: { createdByName: 'Marie Dupont', createdAt: '2026-11-26T10:30:00Z', changeReason: 'Fermeture temporaire.\nRéouverture en janvier.' },
+      isPending: false, isError: false,
+    });
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={denyPublication} objectId="o1" />);
+
+    expect(screen.getByText(/Archivée par Marie Dupont/)).toHaveTextContent('le 26/11/2026 à 14:30');
+    expect(screen.getByText('26/11/2026 à 14:30')).toHaveAttribute('datetime', '2026-11-26T10:30:00Z');
+    expect(screen.getByText(/Fermeture temporaire/).textContent).toContain('Fermeture temporaire.\nRéouverture en janvier.');
+    expect(useObjectLifecycleDetailsQuery).toHaveBeenCalledWith('o1', 'archived');
+  });
+
+  it('shows offline transition details without mistaking a restoration for unpublication', () => {
+    (useObjectLifecycleDetailsQuery as jest.Mock).mockReturnValue({
+      data: { createdByName: 'Paul Martin', createdAt: '2026-11-26T10:30:00Z', changeReason: 'Informations à vérifier.' },
+      isPending: false, isError: false,
+    });
+    const modules = fullModulesFixture();
+    modules.generalInfo.status = 'hidden';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+
+    expect(screen.getByText(/Statut modifié par Paul Martin/)).toBeInTheDocument();
+    expect(screen.getByText(/Informations à vérifier/)).toBeInTheDocument();
+    expect(useObjectLifecycleDetailsQuery).toHaveBeenCalledWith('o1', 'hidden');
+  });
+
+  it('shows an explicit fallback for older archives without a recorded author', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.getByText('Auteur non renseigné')).toBeInTheDocument();
+    expect(screen.queryByText('Motif :')).not.toBeInTheDocument();
+  });
+
+  it('does not show an unknown author while archive information is loading', () => {
+    (useObjectLifecycleDetailsQuery as jest.Mock).mockReturnValue({ data: undefined, isPending: true, isError: false });
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.queryByText('Auteur non renseigné')).not.toBeInTheDocument();
+  });
+
+  it('reports unavailable history separately from an unrecorded author', () => {
+    (useObjectLifecycleDetailsQuery as jest.Mock).mockReturnValue({ data: undefined, isPending: false, isError: true });
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.getByText('Informations de changement de statut indisponibles.')).toBeInTheDocument();
+    expect(screen.queryByText('Auteur non renseigné')).not.toBeInTheDocument();
+  });
+
   it('renders lifecycle action buttons when publication.canDirectWrite is true', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
@@ -154,14 +208,54 @@ describe('SectionPublication (§21)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Dépublier' }));
     const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByRole('textbox', { name: /Motif de la dépublication/ }), { target: { value: ' Informations à vérifier. ' } });
     // The confirm resolves the (mocked) mutation in a microtask and then calls
     // setSavedStatus — wrap it so that state update flushes inside act().
     await act(async () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Dépublier' }));
     });
 
-    expect(mutateAsync).toHaveBeenCalledWith('hidden');
+    expect(mutateAsync).toHaveBeenCalledWith({ status: 'hidden', reason: 'Informations à vérifier.' });
     await waitFor(() => expect(result.current.draft.generalInfo.status).toBe('hidden'));
+  });
+
+  it('requires a non-whitespace archive reason before sending the status change', async () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Archiver' }));
+    const dialog = screen.getByRole('dialog');
+    const reason = within(dialog).getByRole('textbox', { name: /Motif de l’archivage/ });
+    fireEvent.change(reason, { target: { value: ' \n\t ' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archiver' }));
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(reason).toHaveFocus();
+
+    fireEvent.change(reason, { target: { value: ' En pause.\nRecontacter en janvier. ' } });
+    await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: 'Archiver' })); });
+    expect(mutateAsync).toHaveBeenCalledWith({ status: 'archived', reason: 'En pause.\nRecontacter en janvier.' });
+  });
+
+  it('keeps the reason and dialog open when the status change fails', async () => {
+    mutateAsync.mockRejectedValueOnce(new Error('Connexion interrompue.'));
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Archiver' }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByRole('textbox', { name: /Motif de l’archivage/ }), { target: { value: 'Fermeture temporaire.' } });
+    await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: 'Archiver' })); });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Connexion interrompue.');
+    expect(screen.getByRole('textbox', { name: /Motif de l’archivage/ })).toHaveValue('Fermeture temporaire.');
+  });
+
+  it('restores an archived fiche without requesting a reason', async () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Restaurer' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+    await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: 'Restaurer' })); });
+    expect(mutateAsync).toHaveBeenCalledWith('hidden');
   });
 
   it('offers "Supprimer définitivement" next to Restaurer for a superuser on an archived fiche', () => {

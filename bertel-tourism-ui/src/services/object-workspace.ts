@@ -4317,11 +4317,17 @@ export function friendlyStatusError(error: { message?: string } | null | undefin
   if (msg.includes('INVALID_STATUS')) return "Statut de publication inconnu.";
   if (msg.includes('NOT_FOUND')) return "Fiche introuvable.";
   if (msg.includes('NO_AUTH_CONTEXT')) return "Session expirée — reconnectez-vous.";
+  if (msg.includes('REASON_REQUIRED')) return 'Un motif est obligatoire pour archiver ou dépublier une fiche.';
+  if (msg.includes('LIFECYCLE_HISTORY_MISSING')) return 'Le statut et son motif n’ont pas pu être enregistrés. Réessayez.';
   return msg || "Changement de statut impossible.";
 }
 
 /** Sets object.status through the lifecycle RPC. Returns the resolved status. */
-export async function setObjectStatus(objectId: string, status: ObjectLifecycleStatus): Promise<ObjectLifecycleStatus> {
+export async function setObjectStatus(objectId: string, status: ObjectLifecycleStatus, reason?: string): Promise<ObjectLifecycleStatus> {
+  const trimmedReason = reason?.trim();
+  if ((status === 'archived' || (status === 'hidden' && reason !== undefined)) && !trimmedReason) {
+    throw new Error('Un motif est obligatoire pour archiver ou dépublier une fiche.');
+  }
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return status;
@@ -4333,6 +4339,7 @@ export async function setObjectStatus(objectId: string, status: ObjectLifecycleS
   const { data, error } = await apiClient.schema('api').rpc('rpc_set_object_status', {
     p_object_id: objectId,
     p_status: status,
+    ...(reason !== undefined ? { p_reason: trimmedReason } : {}),
   });
   if (error) {
     throw new Error(friendlyStatusError(error));

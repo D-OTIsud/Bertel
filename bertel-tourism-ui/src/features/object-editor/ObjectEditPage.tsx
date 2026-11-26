@@ -266,6 +266,10 @@ function EditorReady({ resource, objectId, meta, workspaceQueryKey, workspaceRea
 
   const setObjectStatus = useSetObjectStatusMutation(objectId);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [archiveSaving, setArchiveSaving] = useState(false);
+  const archiveInFlight = useRef(false);
 
   // §103 — l'export OUTILS reconstruit l'objet EDITABLE COMPLET via le chargeur
   // (get_object_resource + selects directs), qui exige desormais les catalogues.
@@ -440,6 +444,9 @@ function EditorReady({ resource, objectId, meta, workspaceQueryKey, workspaceRea
 
   function handleToolSelect(key: EditorToolKey) {
     if (key === 'archive') {
+      if (archiveInFlight.current) return;
+      setArchiveReason('');
+      setArchiveError(null);
       setArchiveConfirmOpen(true);
     } else if (key === 'versions') {
       setVersionsModalOpen(true);
@@ -450,15 +457,24 @@ function EditorReady({ resource, objectId, meta, workspaceQueryKey, workspaceRea
   }
 
   async function handleArchiveConfirm() {
+    if (archiveInFlight.current || setObjectStatus.isPending) return;
     const target = archiveTargetStatus(lifecycleStatus, lifecyclePublishedAt);
+    const reason = archiveReason.trim();
+    if (target === 'archived' && !reason) return;
+    archiveInFlight.current = true;
+    setArchiveSaving(true);
+    setArchiveError(null);
     try {
-      await setObjectStatus.mutateAsync(target);
+      await setObjectStatus.mutateAsync(target === 'archived' ? { status: target, reason } : target);
       editor.setSavedStatus(target);
       setArchiveConfirmOpen(false);
+      setArchiveReason('');
       setStatusMessage(isArchived ? 'Fiche restaurée.' : 'Fiche archivée.');
     } catch (error) {
-      setArchiveConfirmOpen(false);
-      setStatusMessage(strictErrorMessage(error, 'Changement de statut impossible.'));
+      setArchiveError(strictErrorMessage(error, 'Changement de statut impossible.'));
+    } finally {
+      archiveInFlight.current = false;
+      setArchiveSaving(false);
     }
   }
 
@@ -807,14 +823,24 @@ function EditorReady({ resource, objectId, meta, workspaceQueryKey, workspaceRea
         open={archiveConfirmOpen}
         title={isArchived ? 'Restaurer la fiche' : 'Archiver la fiche'}
         message={
-          isArchived
+          <>{isArchived
             ? 'La fiche quittera l’état archivé et redeviendra modifiable (brouillon ou hors-ligne). Elle pourra être republiée.'
             : 'La fiche sera archivée et retirée du site public. Retrouvez-la avec le filtre « Archivé » pour la restaurer.'
-        }
+          }{archiveError && <span role="alert" className="block mt-3">{archiveError}</span>}</>}
         confirmLabel={isArchived ? 'Restaurer' : 'Archiver'}
         cancelLabel="Annuler"
         tone={isArchived ? 'default' : 'danger'}
-        onCancel={() => setArchiveConfirmOpen(false)}
+        busy={archiveSaving || setObjectStatus.isPending}
+        justification={isArchived ? undefined : {
+          label: 'Motif de l’archivage', value: archiveReason,
+          onChange: (value) => { setArchiveReason(value); setArchiveError(null); },
+        }}
+        onCancel={() => {
+          if (archiveInFlight.current) return;
+          setArchiveConfirmOpen(false);
+          setArchiveReason('');
+          setArchiveError(null);
+        }}
         onConfirm={() => void handleArchiveConfirm()}
       />
       <BlockersModal

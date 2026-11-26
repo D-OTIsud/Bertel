@@ -2789,6 +2789,11 @@
 .object-editor .lifecycle-state__desc {
   margin: 2px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-3);
 }
+.object-editor .lifecycle-state__audit { margin-top: 6px; overflow-wrap: anywhere; }
+.object-editor .lifecycle-state__reason {
+  margin: 4px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-2);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
 .object-editor .lifecycle-state__meta {
   flex: none; text-align: right;
   display: grid; gap: 1px;
@@ -2801,6 +2806,10 @@
 .object-editor .lifecycle-state__meta-v {
   font-size: 12px; font-weight: 600; color: var(--ink-2);
   font-family: var(--font-mono);
+}
+@media (max-width: 600px) {
+  .object-editor .lifecycle-state { display: grid; grid-template-columns: 10px minmax(0, 1fr); }
+  .object-editor .lifecycle-state__meta { grid-column: 2; padding-left: 0; text-align: left; }
 }
 
 .object-editor .lifecycle-actions { margin-top: 16px; }

@@ -10,12 +10,13 @@ test.beforeEach(async ({ page }) => {
 test('Dashboard status, period and both reset entries agree', async ({ page }) => {
   const published = page.getByRole('button', { name: 'Publié', exact: true });
   const draft = page.getByRole('button', { name: 'Brouillon', exact: true });
-  await expect(published).toHaveAttribute('aria-pressed', 'true');
+  await expect(published).toHaveAttribute('aria-pressed', 'false');
   await expect(draft).toHaveAttribute('aria-pressed', 'false');
   await draft.click();
-  await expect(published).toHaveAttribute('aria-pressed', 'true');
+  await expect(published).toHaveAttribute('aria-pressed', 'false');
   await expect(draft).toHaveAttribute('aria-pressed', 'true');
   await published.click();
+  await expect(published).toHaveAttribute('aria-pressed', 'true');
   await expect(draft).toHaveAttribute('aria-pressed', 'true');
 
   for (const resetInBar of [true, false]) {
@@ -25,7 +26,7 @@ test('Dashboard status, period and both reset entries agree', async ({ page }) =
     await scope.getByRole('button', { name: 'Réinitialiser', exact: true }).click();
     await expect(page.locator('#dash-period-from')).toHaveValue('');
     await expect(page.locator('#dash-period-to')).toHaveValue('');
-    await expect(published).toHaveAttribute('aria-pressed', 'true');
+    await expect(published).toHaveAttribute('aria-pressed', 'false');
     await expect(draft).toHaveAttribute('aria-pressed', 'false');
   }
 });

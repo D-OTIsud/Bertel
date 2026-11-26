@@ -70,7 +70,7 @@ export interface ActiveChip {
   value: string;
 }
 
-// §205 — dérivés du vocabulaire unique (« Archivé » inclus, jamais hidden).
+// §205 — dérivés du vocabulaire unique (« Hors ligne » et « Archivé » inclus).
 const STATUS_LABELS: Record<string, string> = Object.fromEntries(
   EXPLORER_STATUS_OPTIONS.map((option) => [option.code, option.label]),
 );

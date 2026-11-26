@@ -221,7 +221,7 @@ describe('DashboardPage — onglets', () => {
     expect(useExplorerStore.getState().common.cities).toEqual(['Salazie']);
     expect(useExplorerStore.getState().selectedObjectIds).toEqual(['explorer-selection']);
     expect(screen.queryByRole('button', { name: 'Retirer le filtre : Fiches mises à jour' })).not.toBeInTheDocument();
-    expect(screen.getByText('Statut appliqué : Publié')).toBeInTheDocument();
+    expect(screen.getByText('Statut appliqué : Publié, Brouillon')).toBeInTheDocument();
   });
 
   it('le retrait de période garde les critères d’objets', async () => {

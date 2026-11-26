@@ -831,7 +831,7 @@ describe('§204 — groupe Remplissage', () => {
   });
 });
 
-describe('§205 — groupe Statut (éditeurs et plus, avec « Archivé »)', () => {
+describe('§205 — groupe Statut (éditeurs et plus, avec « Hors ligne » et « Archivé »)', () => {
   const initial = useSessionStore.getState().canEditObjects;
   beforeEach(resetStore);
   afterEach(() => {
@@ -846,10 +846,11 @@ describe('§205 — groupe Statut (éditeurs et plus, avec « Archivé »)', () 
     });
     render(<FiltersPanel />);
     expect(screen.queryByText('Statut')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hors ligne' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Archivé' })).not.toBeInTheDocument();
   });
 
-  it('un éditeur voit les trois statuts, dont « Archivé »', () => {
+  it('un éditeur voit les quatre statuts, tous décochés sans filtre', () => {
     act(() => {
       useSessionStore.setState({ canEditObjects: true });
     });
@@ -857,25 +858,49 @@ describe('§205 — groupe Statut (éditeurs et plus, avec « Archivé »)', () 
     expect(screen.getByText('Statut')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Publié' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Brouillon' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hors ligne' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Archivé' })).toBeInTheDocument();
+    for (const name of ['Publié', 'Brouillon', 'Hors ligne', 'Archivé']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
+    }
   });
 
-  it('cocher « Archivé » ajoute le statut à la sélection explicite (published+draft+archived)', () => {
+  it('cocher « Hors ligne » isole les fiches dépubliées puis permet d’ajouter « Archivé »', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Hors ligne' }));
+    expect(useExplorerStore.getState().common.statuses).toEqual(['hidden']);
+    fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
+    expect(useExplorerStore.getState().common.statuses).toEqual(['hidden', 'archived']);
+  });
+
+  it('décocher le dernier statut laisse tous les boutons décochés et retire le filtre', () => {
     act(() => {
       useSessionStore.setState({ canEditObjects: true });
     });
     render(<FiltersPanel />);
     fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
-    expect(useExplorerStore.getState().common.statuses).toEqual(['published', 'draft', 'archived']);
+    fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
+    expect(useExplorerStore.getState().common.statuses).toEqual([]);
+    for (const name of ['Publié', 'Brouillon', 'Hors ligne', 'Archivé']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
+    }
   });
 
-  it('décocher « Archivé » replie vers le défaut éditeur (store vide → URL propre)', () => {
+  it('permet de sélectionner les quatre statuts puis de tous les décocher', () => {
     act(() => {
       useSessionStore.setState({ canEditObjects: true });
     });
     render(<FiltersPanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
+    const names = ['Publié', 'Brouillon', 'Hors ligne', 'Archivé'];
+    for (const name of names) fireEvent.click(screen.getByRole('button', { name }));
+    expect(useExplorerStore.getState().common.statuses).toEqual(['published', 'draft', 'hidden', 'archived']);
+    for (const name of names) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(screen.getByRole('button', { name }));
+    }
     expect(useExplorerStore.getState().common.statuses).toEqual([]);
   });
 

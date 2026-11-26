@@ -24,17 +24,24 @@ describe('FiltersPanel — instance Dashboard', () => {
     expect(screen.queryByText("Type d'hébergement")).not.toBeInTheDocument();
   });
 
-  it('part du défaut Publié puis stocke explicitement Publié+Brouillon', () => {
+  it('ne filtre aucun statut au départ et permet de retirer la dernière sélection', () => {
     act(() => useSessionStore.setState({ canEditObjects: true }));
-    render(<FiltersPanel useStore={useDashboardExplorerStore} includeArchivedStatus={false} contextPage="dashboard" />);
-    expect(screen.getByRole('button', { name: 'Publié' })).toHaveAttribute('aria-pressed', 'true');
+    render(<FiltersPanel useStore={useDashboardExplorerStore} contextPage="dashboard" />);
+    expect(screen.getByRole('button', { name: 'Publié' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Brouillon' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: 'Hors ligne' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Archivé' })).not.toBeInTheDocument();
+    expect(dashboardStatsParams(useDashboardExplorerStore.getState(), {}).p_status).toEqual(['published', 'draft']);
     fireEvent.click(screen.getByRole('button', { name: 'Brouillon' }));
-    expect(useDashboardExplorerStore.getState().common.statuses).toEqual(['published', 'draft']);
+    expect(useDashboardExplorerStore.getState().common.statuses).toEqual(['draft']);
+    expect(dashboardStatsParams(useDashboardExplorerStore.getState(), {}).p_status).toEqual(['draft']);
+    fireEvent.click(screen.getByRole('button', { name: 'Brouillon' }));
+    expect(useDashboardExplorerStore.getState().common.statuses).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Brouillon' })).toHaveAttribute('aria-pressed', 'false');
     expect(dashboardStatsParams(useDashboardExplorerStore.getState(), {}).p_status).toEqual(['published', 'draft']);
     fireEvent.click(screen.getByRole('button', { name: 'Publié' }));
-    expect(dashboardStatsParams(useDashboardExplorerStore.getState(), {}).p_status).toEqual(['draft']);
     fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser' }));
-    expect(dashboardStatsParams(useDashboardExplorerStore.getState(), {}).p_status).toEqual(['published']);
+    expect(useDashboardExplorerStore.getState().common.statuses).toEqual([]);
+    expect(dashboardStatsParams(useDashboardExplorerStore.getState(), {}).p_status).toEqual(['published', 'draft']);
   });
 });

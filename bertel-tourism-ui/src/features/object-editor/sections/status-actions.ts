@@ -60,7 +60,7 @@ export const STATUS_ACTION_CONFIRM: Record<StatusActionKind, StatusActionConfirm
   },
   archive: {
     title: 'Archiver la fiche ?',
-    message: "La fiche sera archivée et retirée de l'explorateur. Vous pourrez la restaurer plus tard.",
+    message: "La fiche sera archivée et retirée du site public. Vous pourrez la retrouver avec le filtre « Archivé » et la restaurer plus tard.",
     confirmLabel: 'Archiver',
     tone: 'danger',
   },

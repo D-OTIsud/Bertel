@@ -56,7 +56,7 @@ describe('ExplorerBridgeButton', () => {
     expect(button).toHaveAccessibleDescription(/période et valeurs mémorisées non transmises/);
     fireEvent.click(button);
     const params = new URLSearchParams((push.mock.calls[0][0] as string).split('?')[1]);
-    expect(params.get('status')).toBe('published');
+    expect(params.get('status')).toBe('published,draft');
     expect(params.has('hotCapacity')).toBe(false);
     expect(parseSearchParams(params).selectedBuckets).toEqual(['HOT', 'RES']);
     expect(useDashboardExplorerStore.getState().hot.capacityFilters).toEqual([{ code: 'beds', min: 20, max: 60 }]);

@@ -123,18 +123,18 @@ export interface MeetingRoomFilter {
 
 /**
  * Visible publication statuses in the Explorer.
- * - 'published'  : object is live (default for every user, including anonymous).
+ * - 'published'  : object is live (the only status available to readers).
  * - 'draft'      : object is being prepared by the publishing ORG.
- * - 'archived'   : object retired from publication (§205). Opt-in via the
- *                  status filter — never part of a default set.
- * draft/archived are editor-only (`canEditObjects`): the FiltersPanel hides the
+ * - 'hidden'     : object was unpublished and can be published again.
+ * - 'archived'   : object retired from publication (§205).
+ * An empty selection means all accessible statuses, with no status filter.
+ * draft/hidden/archived are editor-only (`canEditObjects`): the FiltersPanel hides the
  * Statut group for everyone else AND resolveExplorerStatuses forces them back
  * to ['published'] (a shared URL cannot leak the selection). RLS still gates
- * which non-published rows are actually returned — cross-ORG drafts/archives
+ * which non-published rows are actually returned — cross-ORG non-published objects
  * remain hidden regardless of this flag.
- * 'hidden' is intentionally never surfaced in the Explorer.
  */
-export type ExplorerStatusFilter = 'published' | 'draft' | 'archived';
+export type ExplorerStatusFilter = 'published' | 'draft' | 'hidden' | 'archived';
 
 /**
  * An active §09 tag filter. `slug` is the value sent to the RPC (`tags_any`); `name`/`color`

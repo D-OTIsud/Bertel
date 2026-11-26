@@ -941,27 +941,30 @@ describe('§204 — payload du filtre remplissage', () => {
 });
 
 // §205 — le filtre Statut est réservé aux éditeurs et plus (canEditObjects) ;
-// « archivé » est un choix explicite, jamais un défaut.
+// Une sélection vide n'impose aucun filtre de statut.
 describe('resolveExplorerStatuses', () => {
   test('un non-éditeur est TOUJOURS ramené à published — même avec une sélection explicite (URL partagée)', () => {
     expect(resolveExplorerStatuses([], false)).toEqual(['published']);
     expect(resolveExplorerStatuses(['draft', 'archived'], false)).toEqual(['published']);
+    expect(resolveExplorerStatuses(['hidden'], false)).toEqual(['published']);
     expect(resolveExplorerStatuses(['published', 'draft'], false)).toEqual(['published']);
   });
 
-  test('défaut éditeur = published + draft (archivé jamais implicite)', () => {
-    expect(resolveExplorerStatuses([], true)).toEqual(['published', 'draft']);
+  test('sans sélection, un éditeur retrouve tous les statuts, y compris les fiches dépubliées', () => {
+    expect(resolveExplorerStatuses([], true)).toEqual(['published', 'draft', 'hidden', 'archived']);
   });
 
   test('la sélection explicite d’un éditeur gagne, dédupliquée', () => {
     expect(resolveExplorerStatuses(['archived'], true)).toEqual(['archived']);
+    expect(resolveExplorerStatuses(['hidden'], true)).toEqual(['hidden']);
     expect(resolveExplorerStatuses(['published', 'published', 'archived'], true)).toEqual(['published', 'archived']);
   });
 });
 
 describe('EXPLORER_STATUS_OPTIONS', () => {
-  test('vocabulaire = published/draft/archived — jamais hidden (invariant Explorer)', () => {
-    expect(EXPLORER_STATUS_OPTIONS.map((option) => option.code)).toEqual(['published', 'draft', 'archived']);
+  test('les fiches hors ligne ont leur propre choix, distinct des brouillons et archives', () => {
+    expect(EXPLORER_STATUS_OPTIONS.map((option) => option.code)).toEqual(['published', 'draft', 'hidden', 'archived']);
+    expect(EXPLORER_STATUS_OPTIONS.find((option) => option.code === 'hidden')?.label).toBe('Hors ligne');
   });
 });
 

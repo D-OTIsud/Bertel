@@ -29,7 +29,7 @@ const STATUS_DESCRIPTION: Record<string, string> = {
   published: "Visible publiquement sur le site et dans l'explorateur.",
   draft: 'Brouillon — visible uniquement par votre organisation.',
   hidden: 'Hors ligne — retirée du site public, modifiable et republiable.',
-  archived: "Archivée — retirée de l'explorateur, restaurable à tout moment.",
+  archived: "Archivée — retirée du site public, restaurable à tout moment.",
 };
 
 // Each lifecycle action carries a glyph so the row reads at a glance.

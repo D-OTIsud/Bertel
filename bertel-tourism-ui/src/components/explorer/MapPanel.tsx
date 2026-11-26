@@ -371,7 +371,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   }, [hoverPopupState, markerPoints, resultPreview, dismissHoverPopup]);
 
   // A focused result remains individually visible even while supercluster groups its neighbours.
-  const activeMarker = hoverPopupState
+  const activeMarker = hoverPopupState?.trigger === null
     ? markerPoints.find(({ card }) => card.id === hoverPopupState.id)
     : null;
   const activeMarkerNeedsOverlay = activeMarker && !clusters.some((cluster) => {
@@ -1035,7 +1035,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
               longitude={hoverPopupState.lngLat[0]}
               latitude={hoverPopupState.lngLat[1]}
               onClose={dismissHoverPopup}
-              offset={64}
+              offset={hoverPopupState.trigger === null ? 64 : 18}
               closeButton={false}
               closeOnClick={false}
               focusAfterOpen={false}

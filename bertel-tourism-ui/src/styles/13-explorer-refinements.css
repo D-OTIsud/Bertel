@@ -123,7 +123,8 @@
 }
 
 .map-hover-popup {
-  z-index: 20;
+  /* Preview actions must remain above the selection toolbar (30) and active pins (10). */
+  z-index: 40;
 }
 
 @media (prefers-reduced-motion: reduce) {

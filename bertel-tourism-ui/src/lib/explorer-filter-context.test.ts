@@ -33,7 +33,7 @@ function full(): ExplorerFilters {
     taxonomyAny: [{ domain: 'taxonomy_hot', code: 'hotel' }, { domain: 'taxonomy_res', code: 'pizzeria' }],
     tagsAny: [{ slug: 'famille', name: 'Famille' }], rankedLabelSchemeCode: 'LBL_HOTEL',
     rankedLabelIncludeEquivalents: false, rankedLabelValueCodes: ['3'],
-    statuses: ['published', 'draft', 'archived'], missingEssentialsBuckets: ['few'], missingEssentialsAny: ['name'],
+    statuses: ['published', 'draft', 'hidden', 'archived'], missingEssentialsBuckets: ['few'], missingEssentialsAny: ['name'],
     openAt: '2026-10-28T12:30', bbox: [55, -22, 56, -20],
     polygon: { type: 'Polygon', coordinates: [[[55, -22], [56, -22], [56, -20], [55, -22]]] },
   });
@@ -154,27 +154,31 @@ it('preserves actual role guards on Explorer without inventing a Dashboard query
   const explorer = derive(filters, 'explorer', false);
   expect(explorer.effectiveStatuses).toEqual(['published']);
   expect(applications(explorer)['status:draft']).toBe('memorized');
+  expect(applications(explorer)['status:hidden']).toBe('memorized');
   expect(applications(explorer)['status:archived']).toBe('memorized');
   expect(applications(explorer)['remplissage:few']).toBe('memorized');
   expect(applications(explorer)['manque:name']).toBe('memorized');
   const dashboard = derive(filters, 'dashboard', false);
   expect(dashboard.effectiveStatuses).toEqual(['published', 'draft']);
+  expect(applications(dashboard)['status:hidden']).toBe('memorized');
+  expect(applications(dashboard)['status:archived']).toBe('memorized');
   expect(dashboard.dashboardParams).toEqual(dashboardStatsParams(filters, {}));
 });
 
 it('represents effective defaults separately from removable raw status picks', () => {
   const filters = fresh();
   const dashboard = derive(filters);
-  expect(dashboard.effectiveStatuses).toEqual(['published']);
+  expect(dashboard.effectiveStatuses).toEqual(['published', 'draft']);
   expect(dashboard.applied).toEqual([]);
-  expect(dashboard.transferableFilters.common.statuses).toEqual(['published']);
-  expect(derive(filters, 'explorer').effectiveStatuses).toEqual(['published', 'draft']);
+  expect(dashboard.transferableFilters.common.statuses).toEqual(['published', 'draft']);
+  expect(derive(filters, 'explorer').effectiveStatuses).toEqual(['published', 'draft', 'hidden', 'archived']);
   filters.common.statuses = ['published', 'draft'];
   expect(derive(filters).effectiveStatuses).toEqual(['published', 'draft']);
   filters.common.statuses = ['draft'];
   expect(derive(filters).effectiveStatuses).toEqual(['draft']);
-  filters.common.statuses = ['archived'];
-  expect(derive(filters).effectiveStatuses).toEqual(['published']);
+  filters.common.statuses = ['hidden', 'archived'];
+  expect(derive(filters).effectiveStatuses).toEqual(['published', 'draft']);
+  expect(applications(derive(filters))['status:hidden']).toBe('memorized');
   expect(applications(derive(filters))['status:archived']).toBe('memorized');
 });
 
@@ -250,7 +254,7 @@ it('uses the existing URL codec on a single supported snapshot, with an explicit
   filters.common.statuses = [];
   const snapshot = derive(filters).transferableFilters;
   const parsed = normalizeExplorerFilters(parseSearchParams(buildSearchParams(snapshot)));
-  expect(parsed.common.statuses).toEqual(['published']);
+  expect(parsed.common.statuses).toEqual(['published', 'draft']);
   expect(parsed.hot.capacityFilters).toEqual([]);
   expect(parsed.res.capacityFilters).toEqual([]);
   expect(parsed.hot.subtypes).toEqual(filters.hot.subtypes);

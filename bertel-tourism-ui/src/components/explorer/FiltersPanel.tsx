@@ -30,7 +30,6 @@ import {
   filterOptionsBySelectedBuckets,
   isSubtypeNarrowed,
   resolveCapacityBounds,
-  resolveExplorerStatuses,
 } from '../../utils/facets';
 import { resolveTypeLabel } from '../../utils/labels';
 import { schemeUnit } from '../../utils/explorer-card-display';
@@ -47,7 +46,6 @@ import { cn } from '@/lib/utils';
 import { RangeSlider } from '@/components/ui/range-slider';
 import { buildExplorerActiveChips } from './explorer-active-chips';
 import { deriveExplorerFilterContext } from '../../lib/explorer-filter-context';
-import { resolveDashboardStatuses } from '../../lib/dashboard-stats-params';
 import {
   accommodationBreadcrumb,
   buildAccommodationTaxonomyTree,
@@ -262,14 +260,13 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const showEvt = isBucketSelected(selectedBuckets, 'EVT');
   const showVis = isBucketSelected(selectedBuckets, 'VIS');
   const showSrv = isBucketSelected(selectedBuckets, 'SRV');
-  const effectiveStatuses = contextPage === 'dashboard'
-    ? resolveDashboardStatuses(statuses)
-    : resolveExplorerStatuses(statuses, canEditObjects);
-  // §205 — le Dashboard n'offre pas « Archivé » (ses stats restreignent p_status
+  // §205 — le Dashboard n'offre ni « Hors ligne » ni « Archivé » (ses stats restreignent p_status
   // à published/draft) ; l'Exploreur offre le vocabulaire complet.
-  const statusOptions = includeArchivedStatus
-    ? EXPLORER_STATUS_OPTIONS
-    : EXPLORER_STATUS_OPTIONS.filter((option) => option.code !== 'archived');
+  const statusOptions = EXPLORER_STATUS_OPTIONS.filter((option) =>
+    contextPage === 'dashboard'
+      ? option.code === 'published' || option.code === 'draft'
+      : includeArchivedStatus || option.code !== 'archived',
+  );
 
   /**
    * « N actifs » = le nombre exact de pastilles de la barre de filtres actifs.
@@ -1005,27 +1002,19 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Statut">
             <div className="flex flex-wrap gap-2">
               {statusOptions.map((option) => {
-                const active = effectiveStatuses.includes(option.code);
+                const active = statuses.includes(option.code);
                 return (
                   <button
                     key={option.code}
                     type="button"
                     className={bucketChipClass(active)}
                     onClick={() => {
-                      const nextEffective: ExplorerStatusFilter[] = active
-                        ? effectiveStatuses.filter((entry) => entry !== option.code)
-                        : [...effectiveStatuses, option.code];
-                      const sanitized: ExplorerStatusFilter[] =
-                        nextEffective.length > 0 ? nextEffective : ['published'];
-                      // §205 — on ne replie vers « défaut » (store vide, URL propre)
-                      // que si la sélection ÉGALE le défaut éditeur published+draft.
-                      // Comparer à « toutes les options » avalerait « Archivé » :
-                      // les 3 chips cochées se replieraient en published+draft.
-                      const editorDefault = resolveExplorerStatuses([], true);
-                      const isEditorDefault =
-                        sanitized.length === editorDefault.length &&
-                        editorDefault.every((code) => sanitized.includes(code));
-                      setStatuses(contextPage === 'dashboard' ? sanitized : isEditorDefault ? [] : sanitized);
+                      const next: ExplorerStatusFilter[] = active
+                        ? statuses.filter((entry) => entry !== option.code)
+                        : [...statuses, option.code];
+                      // Zéro sélection = aucun filtre de statut. Ne pas réactiver
+                      // implicitement « Publié » ni compacter les choix explicites.
+                      setStatuses(next);
                     }}
                     aria-pressed={active}
                   >

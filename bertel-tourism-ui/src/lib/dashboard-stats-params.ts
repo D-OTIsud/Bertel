@@ -10,10 +10,10 @@ export interface DashboardStatsParams {
 }
 export interface DashboardPeriod { updatedAtFrom?: string; updatedAtTo?: string }
 
-/** Dashboard's own default; an explicit published/draft pair must stay explicit. */
+/** No selection includes both statuses supported by the Dashboard's statistics. */
 export function resolveDashboardStatuses(configured: readonly ExplorerStatusFilter[]): ExplorerStatusFilter[] {
   const statuses = configured.filter((status) => status === 'published' || status === 'draft');
-  return statuses.length > 0 ? statuses : ['published'];
+  return statuses.length > 0 ? statuses : ['published', 'draft'];
 }
 
 // Clés de facettes SPÉCIFIQUES par type — honnêtes seulement en mono-bucket (§7).
@@ -61,9 +61,9 @@ export function dashboardStatsParams(filters: ExplorerFilters, period: Dashboard
     ? buildBucketRpcFilters(filters, buckets[0] as ExplorerBucketKey)
     : transverseFilters(filters);
 
-  // p_status : restreint à published/draft (défaut published). §205 : « archived »
-  // existe dans le vocabulaire Explorer mais reste hors périmètre des KPI — le
-  // panneau du Dashboard masque la chip (includeArchivedStatus={false}) et ce
+  // p_status : restreint à published/draft (tous deux si aucune sélection).
+  // « hidden » et « archived » restent hors périmètre des KPI — le
+  // panneau du Dashboard masque ces options et ce
   // filtre écarte toute valeur résiduelle (URL, état partagé).
   const statuses = resolveDashboardStatuses(normalized.common.statuses);
 

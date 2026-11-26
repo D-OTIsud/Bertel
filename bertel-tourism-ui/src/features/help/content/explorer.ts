@@ -4,7 +4,7 @@
  *  SelectionBar, selection-print), `useExplorerUrlSync.ts` / `useExplorerContextSync.ts`
  *  (`?fiche=`), `object-drawer/*` (tiroir en lecture seule), et CLAUDE.md
  *  § Explorer — non-published visibility (brouillons de l'ORG de l'utilisateur
- *  uniquement, si son compte peut éditer ; archivé/masqué jamais montrés) +
+ *  uniquement, si son compte peut éditer ; hors ligne et archives accessibles) +
  *  mémoire open-status-pill-tristate §133 (jamais `Boolean(open_now)`). */
 import type { FaqEntry } from './types';
 
@@ -87,7 +87,9 @@ Ce lien fonctionne aussi bien pour un collègue connecté à l'application que d
     related: ['explorer-filtres', 'roles-vue-modules'],
     answer: `Vous ne voyez que les **brouillons de votre propre organisation**, et uniquement si votre compte a le droit de **modifier des fiches** (création, édition ou publication). Un lecteur simple de votre organisation ne les voit pas, même si la fiche existe déjà en base.
 
-**Jamais montrées dans l'Explorer**, quel que soit votre rôle : les fiches **archivées** ou **masquées**. Ces statuts sont volontairement exclus de la recherche et des filtres.`,
+Le filtre **Statut** permet de sélectionner **Publié**, **Brouillon**, **Hors ligne** (dépublié) ou **Archivé**. Vous pouvez combiner les choix ou **tout décocher pour ne pas filtrer par statut**. Les fiches non publiées restent limitées à votre périmètre d'accès.
+
+Pour republier une fiche dépubliée, sélectionnez **Hors ligne**, ouvrez la fiche, puis utilisez **Publier** dans l'éditeur. Une fiche **archivée** doit d'abord être restaurée.`,
   },
   {
     id: 'explorer-ouvert',

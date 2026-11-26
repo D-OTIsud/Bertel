@@ -61,7 +61,7 @@ interface ExplorerState extends ExplorerFilters {
   clearTags: () => void;
   /**
    * Toggle a publication-status entry in the Explorer filter set.
-   * Empty array = "let the server use its default (published)".
+   * Empty array = no status filter; query resolvers apply the caller's scope.
    * The FiltersPanel only renders this control for users that have
    * `canEditObjects = true`; for everyone else the array stays empty.
    */

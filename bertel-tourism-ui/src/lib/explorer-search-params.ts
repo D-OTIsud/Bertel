@@ -8,7 +8,7 @@ import type {
 import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS, EXPLORER_STATUS_OPTIONS, normalizeExplorerFilters } from '@/utils/facets';
 
 const EXPLORER_BUCKETS: ExplorerBucketKey[] = EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
-// §205 — dérivée du vocabulaire unique ; un statut hors liste (ex. hidden) est
+// §205 — dérivée du vocabulaire unique ; un statut hors liste est
 // écarté au parse. Pour un non-éditeur, resolveExplorerStatuses neutralise de
 // toute façon la sélection portée par une URL partagée.
 const EXPLORER_STATUS_VALUES: readonly ExplorerStatusFilter[] = EXPLORER_STATUS_OPTIONS.map((option) => option.code);

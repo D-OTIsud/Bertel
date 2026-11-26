@@ -34,10 +34,10 @@ export const PUBLICATION_FAQ: FaqEntry[] = [
 
 - **Brouillon** : visible uniquement par les membres de votre organisation ayant le droit de modifier des fiches.
 - **Publiée** : visible par tout le monde, sur le site et dans l'Explorer.
-- **Hors ligne** (dépubliée) : retirée du site public mais reste modifiable et republiable à tout moment.
-- **Archivée** : retirée de l'Explorer, restaurable plus tard.
+- **Hors ligne** (dépubliée) : retirée du site public mais reste accessible aux éditeurs dans l'Explorer, modifiable et republiable à tout moment.
+- **Archivée** : retirée du site public ; elle doit être restaurée avant republication.
 
-**Jamais dans l'Explorer** : les fiches hors ligne ou archivées n'apparaissent ni dans la recherche ni dans les filtres, quel que soit votre rôle.`,
+Dans l'Explorer, les éditeurs retrouvent les fiches de leur périmètre grâce au filtre **Statut** : **Hors ligne** pour les fiches dépubliées, **Archivé** pour les archives. **Aucun statut sélectionné** signifie qu'aucun filtre de statut n'est appliqué. Les lecteurs simples voient uniquement les fiches publiées.`,
   },
   {
     id: 'archiver-fiche',
@@ -45,7 +45,7 @@ export const PUBLICATION_FAQ: FaqEntry[] = [
     question: 'Comment archiver une fiche (fermeture, saison terminée) ?',
     keywords: ['archiver', 'fermer', 'retirer', 'désactiver'],
     related: ['statuts-fiche', 'supprimer-fiche'],
-    answer: `Dans la section **Publication** de l'éditeur, cliquez sur **« Archiver »**. La fiche est **retirée de l'Explorer**, mais l'action reste **réversible** : un bouton « Restaurer » permet de la ramener en brouillon (ou hors ligne, si elle avait déjà été publiée).
+    answer: `Dans la section **Publication** de l'éditeur, cliquez sur **« Archiver »**. La fiche est **retirée du site public** et reste retrouvable grâce au filtre **Statut → Archivé** dans l'Explorer. L'action reste **réversible** : un bouton « Restaurer » permet de la ramener en brouillon (ou hors ligne, si elle avait déjà été publiée).
 
 **Quand archiver.** Un établissement fermé, une offre qui n'existe plus, une fiche créée par erreur mais qu'on souhaite garder tracée.
 

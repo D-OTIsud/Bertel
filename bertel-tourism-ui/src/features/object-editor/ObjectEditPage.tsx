@@ -809,7 +809,7 @@ function EditorReady({ resource, objectId, meta, workspaceQueryKey, workspaceRea
         message={
           isArchived
             ? 'La fiche quittera l’état archivé et redeviendra modifiable (brouillon ou hors-ligne). Elle pourra être republiée.'
-            : 'La fiche sera archivée et retirée de l’Explorer. Aucune donnée n’est supprimée — vous pourrez la restaurer.'
+            : 'La fiche sera archivée et retirée du site public. Retrouvez-la avec le filtre « Archivé » pour la restaurer.'
         }
         confirmLabel={isArchived ? 'Restaurer' : 'Archiver'}
         cancelLabel="Annuler"

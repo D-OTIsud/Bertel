@@ -114,7 +114,7 @@ describe('§204 — remplissage dans l’URL', () => {
 });
 
 // §205 — le statut « archived » circule dans l'URL comme sélection explicite
-// d'éditeur ; tout statut hors vocabulaire (hidden…) est écarté au parse.
+// d'éditeur ; tout statut hors vocabulaire est écarté au parse.
 describe('explorer-search-params — statuses (§205)', () => {
   it('sérialise une sélection explicite, y compris archived', () => {
     const filters = {
@@ -124,8 +124,19 @@ describe('explorer-search-params — statuses (§205)', () => {
     expect(buildSearchParams(filters).get('status')).toBe('published,archived');
   });
 
-  it('parse status=archived ; hidden (hors vocabulaire) est écarté', () => {
-    const parsed = parseSearchParams(new URLSearchParams('status=archived,hidden'));
-    expect(parsed.common?.statuses).toEqual(['archived']);
+  it('conserve les fiches hors ligne dans une URL partagée et écarte les statuts inconnus', () => {
+    const parsed = parseSearchParams(new URLSearchParams('status=hidden,archived,inconnu'));
+    expect(parsed.common?.statuses).toEqual(['hidden', 'archived']);
+    const filters = {
+      ...DEFAULT_EXPLORER_FILTERS,
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, statuses: parsed.common!.statuses! },
+    };
+    expect(buildSearchParams(filters).get('status')).toBe('hidden,archived');
+  });
+
+  it('ne pose aucun filtre de statut dans l’URL sans sélection', () => {
+    const params = buildSearchParams(DEFAULT_EXPLORER_FILTERS);
+    expect(params.has('status')).toBe(false);
+    expect(parseSearchParams(params).common?.statuses ?? []).toEqual([]);
   });
 });

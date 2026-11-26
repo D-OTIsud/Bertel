@@ -29,11 +29,12 @@ export const EXPLORER_BUCKET_OPTIONS: Array<{ code: ExplorerBucketKey; label: st
  * §205 — vocabulaire UNIQUE du filtre Statut (chips du panneau, pastilles de la
  * barre active, liste blanche de l'URL). Trois listes codées en dur divergeaient ;
  * une seule source ferme la porte pour toutes les surfaces à la fois.
- * `hidden` est volontairement absent : jamais surfacé dans l'Exploreur.
+ * `hidden` correspond aux fiches dépubliées, distinctes des archives.
  */
 export const EXPLORER_STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
   { code: 'published', label: 'Publié' },
   { code: 'draft', label: 'Brouillon' },
+  { code: 'hidden', label: 'Hors ligne' },
   { code: 'archived', label: 'Archivé' },
 ];
 
@@ -113,8 +114,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   rankedLabelSchemeCode: null,
   rankedLabelIncludeEquivalents: true,
   rankedLabelValueCodes: [],
-  // Empty = "use the server default" (published only). Editors get the default
-  // broadened in `useExplorerFilters` once their canEditObjects flag is known.
+  // Empty = no status filter. Query resolvers expand it within the caller's scope.
   statuses: [],
   // §204 — remplissage : vide = pas de filtre. Réservé aux éditeurs.
   missingEssentialsBuckets: [],
@@ -368,9 +368,8 @@ export function getEffectiveSelectedBuckets(selectedBuckets: ExplorerBucketKey[]
  *     de double garde que les clés remplissage §204 : le panneau masque, le
  *     résolveur neutralise ; RLS/readable-set reste le filet côté serveur).
  *   - Editors (admin role or one of create/edit/publish permissions): explicit
- *     selection wins (deduped); default is ['published', 'draft'] so the
- *     Explorer surfaces drafts of their ORG. 'archived' is opt-in only —
- *     never part of a default set. RLS still limits non-published rows to
+ *     selection wins (deduped); an empty selection includes every status.
+ *     RLS still limits non-published rows to
  *     their own scope (cf. api.can_read_extended).
  */
 export function resolveExplorerStatuses(
@@ -383,7 +382,7 @@ export function resolveExplorerStatuses(
   if (configured.length > 0) {
     return [...new Set(configured)];
   }
-  return ['published', 'draft'];
+  return EXPLORER_STATUS_OPTIONS.map((option) => option.code);
 }
 
 export function getBackendTypesForBucket(bucket: ExplorerBucketKey): BackendObjectTypeCode[] {

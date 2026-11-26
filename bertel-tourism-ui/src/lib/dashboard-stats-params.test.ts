@@ -6,7 +6,7 @@ const base = DEFAULT_EXPLORER_FILTERS;
 it('aucun bucket, aucune facette, aucune période → params vides/défaut', () => {
   const p = dashboardStatsParams({ ...base, selectedBuckets: [] }, {});
   expect(p.p_types).toBeNull();
-  expect(p.p_status).toEqual(['published']);
+  expect(p.p_status).toEqual(['published', 'draft']);
   expect(p.p_filters).toEqual({});
   expect(p.p_updated_at_from).toBeNull();
   expect(p.p_updated_at_to).toBeNull();
@@ -49,21 +49,21 @@ it('période → p_updated_at_from/to', () => {
   expect(p.p_updated_at_to).toBe('2026-02-01');
 });
 
-it('statuts restreints à published/draft (défaut published si vide)', () => {
+it('statuts restreints à published/draft, tous deux inclus sans filtre', () => {
   const withDraft = { ...base, selectedBuckets: [], common: { ...base.common, statuses: ['published', 'draft'] } };
   expect(dashboardStatsParams(withDraft as any, {}).p_status).toEqual(['published', 'draft']);
 });
 
-it('« archived » (§205) est écarté — hors périmètre des KPI Dashboard', () => {
-  const withArchived = { ...base, selectedBuckets: [], common: { ...base.common, statuses: ['published', 'archived'] } };
+it('hidden et archived sont écartés — hors périmètre des KPI Dashboard', () => {
+  const withArchived = { ...base, selectedBuckets: [], common: { ...base.common, statuses: ['published', 'hidden', 'archived'] } };
   expect(dashboardStatsParams(withArchived as any, {}).p_status).toEqual(['published']);
 });
 
 it('shares Dashboard defaults without compacting the explicit pair or mutating its input', () => {
-  expect(resolveDashboardStatuses([])).toEqual(['published']);
-  expect(resolveDashboardStatuses(['archived'])).toEqual(['published']);
-  const configured = Object.freeze(['published', 'draft', 'archived'] as const);
+  expect(resolveDashboardStatuses([])).toEqual(['published', 'draft']);
+  expect(resolveDashboardStatuses(['hidden', 'archived'])).toEqual(['published', 'draft']);
+  const configured = Object.freeze(['published', 'draft', 'hidden', 'archived'] as const);
   expect(resolveDashboardStatuses(configured)).toEqual(['published', 'draft']);
-  expect(configured).toEqual(['published', 'draft', 'archived']);
+  expect(configured).toEqual(['published', 'draft', 'hidden', 'archived']);
   expect(resolveDashboardStatuses(['draft'])).toEqual(['draft']);
 });

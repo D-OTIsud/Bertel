@@ -55,7 +55,24 @@
 .object-editor .iti-stage-editor__delete { margin-top: 12px; color: var(--red); font-size: 11px; text-decoration: underline; cursor: pointer; }
 .object-editor .iti-trace-error { font-size: 12px; line-height: 1.5; color: var(--red); margin: 8px 14px; }
 .object-editor .iti-stage-editor__position .iti-trace-error { color: var(--red); margin: 10px 0 0; }
-.object-editor .iti-route-characteristics { margin: 16px 0 20px; align-items: center; }
+.object-editor .iti-route-fields { container: iti-route-fields / inline-size; }
+.object-editor .iti-route-fields .iti-route-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.object-editor .iti-metric-card { min-inline-size: 0; gap: 8px; }
+.object-editor .iti-metric-card__controls { display: flex; align-items: center; gap: 6px; min-inline-size: 0; }
+.object-editor .iti-metric-card__controls .icbtn { flex: none; }
+.object-editor .iti-metric-card__entry { display: flex; align-items: center; flex: 1; gap: 4px; min-inline-size: 0; min-block-size: 40px; padding-inline: 6px; border: 1px solid var(--ink-4); border-radius: var(--r-sm); background: var(--surface); }
+.object-editor .iti-metric-card__entry:focus-within { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+.object-editor .iti-metric-card__input { inline-size: 100%; min-inline-size: 0; min-block-size: 36px; padding: 0; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink); font: 700 max(1rem, 19px)/1.3 var(--font-display); font-variant-numeric: tabular-nums; text-align: center; }
+.object-editor .iti-metric-card__input:focus-visible { outline: 0; }
+.object-editor .iti-metric-card__unit { flex: none; color: var(--ink-3); font: 10.5px var(--font-mono); }
+.object-editor .iti-metric-card__duration { display: flex; flex: 1; gap: 5px; min-inline-size: 0; }
+.object-editor .iti-metric-card__duration .iti-metric-card__entry { padding-inline: 4px; gap: 2px; }
+.object-editor .iti-metric-card__duration .iti-metric-card__unit { font-size: 10px; }
+.object-editor .iti-metric-card__controls .icbtn:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+.object-editor .iti-metric-card__controls .icbtn:disabled,
+.object-editor .iti-metric-card__input:disabled { opacity: .55; cursor: not-allowed; }
+.object-editor .iti-route-characteristics { margin: 16px 0 20px; align-items: end; }
+.object-editor .iti-route-characteristics > .tog { min-block-size: 2.5rem; block-size: 2.5rem; padding-block: 0; }
 .object-editor .iti-practices { display: flex; align-items: center; justify-content: space-between; text-align: left; gap: 8px; }
 .object-editor .iti-practices > span { min-width: 0; overflow-wrap: anywhere; }
 .object-editor .iti-embedded-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -81,6 +98,24 @@
   .object-editor .iti-stage-panel, .object-editor .iti-stage-editor { max-height: none; height: auto; }
   .object-editor .iti-stage-editor__body { overflow-y: visible; }
   .object-editor .iti-stage-order .iti-icon-button { width: 36px; min-height: 36px; }
-  .object-editor .iti-route-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .object-editor .iti-route-characteristics { grid-template-columns: minmax(0, 1fr); }
+}
+@container iti-route-fields (max-width: 1000px) {
+  .object-editor .iti-route-fields .iti-route-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container iti-route-fields (max-width: 640px) {
+  .object-editor .iti-route-fields .iti-route-characteristics { grid-template-columns: minmax(0, 1fr); }
+}
+@container iti-route-fields (max-width: 480px) {
+  .object-editor .iti-route-fields .iti-route-metrics { grid-template-columns: minmax(0, 1fr); }
+}
+@media (pointer: coarse) {
+  .object-editor .iti-metric-card__controls .icbtn { inline-size: 48px; block-size: 48px; }
+  .object-editor .iti-metric-card__entry { min-block-size: 48px; }
+  .object-editor .iti-metric-card__input { min-block-size: 44px; }
+  .object-editor .iti-route-characteristics > .tog,
+  .object-editor .iti-route-characteristics .select { min-block-size: 48px; block-size: auto; }
+  @container iti-route-fields (min-width: 481px) and (max-width: 1200px) {
+    .object-editor .iti-route-fields .iti-route-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 }

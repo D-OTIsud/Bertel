@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, renderHook, screen } from '@testing-library/react';
 import type { ObjectWorkspaceModules } from '../../../../services/object-workspace-parser';
 import type { ObjectWorkspacePermissions } from '../../../../services/object-workspace';
+import { buildItineraryUpsertPayload } from '../../../../services/object-workspace-payloads/itinerary';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockITI } from './BlockITI';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
@@ -86,7 +87,11 @@ describe('BlockITI — honest controls (§48)', () => {
  */
 function ItiHarness({ modules = fullModulesFixture(), permissions = allowAll }: { modules?: ObjectWorkspaceModules; permissions?: ObjectWorkspacePermissions }) {
   const editor = useObjectEditorState('o1', modules);
-  return <><BlockITI editor={editor} permissions={permissions} folded={false} /><output data-testid="saved-stages">{JSON.stringify(editor.draft.itinerary.stages)}</output></>;
+  return <><BlockITI editor={editor} permissions={permissions} folded={false} /><output data-testid="saved-stages">{JSON.stringify(editor.draft.itinerary.stages)}</output><output data-testid="itinerary-payload">{JSON.stringify(buildItineraryUpsertPayload('o1', editor.draft.itinerary))}</output></>;
+}
+
+function itineraryPayload(): ReturnType<typeof buildItineraryUpsertPayload> {
+  return JSON.parse(screen.getByTestId('itinerary-payload').textContent!);
 }
 
 describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
@@ -160,9 +165,133 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
 
   it('the Distance + stepper increments the displayed distance by 0.5', () => {
     render(<ItiHarness />);
-    expect(screen.getByText('8.5')).toBeInTheDocument();
+    expect(screen.getByLabelText('Distance')).toHaveValue('8.5');
     fireEvent.click(screen.getByLabelText('Augmenter Distance'));
-    expect(screen.getByText('9.0')).toBeInTheDocument();
+    expect(screen.getByLabelText('Distance')).toHaveValue('9.0');
+  });
+
+  it.each(['2,175', '2.175'])('accepts exact distance %s and keeps its precision through both shortcuts', (value) => {
+    render(<ItiHarness />);
+    const distance = screen.getByLabelText('Distance');
+    expect(distance).toHaveAttribute('inputmode', 'decimal');
+    fireEvent.change(distance, { target: { value } });
+    expect(itineraryPayload().distance_km).toBe(2.175);
+
+    fireEvent.click(screen.getByLabelText('Augmenter Distance'));
+    expect(itineraryPayload().distance_km).toBe(2.675);
+    fireEvent.click(screen.getByLabelText('Diminuer Distance'));
+    expect(itineraryPayload().distance_km).toBe(2.175);
+  });
+
+  it('accepts separate hours and minutes and keeps them synchronized with duration shortcuts', () => {
+    render(<ItiHarness />);
+    const hours = screen.getByLabelText('Durée, heures');
+    const minutes = screen.getByLabelText('Durée, minutes');
+    expect(hours).toHaveAttribute('inputmode', 'numeric');
+    expect(minutes).toHaveAttribute('inputmode', 'numeric');
+    fireEvent.change(hours, { target: { value: '2' } });
+    fireEvent.change(minutes, { target: { value: '37' } });
+    expect(itineraryPayload().duration_min).toBe(157);
+
+    fireEvent.click(screen.getByLabelText('Augmenter Durée'));
+    expect(hours).toHaveValue('2');
+    expect(minutes).toHaveValue('52');
+    expect(itineraryPayload().duration_min).toBe(172);
+    fireEvent.click(screen.getByLabelText('Diminuer Durée'));
+    expect(minutes).toHaveValue('37');
+    expect(itineraryPayload().duration_min).toBe(157);
+  });
+
+  it('normalizes excess minutes after editing without dropping duration precision', () => {
+    render(<ItiHarness />);
+    const hours = screen.getByLabelText('Durée, heures');
+    const minutes = screen.getByLabelText('Durée, minutes');
+    fireEvent.change(hours, { target: { value: '2' } });
+    fireEvent.change(minutes, { target: { value: '90' } });
+    expect(itineraryPayload().duration_min).toBe(210);
+    fireEvent.blur(minutes);
+    expect(hours).toHaveValue('3');
+    expect(minutes).toHaveValue('30');
+    expect(itineraryPayload().duration_min).toBe(210);
+  });
+
+  it('accepts exact elevation values independently and retains both shortcuts', () => {
+    render(<ItiHarness />);
+    const gain = screen.getByLabelText('Dénivelé +');
+    const loss = screen.getByLabelText('Dénivelé −');
+    expect(gain).toHaveAttribute('inputmode', 'numeric');
+    expect(loss).toHaveAttribute('inputmode', 'numeric');
+    fireEvent.change(gain, { target: { value: '173' } });
+    fireEvent.change(loss, { target: { value: '169' } });
+    expect(itineraryPayload()).toMatchObject({ elevation_gain: 173, elevation_loss: 169 });
+
+    fireEvent.click(screen.getByLabelText('Augmenter Dénivelé +'));
+    expect(itineraryPayload()).toMatchObject({ elevation_gain: 183, elevation_loss: 169 });
+    fireEvent.click(screen.getByLabelText('Diminuer Dénivelé −'));
+    expect(itineraryPayload()).toMatchObject({ elevation_gain: 183, elevation_loss: 159 });
+  });
+
+  it('lets all four metrics be cleared without turning unknown values into zero', () => {
+    render(<ItiHarness />);
+    for (const label of ['Distance', 'Durée, heures', 'Durée, minutes', 'Dénivelé +', 'Dénivelé −']) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value: '' } });
+    }
+    for (const label of ['Distance', 'Durée, heures', 'Durée, minutes', 'Dénivelé +', 'Dénivelé −']) {
+      expect(screen.getByLabelText(label)).toHaveValue('');
+    }
+    expect(itineraryPayload()).toMatchObject({ distance_km: null, duration_min: null, elevation_gain: null, elevation_loss: null });
+  });
+
+  it('keeps a cleared hour segment blank while tabbing to clear the remaining minutes', () => {
+    render(<ItiHarness />);
+    const hours = screen.getByLabelText('Durée, heures');
+    const minutes = screen.getByLabelText('Durée, minutes');
+    fireEvent.focus(hours);
+    fireEvent.change(hours, { target: { value: '' } });
+    fireEvent.blur(hours, { relatedTarget: minutes });
+    fireEvent.focus(minutes, { relatedTarget: hours });
+    expect(hours).toHaveValue('');
+    fireEvent.change(minutes, { target: { value: '' } });
+    fireEvent.blur(minutes, { relatedTarget: screen.getByLabelText('Distance') });
+    expect(hours).toHaveValue('');
+    expect(minutes).toHaveValue('');
+    expect(itineraryPayload().duration_min).toBeNull();
+  });
+
+  it('rejects negative and malformed metrics and fractional minute/metre values', () => {
+    render(<ItiHarness />);
+    const before = itineraryPayload();
+    const invalidByLabel: Record<string, string[]> = {
+      Distance: ['-1', '12abc', '1,2.3'],
+      'Durée, heures': ['-1', '1.5', 'abc'],
+      'Durée, minutes': ['-1', '1.5', 'abc'],
+      'Dénivelé +': ['-1', '173.5', '12abc'],
+      'Dénivelé −': ['-1', '169,5', '1e3'],
+    };
+    for (const [label, values] of Object.entries(invalidByLabel)) {
+      const field = screen.getByLabelText(label);
+      for (const value of values) fireEvent.change(field, { target: { value } });
+    }
+    expect(itineraryPayload()).toEqual(before);
+  });
+
+  it('keeps metric inputs and shortcuts disabled without itinerary write or proposal permissions', () => {
+    const permissions = new Proxy(allowAll, {
+      get(target, key) {
+        const permission = Reflect.get(target, key);
+        return key === 'itinerary'
+          ? { ...permission, canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false }
+          : permission;
+      },
+    });
+    render(<ItiHarness permissions={permissions} />);
+    for (const label of ['Distance', 'Durée, heures', 'Durée, minutes', 'Dénivelé +', 'Dénivelé −']) {
+      expect(screen.getByLabelText(label)).toBeDisabled();
+    }
+    for (const metric of ['Distance', 'Durée', 'Dénivelé +', 'Dénivelé −']) {
+      expect(screen.getByLabelText(`Augmenter ${metric}`)).toBeDisabled();
+      expect(screen.getByLabelText(`Diminuer ${metric}`)).toBeDisabled();
+    }
   });
 
   it('§B5: renders the Infos pratiques block with the relocated Boucle + child-friendly toggles', () => {

@@ -6,25 +6,30 @@ export interface StepOptions {
   step: number;
   /** Lower bound (metrics are never negative). Default 0. */
   min?: number;
-  /** Decimal places to keep on the result. Default 0. */
+  /** Minimum decimal places for decimal fields; 0/default keeps integer fields integer. */
   decimals?: number;
 }
 
 /**
  * Step a numeric string field by `delta * step`, clamped to `min`, formatted to
- * `decimals`. Tolerates empty / non-numeric current values (treated as `min`).
+ * at least `decimals`, preserving entered precision up to 15 decimal places. Tolerates
+ * empty / non-numeric current values (treated as `min`).
  * Returns a string so it round-trips through the draft model (values are strings).
  */
 export function stepMetric(current: string | null | undefined, delta: number, opts: StepOptions): string {
   const min = opts.min ?? 0;
-  const decimals = opts.decimals ?? 0;
-  const parsed = Number(String(current ?? '').replace(',', '.'));
+  const normalized = String(current ?? '').trim().replace(',', '.');
+  const parsed = Number(normalized);
+  const [coefficient, exponent = '0'] = normalized.toLowerCase().split('e');
+  const enteredDecimals = Number.isFinite(parsed)
+    ? Math.max(0, (coefficient.split('.')[1]?.length ?? 0) - Number(exponent))
+    : 0;
+  // Bound pasted precision to Number's useful range and toFixed's supported range.
+  const decimals = opts.decimals ? Math.min(15, Math.max(opts.decimals, enteredDecimals)) : 0;
   const base = Number.isFinite(parsed) ? parsed : min;
   const next = Math.max(min, base + delta * opts.step);
-  // Avoid float artifacts (0.1 + 0.2) — round to the requested precision.
-  const factor = 10 ** decimals;
-  const rounded = Math.round(next * factor) / factor;
-  return decimals > 0 ? rounded.toFixed(decimals) : String(Math.round(rounded));
+  // Format directly: multiplying a very large finite value by 10 ** decimals can overflow.
+  return decimals > 0 ? next.toFixed(decimals) : String(Math.round(next));
 }
 
 /** Format a duration in minutes as a compact "Xh", "Xh YY", or "YY min" label. */

@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
-import { Chip, ChipSet, Disclosure, EditorModal, Field, Fs, Input, ReferenceSelect, SortableList, StatCard, Toggle } from '../../primitives';
+import { Chip, ChipSet, Disclosure, EditorModal, Field, Fs, Input, ReferenceSelect, SortableList, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
-import { formatDurationShort, stepMetric } from './iti-metrics';
+import { stepMetric } from './iti-metrics';
 import { ItiTraceMap } from '../../widgets/ItiTraceMap';
 import { ItineraryStageEditor } from '../../widgets/ItineraryStageEditor';
+import { ItineraryDurationCard, ItineraryMetricCard } from '../../widgets/ItineraryMetricCard';
 import { AssociatedObjectModal } from '../../widgets/AssociatedObjectModal';
 import { itineraryStagePoint } from '../../widgets/itinerary-map-utils';
 import { isInsideCorridor } from './corridor';
@@ -118,12 +119,17 @@ export function BlockITI(props: SectionProps) {
             </>}
           </div>
         </ItiTraceMap>
-        <fieldset className="iti-embedded-fields" disabled={!canEdit}>
+        <fieldset className="iti-embedded-fields iti-route-fields" disabled={!canEdit}>
+        <legend className="sr-only">Mesures et caractéristiques du parcours</legend>
         <div className="grid-4 iti-route-metrics">
-          <StatCard label="Distance" value={itinerary.distanceKm || '0'} suffix="km" hasStep onStep={(delta) => patch({ distanceKm: stepMetric(itinerary.distanceKm, delta, { step: .5, decimals: 1 }) })} />
-          <StatCard label="Durée" value={formatDurationShort(itinerary.durationMin)} hasStep onStep={(delta) => patch({ durationMin: stepMetric(itinerary.durationMin, delta, { step: 15 }) })} />
-          <StatCard label="Dénivelé +" value={itinerary.elevationPositiveM || '0'} suffix="m" hasStep onStep={(delta) => patch({ elevationPositiveM: stepMetric(itinerary.elevationPositiveM, delta, { step: 10 }) })} />
-          <StatCard label="Dénivelé −" value={itinerary.elevationNegativeM || '0'} suffix="m" hasStep onStep={(delta) => patch({ elevationNegativeM: stepMetric(itinerary.elevationNegativeM, delta, { step: 10 }) })} />
+          <ItineraryMetricCard label="Distance" value={itinerary.distanceKm} unit="km" decimal disabled={!canEdit}
+            onChange={(distanceKm) => patch({ distanceKm })} onStep={(delta) => patch({ distanceKm: stepMetric(itinerary.distanceKm, delta, { step: .5, decimals: 1 }) })} />
+          <ItineraryDurationCard value={itinerary.durationMin} disabled={!canEdit}
+            onChange={(durationMin) => patch({ durationMin })} onStep={(delta) => patch({ durationMin: stepMetric(itinerary.durationMin, delta, { step: 15 }) })} />
+          <ItineraryMetricCard label="Dénivelé +" value={itinerary.elevationPositiveM} unit="m" disabled={!canEdit}
+            onChange={(elevationPositiveM) => patch({ elevationPositiveM })} onStep={(delta) => patch({ elevationPositiveM: stepMetric(itinerary.elevationPositiveM, delta, { step: 10 }) })} />
+          <ItineraryMetricCard label="Dénivelé −" value={itinerary.elevationNegativeM} unit="m" disabled={!canEdit}
+            onChange={(elevationNegativeM) => patch({ elevationNegativeM })} onStep={(delta) => patch({ elevationNegativeM: stepMetric(itinerary.elevationNegativeM, delta, { step: 10 }) })} />
         </div>
         <div className="grid-3 iti-route-characteristics">
           <Field label="Difficulté" hint="Niveau 1 (très facile) à 5 (très difficile)"><ReferenceSelect value={itinerary.difficultyLevel} options={itinerary.difficultyOptions} onChange={(difficultyLevel) => patch({ difficultyLevel })} allowEmpty emptyLabel="Non renseigné" aria-label="Difficulté" /></Field>

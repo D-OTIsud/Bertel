@@ -252,6 +252,7 @@ interface ResultCardViewProps {
   onOpen?: () => void;
   /** D20 : signale l'entrée/sortie du pointeur pour surligner le marqueur carte. */
   onHoverChange?: (hovered: boolean) => void;
+  onFocusChange?: (focused: boolean) => void;
   /** Click-to-filter for a colored §09 tag chip (cards + map). Inert when omitted or interactive=false. */
   onToggleTag?: (tag: ExplorerTagFilter) => void;
   onToggleSelect?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -266,6 +267,7 @@ export function ResultCardView({
   inSelection = false,
   onOpen,
   onHoverChange,
+  onFocusChange,
   onToggleTag,
   onToggleSelect,
 }: ResultCardViewProps) {
@@ -295,10 +297,17 @@ export function ResultCardView({
   return (
     <div
       id={domId}
+      data-result-card-id={card.id}
       onMouseEnter={() => onHoverChange?.(true)}
       onMouseLeave={() => {
         setExpanded(false);
         onHoverChange?.(false);
+      }}
+      onFocus={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onFocusChange?.(true);
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onFocusChange?.(false);
       }}
       {...(containerInteractive
         ? {
@@ -306,6 +315,7 @@ export function ResultCardView({
             tabIndex: 0,
             onClick: onOpen,
             onKeyDown: (event: React.KeyboardEvent) => {
+              if (event.target !== event.currentTarget) return;
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
                 onOpen?.();

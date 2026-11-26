@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import { usePrefetchObjectDetail, useExplorerSelectionCardsQuery } from '../../hooks/useExplorerQueries';
+import { useResultMapPreview } from '../../hooks/useResultMapPreview';
 import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
 import { buildResultSections, buildGradeSections } from '../../utils/explorer-result-sections';
@@ -272,10 +273,12 @@ export function ResultsList({
   }, [hasMore, isLoadingMore, onLoadMore, cards.length]);
 
   const prefetchObjectDetail = usePrefetchObjectDetail();
+  const mapPreview = useResultMapPreview(scrollRef, orderedCards);
   // Annulation du delai d'intention en cours. Un seul suffit : le pointeur n'est
   // que sur une carte a la fois, et `onHoverChange(false)` part avant le
   // `onHoverChange(true)` de la carte suivante.
   const cancelPrefetchRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => cancelPrefetchRef.current?.(), []);
 
   const renderCard = (card: ObjectCard) => {
     const isSelected = selectedObjectIds.includes(card.id) || selectedCardId === card.id;
@@ -288,18 +291,26 @@ export function ResultsList({
         isSelected={isSelected}
         isHovered={hoveredCardId === card.id}
         inSelection={inSelection}
-        onOpen={() => openDrawer(card.id)}
+        onOpen={() => {
+          mapPreview.showSelectionPreview(card);
+          openDrawer(card.id);
+        }}
         onHoverChange={(hovered) => {
-          setHoveredCard(hovered ? card.id : null);
+          if (hovered || useExplorerStore.getState().hoveredCardId === card.id) {
+            setHoveredCard(hovered ? card.id : null);
+          }
+          mapPreview.onHoverChange(card, hovered);
           cancelPrefetchRef.current?.();
           cancelPrefetchRef.current = hovered ? prefetchObjectDetail(card.id) : null;
         }}
+        onFocusChange={(focused) => mapPreview.onFocusChange(card, focused)}
         onToggleTag={toggleTag}
         onToggleSelect={(event) => {
           event.preventDefault();
           event.stopPropagation();
           if (!inSelection) {
             flyStarToSelection(event.currentTarget);
+            mapPreview.showSelectionPreview(card);
           }
           toggleSelectedObject(card.id);
         }}
@@ -353,7 +364,7 @@ export function ResultsList({
         </div>
       ) : null}
 
-      <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+      <div ref={scrollRef} onMouseMove={mapPreview.trackPointer} onMouseLeave={mapPreview.leaveList} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
         {sections.grouped
           ? sections.groups.map((grp) => (
               <div key={grp.group} className="flex flex-col gap-2">

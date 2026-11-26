@@ -9,6 +9,7 @@ import {
 } from '../../config/map-markers';
 import { getAppMapStyle, MAP_LAYER_OPTIONS } from '../../lib/map-style';
 import { useExplorerStore } from '../../store/explorer-store';
+import { useExplorerMapPreviewStore } from '../../store/explorer-map-preview-store';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
 import { tagChipStyle } from '../../utils/explorer-card';
@@ -95,7 +96,7 @@ const CLUSTER_OPTIONS = { radius: 30, maxZoom: 12, map: CLUSTER_MAP, reduce: CLU
 
 type HoverPopupState = {
   lngLat: [number, number];
-  trigger: HTMLButtonElement;
+  trigger: HTMLButtonElement | null;
   id: string;
   name: string;
   image?: string;
@@ -154,6 +155,9 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
   const hoveredCardId = useExplorerStore((state) => state.hoveredCardId);
+  const resultPreview = useExplorerMapPreviewStore((state) => state.preview);
+  const resultPreviewRef = useRef(resultPreview);
+  resultPreviewRef.current = resultPreview;
   const addSelectedObjects = useExplorerStore((state) => state.addSelectedObjects);
   const toggleTag = useExplorerStore((state) => state.toggleTag);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
@@ -272,7 +276,9 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
     clearPopupTimers();
     minVisibleUntilRef.current = 0;
     popupHoveredRef.current = false;
+    popupKeyboardRef.current = false;
     setHoverPopupState(null);
+    useExplorerMapPreviewStore.getState().clearPreview();
   }, [clearPopupTimers]);
 
   useEffect(() => {
@@ -302,7 +308,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
 
   const closeHoverPopup = useCallback(() => {
     dismissHoverPopup();
-    if (hoverPopupState) focusMarker(hoverPopupState.trigger);
+    if (hoverPopupState?.trigger) focusMarker(hoverPopupState.trigger);
   }, [dismissHoverPopup, focusMarker, hoverPopupState]);
 
   const schedulePopupClose = useCallback(() => {
@@ -311,16 +317,72 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
     const waitMs = Math.max(POPUP_CLOSE_GRACE_MS, untilMin);
     closeTimerRef.current = window.setTimeout(() => {
       closeTimerRef.current = null;
-      if (popupHoveredRef.current || markerHoveredRef.current
-        || popupContainerRef.current?.contains(document.activeElement)) return;
+      const focusedElement = document.activeElement;
+      if (popupHoveredRef.current || markerHoveredRef.current || resultPreviewRef.current
+        || popupContainerRef.current?.contains(focusedElement)
+        || (focusedElement instanceof Element && focusedElement.closest('.map-marker-pin'))) return;
       minVisibleUntilRef.current = 0;
       setHoverPopupState(null);
     }, waitMs);
   }, [clearCloseTimer]);
 
+  const showCardPopup = useCallback((card: ObjectCard, lng: number, lat: number, trigger: HTMLButtonElement | null = null) => {
+    clearPopupTimers();
+    minVisibleUntilRef.current = Date.now() + POPUP_MIN_VISIBLE_MS;
+    setHoverPopupState({
+      trigger,
+      id: card.id,
+      name: card.name,
+      image: card.image ?? undefined,
+      city: card.location?.city ?? undefined,
+      typeLabel: getCategoryLabel(card.type),
+      openNow: card.open_now ?? null,
+      chips: buildHoverChips(card),
+      lngLat: [lng, lat],
+    });
+  }, [clearPopupTimers]);
+
+  const previousResultPreviewRef = useRef(resultPreview);
+  useEffect(() => {
+    const previous = previousResultPreviewRef.current;
+    previousResultPreviewRef.current = resultPreview;
+    if (!resultPreview) {
+      if (previous) schedulePopupClose();
+      return;
+    }
+    // List interest must never inherit the map's keyboard-only focus transfer.
+    popupKeyboardRef.current = false;
+    // Coordinates come from the current map corpus; result metadata is richer than its markers.
+    const marker = markerPoints.find(({ card }) => card.id === resultPreview.card.id);
+    if (!marker) {
+      // The marker query can still be catching up with already-rendered result cards.
+      clearPopupTimers();
+      setHoverPopupState(null);
+      return;
+    }
+    showCardPopup(resultPreview.card, marker.lon, marker.lat);
+  }, [resultPreview, markerPoints, showCardPopup, schedulePopupClose, clearPopupTimers]);
+
+  useEffect(() => {
+    if (hoverPopupState && !markerPoints.some(({ card }) => card.id === hoverPopupState.id)
+      && (!resultPreview || resultPreview.card.id === hoverPopupState.id)) {
+      dismissHoverPopup();
+    }
+  }, [hoverPopupState, markerPoints, resultPreview, dismissHoverPopup]);
+
+  // A focused result remains individually visible even while supercluster groups its neighbours.
+  const activeMarker = hoverPopupState?.trigger === null
+    ? markerPoints.find(({ card }) => card.id === hoverPopupState.id)
+    : null;
+  const activeMarkerNeedsOverlay = activeMarker && !clusters.some((cluster) => {
+    const props = cluster.properties as { cluster?: boolean; cardId?: string };
+    return !props.cluster && props.cardId === activeMarker.card.id;
+  });
+
   useEffect(
     () => () => {
       clearPopupTimers();
+      useExplorerMapPreviewStore.getState().clearPreview();
     },
     [clearPopupTimers],
   );
@@ -334,12 +396,19 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
       if (!(target instanceof Node)) return;
       if (popupContainerRef.current?.contains(target)) return;
       if (target instanceof Element && target.closest('.map-marker-pin')) return;
+      if (target instanceof Element && target.closest('[data-result-card-id]')?.getAttribute('data-result-card-id') === hoverPopupState.id) return;
       dismissHoverPopup();
     };
 
+    const onDocKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') dismissHoverPopup();
+    };
+
     document.addEventListener('pointerdown', onDocPointerDown, true);
+    document.addEventListener('keydown', onDocKeyDown);
     return () => {
       document.removeEventListener('pointerdown', onDocPointerDown, true);
+      document.removeEventListener('keydown', onDocKeyDown);
     };
   }, [hoverPopupState, dismissHoverPopup]);
 
@@ -462,33 +531,25 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
 
   const handleMarkerEnter = useCallback(
     (card: ObjectCard, lng: number, lat: number, trigger: HTMLButtonElement) => {
+      useExplorerMapPreviewStore.getState().clearPreview();
       // D20 : survol croisé — la carte-résultat correspondante se surligne dans la liste.
       useExplorerStore.getState().setHoveredCard(card.id);
       clearCloseTimer();
       clearOpenTimer();
       openTimerRef.current = window.setTimeout(() => {
         openTimerRef.current = null;
-        minVisibleUntilRef.current = Date.now() + POPUP_MIN_VISIBLE_MS;
-        setHoverPopupState({
-          // A cancelled hover must never change the displayed popup's owner.
-          trigger,
-          id: card.id,
-          name: card.name,
-          image: card.image ?? undefined,
-          city: card.location?.city ?? undefined,
-          typeLabel: getCategoryLabel(card.type),
-          openNow: card.open_now ?? null,
-          chips: buildHoverChips(card),
-          lngLat: [lng, lat],
-        });
+        // Bind focus restoration only when this hover actually opens its popup.
+        showCardPopup(card, lng, lat, trigger);
       }, HOVER_INTENT_DELAY_MS);
     },
-    [clearCloseTimer, clearOpenTimer],
+    [clearCloseTimer, clearOpenTimer, showCardPopup],
   );
 
-  const handleMarkerLeave = useCallback(() => {
+  const handleMarkerLeave = useCallback((cardId: string) => {
     markerHoveredRef.current = false;
-    useExplorerStore.getState().setHoveredCard(null);
+    if (useExplorerStore.getState().hoveredCardId === cardId) {
+      useExplorerStore.getState().setHoveredCard(null);
+    }
     clearOpenTimer();
     schedulePopupClose();
   }, [clearOpenTimer, schedulePopupClose]);
@@ -504,15 +565,19 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   }, [schedulePopupClose]);
 
   const handleMarkerClick = useCallback(
-    (cardId: string, marker: HTMLButtonElement) => {
-      dismissHoverPopup();
+    (cardId: string, trigger: HTMLButtonElement) => {
       if (onCompactMarkerSelect) {
-        onCompactMarkerSelect(cardId, () => focusMarker(marker));
+        dismissHoverPopup();
+        onCompactMarkerSelect(cardId, () => focusMarker(trigger));
       } else {
+        useExplorerMapPreviewStore.getState().clearPreview();
+        popupKeyboardRef.current = false;
+        const marker = markerPoints.find(({ card }) => card.id === cardId);
+        if (marker) showCardPopup(marker.card, marker.lon, marker.lat, trigger);
         selectCard(cardId);
       }
     },
-    [dismissHoverPopup, focusMarker, onCompactMarkerSelect, selectCard],
+    [dismissHoverPopup, focusMarker, markerPoints, onCompactMarkerSelect, selectCard, showCardPopup],
   );
 
   const handlePopupClick = useCallback(
@@ -877,12 +942,15 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
             }
 
             const { card, imageSrc } = props;
+            const isActive = card.id === activeMarker?.card.id;
             return (
-              <Marker key={card.id} longitude={longitude} latitude={latitude} anchor="bottom">
+              <Marker key={card.id} longitude={longitude} latitude={latitude} anchor="bottom"
+                style={{ zIndex: isActive ? 10 : hoveredCardId === card.id ? 5 : selectedObjectIdSet.has(card.id) ? 1 : 0 }}>
                 <button
                   type="button"
                   className={cn(
                     'map-marker-pin',
+                    isActive && 'map-marker-pin--active',
                     selectedObjectIdSet.has(card.id) && 'map-marker-pin--selected',
                     hoveredCardId === card.id && 'map-marker-pin--hovered',
                   )}
@@ -891,7 +959,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
                     markerHoveredRef.current = true;
                     handleMarkerEnter(card, longitude, latitude, event.currentTarget);
                   }}
-                  onPointerLeave={() => handleMarkerLeave()}
+                  onPointerLeave={() => handleMarkerLeave(card.id)}
                   onFocus={(event) => {
                     if (suppressMarkerFocusRef.current) return;
                     popupKeyboardRef.current = true;
@@ -900,7 +968,9 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
                   onBlur={() => {
                     clearOpenTimer();
                     schedulePopupClose();
-                    if (!markerHoveredRef.current) useExplorerStore.getState().setHoveredCard(null);
+                    if (!markerHoveredRef.current && useExplorerStore.getState().hoveredCardId === card.id) {
+                      useExplorerStore.getState().setHoveredCard(null);
+                    }
                   }}
                   onClick={(event) => handleMarkerClick(card.id, event.currentTarget)}
                   aria-label={`Ouvrir ${card.name}`}
@@ -910,6 +980,37 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
               </Marker>
             );
           })}
+          {activeMarker && activeMarkerNeedsOverlay ? (
+            <Marker key={`active-${activeMarker.card.id}`} longitude={activeMarker.lon} latitude={activeMarker.lat}
+              anchor="bottom" style={{ zIndex: 10 }}>
+              <button
+                type="button"
+                className={cn('map-marker-pin map-marker-pin--active', selectedObjectIdSet.has(activeMarker.card.id) && 'map-marker-pin--selected')}
+                onPointerEnter={(event) => {
+                  popupKeyboardRef.current = false;
+                  markerHoveredRef.current = true;
+                  handleMarkerEnter(activeMarker.card, activeMarker.lon, activeMarker.lat, event.currentTarget);
+                }}
+                onPointerLeave={() => handleMarkerLeave(activeMarker.card.id)}
+                onFocus={(event) => {
+                  if (suppressMarkerFocusRef.current) return;
+                  popupKeyboardRef.current = true;
+                  handleMarkerEnter(activeMarker.card, activeMarker.lon, activeMarker.lat, event.currentTarget);
+                }}
+                onBlur={() => {
+                  clearOpenTimer();
+                  schedulePopupClose();
+                  if (!markerHoveredRef.current && useExplorerStore.getState().hoveredCardId === activeMarker.card.id) {
+                    useExplorerStore.getState().setHoveredCard(null);
+                  }
+                }}
+                onClick={(event) => handleMarkerClick(activeMarker.card.id, event.currentTarget)}
+                aria-label={`Ouvrir ${activeMarker.card.name}`}
+              >
+                <img src={activeMarker.imageSrc} alt={activeMarker.card.name} className="map-marker-pin__img" />
+              </button>
+            </Marker>
+          ) : null}
           <Source id={OBJECT_SOURCE_ID} type="geojson" data={geojsonData}>
             <Layer
               id={OBJECT_LABEL_LAYER_ID}
@@ -934,7 +1035,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
               longitude={hoverPopupState.lngLat[0]}
               latitude={hoverPopupState.lngLat[1]}
               onClose={dismissHoverPopup}
-              offset={18}
+              offset={hoverPopupState.trigger === null ? 64 : 18}
               closeButton={false}
               closeOnClick={false}
               focusAfterOpen={false}

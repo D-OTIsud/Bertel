@@ -7,6 +7,7 @@ import {
   formatChangeType,
   getObjectVersions,
   getObjectVersionSnapshot,
+  getObjectLifecycleDetails,
   restoreObjectVersion,
 } from './object-versions';
 
@@ -112,6 +113,178 @@ describe('getObjectVersionSnapshot', () => {
       p_version_number: 2,
     });
     expect(snap).toEqual({ name: 'X' });
+  });
+});
+
+describe('getObjectLifecycleDetails', () => {
+  const objectId = 'PCURUN0000000001';
+  function useRpc(rpc: jest.Mock) {
+    const request = (...args: unknown[]) => Object.assign(Promise.resolve(rpc(...args)), {
+      abortSignal: jest.fn().mockReturnThis(),
+    });
+    mockGetApiClient.mockReturnValue({ schema: () => ({ rpc: request }) });
+  }
+  const transitionRow = (versionNumber: number, createdByName = 'Alice') => ({
+    version_number: versionNumber,
+    created_at: '2026-11-26T10:00:00Z',
+    created_by_name: createdByName,
+    change_reason: `Reason for version ${versionNumber}`,
+    change_type: 'update',
+    changed_fields: ['status'],
+  });
+
+  it('returns the most recent archive author after multiple archive and restore episodes, ignoring later edits', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({
+        data: [
+          { ...transitionRow(8, 'Later editor'), changed_fields: ['name'] },
+          transitionRow(7, 'Latest archiver'),
+          transitionRow(6, 'Restorer'),
+          transitionRow(4, 'First archiver'),
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { status: 'archived' }, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).resolves.toEqual({
+      createdAt: '2026-11-26T10:00:00Z',
+      createdByName: 'Latest archiver',
+      changeReason: 'Reason for version 7',
+    });
+    expect(rpc).toHaveBeenLastCalledWith('get_object_version_snapshot', {
+      p_object_id: objectId,
+      p_version_number: 7,
+    });
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('continues beyond 50 later edits to find the archive transition', async () => {
+    const laterEdits = Array.from({ length: 50 }, (_, index) => ({
+      ...transitionRow(100 - index, 'Later editor'),
+      changed_fields: ['name'],
+    }));
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: laterEdits, error: null })
+      .mockResolvedValueOnce({ data: [transitionRow(50)], error: null })
+      .mockResolvedValueOnce({ data: { status: 'archived' }, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).resolves.toEqual({
+      createdAt: '2026-11-26T10:00:00Z',
+      createdByName: 'Alice',
+      changeReason: 'Reason for version 50',
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'get_object_versions', {
+      p_object_id: objectId,
+      p_limit: 50,
+      p_offset: 50,
+    });
+    expect(rpc).toHaveBeenLastCalledWith('get_object_version_snapshot', {
+      p_object_id: objectId,
+      p_version_number: 50,
+    });
+  });
+
+  it('returns the latest hidden transition with its author, date and justification', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({
+        data: [
+          { ...transitionRow(6, 'Later editor'), changed_fields: ['name'] },
+          transitionRow(5, 'Latest unpublisher'),
+          transitionRow(3, 'Previous unpublisher'),
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { status: 'hidden' }, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'hidden')).resolves.toEqual({
+      createdAt: '2026-11-26T10:00:00Z',
+      createdByName: 'Latest unpublisher',
+      changeReason: 'Reason for version 5',
+    });
+    expect(rpc).toHaveBeenLastCalledWith('get_object_version_snapshot', {
+      p_object_id: objectId,
+      p_version_number: 5,
+    });
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reuse a previous hidden episode when a later transition archived the object', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [transitionRow(5), transitionRow(3)], error: null })
+      .mockResolvedValueOnce({ data: { status: 'archived' }, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'hidden')).resolves.toBeNull();
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not report a previous archive when the latest status transition restored the object', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [transitionRow(3, 'Restorer'), transitionRow(2, 'Archiver')], error: null })
+      .mockResolvedValueOnce({ data: { status: 'hidden' }, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).resolves.toBeNull();
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenLastCalledWith('get_object_version_snapshot', {
+      p_object_id: objectId,
+      p_version_number: 3,
+    });
+  });
+
+  it.each([null, {}])('returns no archive when the latest transition snapshot is unavailable: %p', async (snapshot) => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [transitionRow(3), transitionRow(2)], error: null })
+      .mockResolvedValueOnce({ data: snapshot, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).resolves.toBeNull();
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves an unnamed archiver for the UI fallback', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [transitionRow(2, '')], error: null })
+      .mockResolvedValueOnce({ data: { status: 'archived' }, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).resolves.toEqual({
+      createdAt: '2026-11-26T10:00:00Z',
+      createdByName: '',
+      changeReason: 'Reason for version 2',
+    });
+  });
+
+  it.each([
+    { scenario: 'empty history', versions: [] },
+    { scenario: 'creation only', versions: [{ ...transitionRow(1), change_type: 'insert' }] },
+    { scenario: 'edits only', versions: [{ ...transitionRow(2), changed_fields: ['name'] }] },
+  ])('returns no archive without a recorded status transition: $scenario', async ({ versions }) => {
+    const rpc = jest.fn().mockResolvedValueOnce({ data: versions, error: null });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).resolves.toBeNull();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates a history failure instead of presenting it as absent attribution', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'Unavailable' } });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).rejects.toThrow(/historique/i);
+  });
+
+  it('propagates a snapshot failure instead of falling back to an older archive', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [transitionRow(3), transitionRow(2)], error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'Unavailable' } });
+    useRpc(rpc);
+
+    await expect(getObjectLifecycleDetails(objectId, 'archived')).rejects.toThrow(/version/i);
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 });
 

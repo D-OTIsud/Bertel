@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -130,5 +131,51 @@ describe.each(['default', 'editor'] as const)('ConfirmDialog shared guards: %s',
     // Existing async consumers may leave the dialog open after failure and retry.
     fireEvent.click(confirm);
     expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps required justification reachable and validates blank text only after submission', () => {
+    const onConfirm = jest.fn();
+    function JustifiedConfirmation() {
+      const [value, setValue] = useState('');
+      return <ConfirmDialog open title="Archiver la fiche" message="La fiche sera archivée." appearance={appearance}
+        confirmLabel="Archiver" onCancel={jest.fn()} onConfirm={onConfirm}
+        justification={{ label: 'Motif de l’archivage', value, onChange: setValue }} />;
+    }
+    render(<JustifiedConfirmation />);
+    const input = screen.getByRole('textbox', { name: 'Motif de l’archivage (obligatoire)' });
+    const confirm = screen.getByRole('button', { name: 'Archiver' });
+    expect(input).toBeRequired();
+    expect(input).toHaveAttribute('rows', '4');
+    expect(input).toHaveAttribute('aria-invalid', 'false');
+    expect(confirm).not.toBeDisabled();
+    expect(confirm).not.toHaveAttribute('aria-disabled');
+    expect(screen.queryByText(/Un motif est obligatoire/)).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: '  \n  ' } });
+    expect(screen.queryByText(/Un motif est obligatoire/)).not.toBeInTheDocument();
+    fireEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription('Un motif est obligatoire pour confirmer cette action.');
+
+    fireEvent.change(input, { target: { value: 'Fermeture définitive\nConfirmée par le prestataire.' } });
+    expect(input).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.queryByText(/Un motif est obligatoire/)).not.toBeInTheDocument();
+    fireEvent.click(confirm);
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks confirmation and dismissal while a justification is being saved', () => {
+    const onConfirm = jest.fn();
+    const onCancel = jest.fn();
+    render(<ConfirmDialog open busy title="Archiver la fiche" message="La fiche sera archivée." appearance={appearance}
+      confirmLabel="Archiver" onCancel={onCancel} onConfirm={onConfirm}
+      justification={{ label: 'Motif', value: 'Fermeture', onChange: jest.fn() }} />);
+    expect(screen.getByRole('textbox', { name: /Motif/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Archiver' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
   });
 });

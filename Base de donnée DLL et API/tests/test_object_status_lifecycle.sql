@@ -1,7 +1,7 @@
 -- test_object_status_lifecycle.sql
 -- Behavioral test for api.rpc_set_object_status + the rpc_publish_object wrapper.
 -- Self-contained + transactional (ROLLBACK at end). Run AFTER the full manifest
--- INCLUDING migration_object_status_lifecycle.sql.
+-- INCLUDING migration_object_status_lifecycle.sql + object_lifecycle_reason.
 \set ON_ERROR_STOP on
 BEGIN;
 
@@ -48,9 +48,9 @@ BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_editor_uid, 'role','authenticated')::text, true);
 
   v_result := api.rpc_set_object_status(v_obj, 'published');  ASSERT v_result = 'published', 'draft->published';
-  v_result := api.rpc_set_object_status(v_obj, 'hidden');     ASSERT v_result = 'hidden',    'published->hidden';
+  v_result := api.rpc_set_object_status(v_obj, 'hidden', 'Lifecycle test depublication'); ASSERT v_result = 'hidden', 'published->hidden';
   v_result := api.rpc_set_object_status(v_obj, 'published');  ASSERT v_result = 'published', 'hidden->published';
-  v_result := api.rpc_set_object_status(v_obj, 'archived');   ASSERT v_result = 'archived',  'published->archived';
+  v_result := api.rpc_set_object_status(v_obj, 'archived', 'Lifecycle test archive'); ASSERT v_result = 'archived', 'published->archived';
   -- restore: object was published (published_at set) -> archived restores to 'hidden'
   v_result := api.rpc_set_object_status(v_obj, 'hidden');     ASSERT v_result = 'hidden',    'archived->hidden (ever-published)';
   SELECT status INTO v_status FROM object WHERE id = v_obj;   ASSERT v_status = 'hidden',    'row reflects hidden';

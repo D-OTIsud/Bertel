@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Archive, EyeOff, Globe, RotateCcw, Trash2, type LucideIcon } from 'lucide-react';
 import { Chip, ChipSet, ConfirmDialog, Field, Fs, Select } from '../primitives';
 import type { SectionProps } from './section-types';
 import { useSetObjectStatusMutation } from '../../../hooks/useExplorerQueries';
+import { useObjectLifecycleDetailsQuery } from '../../../hooks/useObjectLifecycleDetailsQuery';
 import { getApiClient } from '../../../lib/supabase';
 import { DeleteObjectModal } from '../widgets/DeleteObjectModal';
 import { computeStatusActions, STATUS_ACTION_CONFIRM, type StatusAction, type StatusActionKind } from './status-actions';
@@ -29,7 +30,7 @@ const STATUS_DESCRIPTION: Record<string, string> = {
   published: "Visible publiquement sur le site et dans l'explorateur.",
   draft: 'Brouillon — visible uniquement par votre organisation.',
   hidden: 'Hors ligne — retirée du site public, modifiable et republiable.',
-  archived: "Archivée — retirée de l'explorateur, restaurable à tout moment.",
+  archived: "Archivée — retirée du site public, restaurable à tout moment.",
 };
 
 // Each lifecycle action carries a glyph so the row reads at a glance.
@@ -40,6 +41,21 @@ const ACTION_ICON: Record<StatusActionKind, LucideIcon> = {
   restore: RotateCcw,
 };
 
+function formatLifecycleDate(iso: string, timeZone: string): string {
+  const date = new Date(iso);
+  if (!iso || Number.isNaN(date.getTime())) return '';
+  try {
+    const parts = new Intl.DateTimeFormat('fr-FR', {
+      timeZone, day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.day}/${values.month}/${values.year} à ${values.hour}:${values.minute}`;
+  } catch {
+    return '';
+  }
+}
+
 export function SectionPublication({ editor, permissions, objectId, archetype, folded }: SectionProps) {
   const publication = editor.draft.publication;
   const generalInfo = editor.draft.generalInfo;
@@ -47,12 +63,17 @@ export function SectionPublication({ editor, permissions, objectId, archetype, f
   const status = generalInfo.status || publication.status || 'draft';
   const publishedAt = publication.publishedAt || generalInfo.publishedAt || '';
   const pill = STATUS_PILL[status] ?? { tone: 'warn' as const, label: status };
+  const lifecycleStatus = status === 'archived' || status === 'hidden' ? status : null;
+  const lifecycleDetails = useObjectLifecycleDetailsQuery(objectId ?? null, lifecycleStatus);
+  const lifecycleDate = formatLifecycleDate(lifecycleDetails.data?.createdAt ?? '', generalInfo.businessTimezone || 'Indian/Reunion');
 
   const canPublish = permissions.publication.canDirectWrite;
   const setStatus = useSetObjectStatusMutation(objectId ?? null);
   const [error, setError] = useState<string | null>(null);
   // The lifecycle change the user clicked, held until they confirm (or cancel) in the modal.
   const [pendingAction, setPendingAction] = useState<StatusAction | null>(null);
+  const [justification, setJustification] = useState('');
+  const actionInFlight = useRef(false);
   const actions = computeStatusActions(status, publishedAt);
 
   // §108 — suppression définitive : action terminale du cycle de vie, à côté de « Restaurer ».
@@ -70,13 +91,21 @@ export function SectionPublication({ editor, permissions, objectId, archetype, f
     void client.auth.getSession().then(({ data }) => setAccessToken(data.session?.access_token ?? null));
   }, [canHardDelete]);
 
-  async function runAction(target: Parameters<typeof setStatus.mutateAsync>[0]) {
+  async function runAction(action: StatusAction) {
+    if (actionInFlight.current || setStatus.isPending) return;
+    const needsReason = action.kind === 'archive' || action.kind === 'unpublish';
+    if (needsReason && !justification.trim()) return;
+    actionInFlight.current = true;
     setError(null);
     try {
-      await setStatus.mutateAsync(target);
-      editor.setSavedStatus(target);
+      await setStatus.mutateAsync(needsReason ? { status: action.target, reason: justification.trim() } : action.target);
+      editor.setSavedStatus(action.target);
+      setPendingAction(null);
+      setJustification('');
     } catch (e) {
       setError(strictErrorMessage(e, 'Changement de statut impossible.'));
+    } finally {
+      actionInFlight.current = false;
     }
   }
 
@@ -90,6 +119,25 @@ export function SectionPublication({ editor, permissions, objectId, archetype, f
         <div className="lifecycle-state__body">
           <strong className="lifecycle-state__label">{pill.label}</strong>
           <p className="lifecycle-state__desc">{STATUS_DESCRIPTION[status] ?? 'Statut courant de la fiche.'}</p>
+          {lifecycleStatus && !lifecycleDetails.isPending && (
+            <div className="lifecycle-state__audit">
+              {lifecycleDetails.isError && !lifecycleDetails.data ? (
+                <p className="lifecycle-state__desc">Informations de changement de statut indisponibles.</p>
+              ) : (
+                <>
+                  <p className="lifecycle-state__desc">
+                    {lifecycleDetails.data?.createdByName.trim()
+                      ? `${status === 'archived' ? 'Archivée' : 'Statut modifié'} par ${lifecycleDetails.data.createdByName.trim()}`
+                      : 'Auteur non renseigné'}
+                    {lifecycleDate && <> · le <time dateTime={lifecycleDetails.data?.createdAt}>{lifecycleDate}</time></>}
+                  </p>
+                  {lifecycleDetails.data?.changeReason.trim() && (
+                    <p className="lifecycle-state__reason"><strong>Motif :</strong> {lifecycleDetails.data.changeReason}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
         {publishedAt && (
           <div className="lifecycle-state__meta">
@@ -123,7 +171,11 @@ export function SectionPublication({ editor, permissions, objectId, archetype, f
                     type="button"
                     className={constructive ? 'btn primary' : 'btn'}
                     disabled={setStatus.isPending}
-                    onClick={() => setPendingAction(a)}
+                    onClick={() => {
+                      setError(null);
+                      setJustification('');
+                      setPendingAction(a);
+                    }}
                   >
                     <Icon size={14} aria-hidden />
                     {a.label}
@@ -147,7 +199,7 @@ export function SectionPublication({ editor, permissions, objectId, archetype, f
         ) : (
           <div className="contacts-notice">{permissions.publication.disabledReason ?? 'Lecture seule — publication.'}</div>
         )}
-        {error && <div className="field__error" style={{ marginTop: 8 }}>{error}</div>}
+        {error && !pendingAction && <div className="field__error" style={{ marginTop: 8 }}>{error}</div>}
       </div>
 
       {publication.moderation.items.length > 0 || publication.printPublications.items.length > 0 ? (
@@ -185,15 +237,22 @@ export function SectionPublication({ editor, permissions, objectId, archetype, f
         <ConfirmDialog
           open
           title={confirm.title}
-          message={confirm.message}
+          message={<>{confirm.message}{error && <span className="field__error" role="alert" style={{ display: 'block', marginTop: 8 }}>{error}</span>}</>}
           confirmLabel={confirm.confirmLabel}
           tone={confirm.tone}
-          onCancel={() => setPendingAction(null)}
-          onConfirm={() => {
-            const target = pendingAction.target;
+          busy={setStatus.isPending}
+          justification={pendingAction.kind === 'archive' || pendingAction.kind === 'unpublish' ? {
+            label: pendingAction.kind === 'archive' ? 'Motif de l’archivage' : 'Motif de la dépublication',
+            value: justification,
+            onChange: (value) => { setJustification(value); setError(null); },
+          } : undefined}
+          onCancel={() => {
+            if (actionInFlight.current || setStatus.isPending) return;
             setPendingAction(null);
-            void runAction(target);
+            setJustification('');
+            setError(null);
           }}
+          onConfirm={() => void runAction(pendingAction)}
         />
       )}
 

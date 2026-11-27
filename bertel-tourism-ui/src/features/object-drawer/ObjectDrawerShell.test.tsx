@@ -135,6 +135,76 @@ describe('ObjectDrawerShell', () => {
     expect(screen.getByTestId('detail-view')).toHaveTextContent('Chez Testeur');
   });
 
+  describe('état de publication', () => {
+    test.each([
+      ['draft', 'Brouillon', 'Fiche en préparation.'],
+      ['hidden', 'Hors ligne', 'Fiche retirée de la publication.'],
+      ['archived', 'Archivée', 'Fiche archivée, à restaurer avant republication.'],
+    ])('signale explicitement une fiche %s sans masquer son contenu', (status, label, description) => {
+      mockDetailData = { ...baseDetailData, raw: { status } };
+
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+      expect(screen.getByText('Non publiée')).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByText(description)).toBeInTheDocument();
+      expect(screen.getByTestId('detail-view')).toHaveTextContent('Chez Testeur');
+    });
+
+    test.each(['published', undefined, null, '', 'unknown'])('ne déduit pas une dépublication du statut %s', (status) => {
+      mockDetailData = { ...baseDetailData, raw: { status } };
+
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+      expect(screen.queryByText('Non publiée')).not.toBeInTheDocument();
+    });
+
+    test('conserve le signal hors ligne malgré une date de publication historique', () => {
+      mockDetailData = {
+        ...baseDetailData,
+        raw: { status: 'hidden', published_at: '2026-10-01T08:00:00Z' },
+      };
+
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+      expect(screen.getByText('Non publiée')).toBeInTheDocument();
+      expect(screen.getByText('Hors ligne')).toBeInTheDocument();
+    });
+
+    test.each(['private', 'lapsed', 'suspended'])('distingue la visibilité %s du statut de publication', (commercialVisibility) => {
+      mockDetailData = {
+        ...baseDetailData,
+        raw: { status: 'published', commercial_visibility: commercialVisibility },
+      };
+
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+      expect(screen.queryByText('Non publiée')).not.toBeInTheDocument();
+    });
+
+    test.each(['draft', 'hidden', 'archived'])('ne traite pas une organisation %s comme une fiche touristique', (status) => {
+      mockDetailData = { ...baseDetailData, type: 'ORG', raw: { status } };
+
+      render(<ObjectDrawerShell objectId="org-1" onClose={() => {}} />, { wrapper });
+
+      expect(screen.queryByText('Non publiée')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /ouvrir l.administration/i })).toBeInTheDocument();
+    });
+
+    test('retire le signal dès que les données actualisées indiquent une publication', () => {
+      mockDetailData = { ...baseDetailData, raw: { status: 'draft' } };
+      const { rerender } = render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+      expect(screen.getByText('Non publiée')).toBeInTheDocument();
+
+      mockDetailData = { ...baseDetailData, raw: { status: 'published' } };
+      rerender(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />);
+
+      expect(screen.queryByText('Non publiée')).not.toBeInTheDocument();
+      expect(screen.queryByText('Brouillon')).not.toBeInTheDocument();
+      expect(screen.getByTestId('detail-view')).toHaveTextContent('Chez Testeur');
+    });
+  });
+
   // Demande CES : le type seul (« Gîtes, meublés & chambres d'hôtes ») ne dit pas
   // si la fiche est un meublé, une chambre d'hôtes… La nature taxonomique
   // (assigned_node) s'affiche en pastille à côté du type, chemin complet en title.

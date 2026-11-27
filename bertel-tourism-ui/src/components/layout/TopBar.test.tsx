@@ -11,6 +11,7 @@ import { useCrmSearchStore } from '../../store/crm-search-store';
 import { useUiStore } from '../../store/ui-store';
 import { useSessionStore } from '../../store/session-store';
 import { searchObjectsByName } from '../../services/name-search';
+import { NameMatchBand } from '../explorer/NameMatchBand';
 
 const pathnameMock = jest.fn<string, []>();
 jest.mock('next/navigation', () => ({ usePathname: () => pathnameMock() }));
@@ -38,7 +39,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   searchObjectsByNameMock.mockResolvedValue([]);
   useCrmSearchStore.setState({ search: '' });
-  useExplorerStore.getState().setSearch('');
+  useExplorerStore.getState().resetAll();
+  useSessionStore.setState(useSessionStore.getInitialState(), true);
   useUiStore.getState().closeDrawer();
 });
 
@@ -160,6 +162,56 @@ describe('TopBar — menu de concordances directes', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(screen.getByLabelText('Rechercher un acteur')).not.toHaveAttribute('role', 'combobox');
     expect(searchObjectsByNameMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['Escape', 'Enter', 'pick'] as const)('rouvre le menu à la frappe après %s sans perdre le focus', async (close) => {
+    searchObjectsByNameMock.mockResolvedValue([match]);
+    pathnameMock.mockReturnValue('/explorer');
+    useExplorerStore.getState().setSearch('jardin');
+    render(<TopBar />);
+    const input = screen.getByLabelText('Rechercher une fiche');
+    fireEvent.focus(input);
+    const option = await screen.findByRole('option', { name: /Le Jardin Créole/ });
+
+    if (close === 'pick') fireEvent.mouseDown(option);
+    else fireEvent.keyDown(input, { key: close });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    // Pas de nouvel événement focus entre la fermeture et cette frappe.
+    fireEvent.change(input, { target: { value: 'jardi' } });
+    await screen.findByRole('option', { name: /Le Jardin Créole/ });
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('aligne menu et bandeau sur Hors ligne sans une seconde requête ni brouillon parasite', async () => {
+    const hidden = { ...match, id: 'hidden', name: 'Le Margouillat', status: 'hidden' };
+    const draft = { ...match, id: 'draft', name: "ESCAL’RUN — Appart Margouillat", status: 'draft' };
+    const published = { ...match, id: 'published', name: 'Margouillat Jardin', status: 'published' };
+    searchObjectsByNameMock.mockImplementation(async (_term, _signal, statuses) => (
+      [draft, published, hidden].filter((row) => statuses == null || statuses.includes(row.status as 'draft' | 'published' | 'hidden'))
+    ));
+    pathnameMock.mockReturnValue('/explorer');
+    useSessionStore.setState({ canEditObjects: true });
+    useExplorerStore.getState().setStatuses(['hidden']);
+    useExplorerStore.getState().setSearch('margouillat');
+    render(<><TopBar /><NameMatchBand /></>);
+
+    fireEvent.focus(screen.getByLabelText('Rechercher une fiche'));
+    await screen.findByRole('option', { name: /Le Margouillat/ });
+    expect(screen.getByRole('button', { name: /Le Margouillat/ })).toHaveTextContent('Hors ligne');
+    expect(screen.queryByText(draft.name)).not.toBeInTheDocument();
+    expect(screen.queryByText(published.name)).not.toBeInTheDocument();
+    expect(searchObjectsByNameMock).toHaveBeenCalledTimes(1);
+    expect(searchObjectsByNameMock).toHaveBeenCalledWith('margouillat', expect.any(AbortSignal), ['hidden']);
+
+    act(() => useExplorerStore.getState().setStatuses(['published']));
+    expect(screen.queryByRole('option', { name: /Le Margouillat/ })).not.toBeInTheDocument();
+    await screen.findByRole('option', { name: /Margouillat Jardin/ });
+    expect(screen.getByRole('button', { name: /Margouillat Jardin/ })).toBeInTheDocument();
+    expect(screen.queryByText(hidden.name)).not.toBeInTheDocument();
+    expect(searchObjectsByNameMock).toHaveBeenCalledTimes(2);
+    expect(searchObjectsByNameMock).toHaveBeenLastCalledWith('margouillat', expect.any(AbortSignal), ['published']);
   });
 });
 

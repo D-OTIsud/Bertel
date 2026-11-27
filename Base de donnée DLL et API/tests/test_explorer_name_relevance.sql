@@ -22,6 +22,12 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- Ranking witnesses deliberately include drafts without an organisation link.
+-- The direct filter now authorizes its source rows before ranking, so this
+-- administrative harness must declare its service context explicitly. Scoped
+-- authenticated/anonymous access is covered by test_explorer_filtered_read_authority.sql.
+SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
 DO $$
 DECLARE
   v_exact1 text := 'HLORUN9999999820';  -- nom EXACTEMENT la saisie (homonyme 1)

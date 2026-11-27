@@ -21,9 +21,8 @@ const PALETTE_SEARCH_LIMIT = 8;
  * - un seul aller-retour léger (~20 ms mesuré) remplace le socle marqueurs
  *   (~250 ms) et son appel PAR BUCKET.
  *
- * Le PÉRIMÈTRE est auto-gardé CÔTÉ SERVEUR (publié pour tous, + les brouillons
- * du périmètre étendu pour un éditeur) : aucune résolution de statut ici — en
- * remettre une recréerait une seconde source de vérité.
+ * La palette conserve tout le périmètre autorisé côté serveur : elle ne reprend
+ * pas les statuts choisis dans l'Explorer. Le service transmet donc p_status=null.
  */
 export async function searchPaletteObjects(query: string): Promise<ObjectCard[]> {
   if (query.trim().length < PALETTE_SEARCH_MIN_CHARS) {

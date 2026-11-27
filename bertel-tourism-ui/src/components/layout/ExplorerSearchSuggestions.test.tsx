@@ -83,12 +83,23 @@ describe('ExplorerSearchSuggestions', () => {
     expect(options[1]).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('signale les brouillons, et seulement eux', () => {
+  it('signale les brouillons sans ajouter de badge aux fiches publiées', () => {
     renderSuggestions();
 
     const options = screen.getAllByRole('option');
     expect(options[0]).not.toHaveTextContent('Brouillon');
     expect(options[1]).toHaveTextContent('Brouillon');
+  });
+
+  it('identifie les fiches hors ligne et archivées avec les libellés canoniques', () => {
+    setMatches([
+      { ...DIMITILE, id: 'hidden', status: 'hidden' },
+      { ...GUILAINE, id: 'archived', status: 'archived' },
+    ]);
+    renderSuggestions();
+
+    expect(screen.getByText('Hors ligne')).toBeInTheDocument();
+    expect(screen.getByText('Archivée')).toBeInTheDocument();
   });
 
   it('rappelle que Entrée hors sélection lance la recherche complète', () => {
@@ -125,8 +136,13 @@ describe('ExplorerSearchSuggestions', () => {
   it("n'interroge pas le serveur pour un menu fermé", () => {
     renderSuggestions({ open: false });
     // Terme vide ⇒ la requête est désactivée en amont (seuil de caractères).
-    expect(mockUseNameMatchQuery).toHaveBeenCalledWith('');
-    expect(mockUseNameMatchQuery).not.toHaveBeenCalledWith('dimi');
+    expect(mockUseNameMatchQuery).toHaveBeenCalledWith('', 'explorer');
+    expect(mockUseNameMatchQuery).not.toHaveBeenCalledWith('dimi', 'explorer');
+  });
+
+  it('utilise le même périmètre que le clavier de sa page', () => {
+    renderSuggestions({ scope: 'global' });
+    expect(mockUseNameMatchQuery).toHaveBeenCalledWith('dimi', 'global');
   });
 });
 

@@ -3532,7 +3532,7 @@ Exécution directe réservée au rôle `authenticated`.
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
 
-> Concordance directe par nom (spec 2026-08-26) : navigation, pas filtrage — cherche tout le corpus visible indépendamment des filtres de l'Exploreur. Périmètre auto-gardé : published pour tous, + draft du périmètre étendu pour un éditeur (COALESCE sur la sonde à trois valeurs, §204) ; archived/hidden jamais. Consommée par le menu de la barre de recherche, le bandeau de résultats et la palette ⌘K.
+> Concordances de noms partielles pour les clients historiques et la navigation globale. Délègue à la surcharge à trois paramètres sans filtre de statut, dans le périmètre autorisé du lecteur.
 
 ## `api.search_objects_with_deep_data(p_search_term text, p_object_types text[] DEFAULT NULL::text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
 - returns: `json`
@@ -5569,3 +5569,10 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 
 ## `thesaurus.write_fence()`
 - returns: `trigger`
+
+## `api.search_objects_by_name(p_term text, p_limit integer, p_status public.object_status[])`
+- **returns:** `TABLE(id text, name text, object_type public.object_type, status public.object_status, city text, image_url text)` — SECURITY DEFINER
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/search_objects_by_name` avec `p_term`, `p_limit`, `p_status` explicites.
+- **reads:** `public.object`, `public.object_location`.
+- Concordances de noms partiels (2 caractères minimum), insensibles aux accents/casse, espaces de saisie normalisés. Statuts filtrés avant LIMIT : NULL/{} = tous les statuts accessibles ; lecteurs published seul ; éditeurs published + draft/hidden/archived de leur périmètre étendu. Realm réel/test conservé. Surcharge sans DEFAULT pour lever toute ambiguïté PostgREST avec la signature historique.
+- Capture ciblée : [NAME_SEARCH_CATALOG.json](NAME_SEARCH_CATALOG.json).

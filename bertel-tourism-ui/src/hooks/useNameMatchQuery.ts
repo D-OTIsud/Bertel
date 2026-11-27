@@ -1,6 +1,10 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { NAME_MATCH_MIN_CHARS, searchObjectsByName, type NameMatch } from '../services/name-search';
 import { useDebouncedValue } from './useDebouncedValue';
+import { useExplorerStore } from '../store/explorer-store';
+import { useSessionStore } from '../store/session-store';
+import { resolveExplorerStatuses } from '../utils/facets';
+import { sessionQueryScopeKey } from '../app/session-query-cache';
 
 /**
  * 150 ms, PAS les 250 ms de la requete lourde de l'Exploreur : c'est toute la
@@ -19,35 +23,45 @@ export interface NameMatchQueryResult {
   isFetching: boolean;
 }
 
+export type NameMatchScope = 'explorer' | 'global';
+
 /**
- * Recherche par nom partagee par les TROIS surfaces qui la consomment (menu
- * sous la barre de recherche, bandeau de resultats, palette ⌘K).
+ * Recherche par nom partagée par le menu et le bandeau de concordances.
  *
- * La `queryKey` ne porte que le terme trime : elle est donc COMMUNE aux trois
- * surfaces, qui se servent du meme cache — trois surfaces ouvertes sur le meme
- * terme = une seule requete reseau.
+ * La clé commune porte le terme, les statuts et le périmètre autorisé : le menu,
+ * son parent clavier et le bandeau partagent ainsi une seule requête.
  *
  * ECHEC SILENCIEUX assume : en cas d'erreur le hook rend `[]` (et `retry:
  * false`). C'est une aide a la navigation, jamais un resultat dont l'ecran
  * depend — la remonter en etat d'erreur ferait clignoter une alerte pendant la
  * frappe pour un service dont l'absence se voit deja (aucune suggestion).
  */
-export function useNameMatchQuery(term: string): NameMatchQueryResult {
+export function useNameMatchQuery(term: string, scope: NameMatchScope = 'explorer'): NameMatchQueryResult {
+  const configuredStatuses = useExplorerStore((state) => state.common.statuses);
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
+  const sessionScope = useSessionStore((state) => JSON.stringify([
+    sessionQueryScopeKey(state), state.adminRank, state.demoMode, state.isSandboxDiscovery,
+    state.authAuthority?.epoch, state.authAuthority?.hydrated,
+  ]));
+  const statuses = scope === 'explorer' ? resolveExplorerStatuses(configuredStatuses, canEditObjects) : null;
+  const scopeKey = JSON.stringify([scope, sessionScope, canEditObjects, statuses]);
   const debouncedTerm = useDebouncedValue(term, NAME_MATCH_DEBOUNCE_MS);
   const trimmed = debouncedTerm.trim();
   const enabled = trimmed.length >= NAME_MATCH_MIN_CHARS;
 
   const query = useQuery({
-    queryKey: ['name-match', trimmed],
-    queryFn: ({ signal }) => searchObjectsByName(trimmed, signal),
+    queryKey: ['name-match', scopeKey, trimmed],
+    queryFn: ({ signal }) => searchObjectsByName(trimmed, signal, statuses),
     enabled,
     staleTime: NAME_MATCH_STALE_TIME_MS,
-    placeholderData: keepPreviousData,
+    // Une autre frappe peut garder les noms précédents pendant le chargement.
+    // Un changement de statut ou de droits doit les retirer immédiatement.
+    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === scopeKey ? previous : undefined,
     retry: false,
   });
 
   return {
-    data: query.data ?? EMPTY_MATCHES,
+    data: enabled ? query.data ?? EMPTY_MATCHES : EMPTY_MATCHES,
     isFetching: query.isFetching,
   };
 }

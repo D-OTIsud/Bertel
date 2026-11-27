@@ -21,6 +21,8 @@ export const EXPLORER_FAQ: FaqEntry[] = [
 - **La recherche globale de l'Explorer** : le champ de recherche interroge à la fois le nom et le contenu des fiches.
 - **La palette de commandes** (Ctrl/⌘ + K), accessible depuis n'importe quel écran de l'application, pas seulement l'Explorer.
 
+**Un nom partiel suffit**, à partir de deux caractères. Dans l'Explorer, les suggestions sous la barre et les concordances directes suivent le filtre **Statut** : **Hors ligne** retrouve les fiches dépubliées ; sans statut sélectionné, tous les statuts accessibles sont inclus.
+
 **Astuce.** Si vous êtes déjà ailleurs dans l'app (CRM, Dashboard…), la palette est plus rapide que d'aller ouvrir l'Explorer.`,
   },
   {

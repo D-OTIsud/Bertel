@@ -5,6 +5,7 @@ import { useUiStore } from '../../store/ui-store';
 import { useNameMatchQuery } from '../../hooks/useNameMatchQuery';
 import { NAME_MATCH_MIN_CHARS } from '../../services/name-search';
 import { resolveTypeLabel } from '../../utils/labels';
+import { STATUS_LABELS } from '../../lib/object-status-labels';
 
 /**
  * Bandeau « Concordances directes » en tête de la colonne de résultats
@@ -53,9 +54,9 @@ export function NameMatchBand() {
             <span className="flex min-w-0 flex-col">
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-[13px] font-semibold text-ink">{match.name}</span>
-                {match.status === 'draft' ? (
+                {match.status !== 'published' && STATUS_LABELS[match.status] ? (
                   <span className="shrink-0 rounded-[5px] border border-line bg-bgTint px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                    Brouillon
+                    {STATUS_LABELS[match.status]}
                   </span>
                 ) : null}
               </span>

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Printer, X } from 'lucide-react';
+import { EyeOff, Pencil, Printer, X } from 'lucide-react';
 import { AvatarStack } from '../../components/common/AvatarStack';
 import { StatusPill } from '../../components/common/StatusPill';
 import { useObjectDetailQuery, usePrefetchObjectWorkspace } from '../../hooks/useExplorerQueries';
@@ -12,6 +12,8 @@ import { resolveTypeLabel } from '../../utils/labels';
 import { ObjectDetailView } from './ObjectDetailView';
 import { parseTaxonomyEyebrow } from './utils';
 import { confirmNavigation } from '../../lib/navigation-guard';
+import { STATUS_LABELS } from '../../lib/object-status-labels';
+import { cn } from '../../lib/utils';
 
 /**
  * Delai avant le prechargement automatique de l'editeur, en millisecondes.
@@ -19,6 +21,12 @@ import { confirmNavigation } from '../../lib/navigation-guard';
  * tiroir ait peint. A remonter si la mesure montre qu'il concurrence le rendu.
  */
 const AUTO_PREFETCH_DELAY_MS = 300;
+
+const UNPUBLISHED_DESCRIPTIONS = {
+  draft: 'Fiche en préparation.',
+  hidden: 'Fiche retirée de la publication.',
+  archived: 'Fiche archivée, à restaurer avant republication.',
+};
 
 interface ObjectDrawerShellProps {
   objectId: string | null;
@@ -110,6 +118,13 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   // PLAN 6 : une ORG n'est pas une fiche touristique — pas d'éditeur d'objet,
   // pas de ruban/sections génériques ; on renvoie vers /team.
   const isOrg = resolvedData?.type === 'ORG';
+  // Une date de première publication ou une visibilité commerciale ne donne
+  // pas le statut actuel. Seuls ces trois statuts confirment la non-publication.
+  const rawStatus = previewRaw.status;
+  const unpublishedStatus = !isShellLoading && !isOrg
+    && (rawStatus === 'draft' || rawStatus === 'hidden' || rawStatus === 'archived')
+    ? rawStatus
+    : null;
 
   const typeLabel = resolveTypeLabel(resolvedData?.type);
   const typeLineUpper = typeLabel ? typeLabel.toUpperCase() : '';
@@ -175,7 +190,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   }
 
   return (
-    <div key={objectId} className="drawer-shell__inner">
+    <div key={objectId} className={cn('drawer-shell__inner', unpublishedStatus && 'drawer-shell__inner--unpublished')}>
       <div className="drawer-header" aria-busy={isShellLoading}>
         {isShellLoading ? (
           <DrawerHeaderSkeleton />
@@ -223,6 +238,18 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       </div>
 
       <div className="drawer-status-row">
+        {unpublishedStatus && (
+          <div className={cn('drawer-publication-banner', `drawer-publication-banner--${unpublishedStatus}`)} role="status">
+            <span className="drawer-publication-banner__badge">
+              <EyeOff size={18} strokeWidth={2} aria-hidden="true" />
+              Non publiée
+            </span>
+            <div className="drawer-publication-banner__details">
+              <strong>{STATUS_LABELS[unpublishedStatus]}</strong>
+              <p>{UNPUBLISHED_DESCRIPTIONS[unpublishedStatus]}</p>
+            </div>
+          </div>
+        )}
         {typingUsers.length > 0 && <div className="inline-alert">{typingUsers.join(' · ')}</div>}
       </div>
       {isError && <div className="panel-card panel-card--warning panel-card--nested">{(error as Error).message}</div>}

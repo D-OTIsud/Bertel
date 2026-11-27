@@ -49,7 +49,7 @@ BEGIN
   ASSERT (SELECT count(*) FROM public.object WHERE id = 'HOTRUN9980080001' AND status = 'draft') = 1,
     'ordinary direct draft creation preserved';
   ASSERT api.user_can_publish_object('HOTRUN9980080001') IS FALSE, 'publisher link alone grants no permission';
-  v_id := api.rpc_create_object('HOT', 'DB08 RPC draft', 'RUN');
+  v_id := api.rpc_create_object('HOT', 'DB08 RPC draft', 'RUN', 'Entre-Deux', '97414');
   ASSERT v_id IS NOT NULL AND (SELECT status FROM public.object WHERE id = v_id) = 'draft', 'RPC creation remains draft';
 
   BEGIN
@@ -81,7 +81,7 @@ BEGIN
     ASSERT position('Organization creation' IN SQLERRM) > 0, 'ORG gate reached';
   END;
   BEGIN
-    PERFORM api.rpc_create_object('ORG', 'DB08 forbidden RPC ORG', 'RUN');
+    PERFORM api.rpc_create_object('ORG', 'DB08 forbidden RPC ORG', 'RUN', 'Entre-Deux', '97414');
     RAISE EXCEPTION 'DB08_FAIL: generic RPC created ORG';
   EXCEPTION WHEN insufficient_privilege THEN
     ASSERT position('Organization creation' IN SQLERRM) > 0, 'generic RPC respects same ORG gate';
@@ -130,7 +130,7 @@ BEGIN
   ASSERT (SELECT count(*) FROM public.object WHERE id = 'HOTRUN9980080005' AND status = 'published') = 1,
     'authorized initial publication succeeds after auto-attach';
   ASSERT api.user_can_publish_object('HOTRUN9980080005') IS TRUE, 'actual publisher scope established';
-  v_id := api.rpc_create_object('HOT', 'DB08 create then publish', 'RUN');
+  v_id := api.rpc_create_object('HOT', 'DB08 create then publish', 'RUN', 'Entre-Deux', '97414');
   ASSERT (SELECT status FROM public.object WHERE id = v_id) = 'draft', 'authorized workflow starts draft';
   PERFORM api.rpc_publish_object(v_id, TRUE);
   ASSERT (SELECT count(*) FROM public.object WHERE id = v_id AND status = 'published' AND published_at IS NOT NULL) = 1,

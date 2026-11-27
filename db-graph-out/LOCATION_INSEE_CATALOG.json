@@ -1,0 +1,179 @@
+{
+  "scope": "targeted live production location INSEE catalogue; not a complete refresh",
+  "source": "Bertel Supabase MCP pg_catalog metadata and aggregate postcheck",
+  "tables": [
+    {
+      "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+      "rls": true,
+      "name": "object_location",
+      "owner": "postgres",
+      "columns": [
+        {
+          "name": "code_insee",
+          "type": "character varying(5)",
+          "comment": "Required commune INSEE code, derived from city/postcode on every write; validated against ref_commune. Postal code is not an INSEE code.",
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_object_location_code_insee ON public.object_location USING btree (code_insee)"
+      ],
+      "constraints": [
+        {
+          "name": "object_location_code_insee_fkey",
+          "validated": true,
+          "definition": "FOREIGN KEY (code_insee) REFERENCES ref_commune(insee_code)"
+        }
+      ]
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,anon=r/postgres,authenticated=r/postgres,service_role=r/postgres,bertel_thesaurus_publisher=r/postgres}",
+      "rls": true,
+      "name": "ref_commune_postcode",
+      "owner": "postgres",
+      "columns": [
+        {
+          "name": "postcode",
+          "type": "character varying(5)",
+          "comment": null,
+          "not_null": true
+        },
+        {
+          "name": "insee_code",
+          "type": "character varying(5)",
+          "comment": null,
+          "not_null": true
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_ref_commune_postcode_insee ON public.ref_commune_postcode USING btree (insee_code)",
+        "CREATE UNIQUE INDEX ref_commune_postcode_pkey ON public.ref_commune_postcode USING btree (postcode, insee_code)"
+      ],
+      "constraints": [
+        {
+          "name": "ref_commune_postcode_insee_code_fkey",
+          "validated": true,
+          "definition": "FOREIGN KEY (insee_code) REFERENCES ref_commune(insee_code)"
+        },
+        {
+          "name": "ref_commune_postcode_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (postcode, insee_code)"
+        },
+        {
+          "name": "ref_commune_postcode_postcode_check",
+          "validated": true,
+          "definition": "CHECK (((postcode)::text ~ '^[0-9]{5}$'::text))"
+        }
+      ]
+    }
+  ],
+  "database": "postgres",
+  "policies": [
+    {
+      "cmd": "SELECT",
+      "qual": "true",
+      "roles": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "tablename": "ref_commune_postcode",
+      "permissive": "PERMISSIVE",
+      "policyname": "pub_ref_commune_postcode_read",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "true",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "tablename": "ref_commune_postcode",
+      "permissive": "PERMISSIVE",
+      "policyname": "publisher_ref_commune_postcode_read",
+      "schemaname": "public",
+      "with_check": null
+    }
+  ],
+  "triggers": [
+    {
+      "name": "a_set_location_insee",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER a_set_location_insee BEFORE INSERT OR UPDATE OF city, postcode, code_insee ON public.object_location FOR EACH ROW EXECUTE FUNCTION internal.set_location_insee()"
+    },
+    {
+      "name": "thesaurus_assignment_guard",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_assignment_guard BEFORE INSERT OR DELETE OR UPDATE ON public.object_location FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_assignment('[{\"kind\":\"commune\",\"domain\":null,\"keys\":[{\"local\":\"code_insee\",\"target\":\"insee_code\"}]}]')"
+    }
+  ],
+  "functions": [
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "args": "p_name text",
+      "name": "normalize_commune_name",
+      "schema": "internal",
+      "returns": "text",
+      "body_md5": "59ea182304bf73d0667d24327b1c33cc",
+      "settings": [
+        "search_path=pg_catalog, public, pg_temp"
+      ],
+      "volatility": "i",
+      "anon_execute": false,
+      "security_definer": false,
+      "service_role_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres,bertel_thesaurus_publisher=X/postgres}",
+      "args": "p_city text, p_postcode text",
+      "name": "resolve_location_insee",
+      "schema": "internal",
+      "returns": "text",
+      "body_md5": "b245d9e0d236d9244190c47729d421f7",
+      "settings": [
+        "search_path=pg_catalog, public, internal, pg_temp"
+      ],
+      "volatility": "s",
+      "anon_execute": false,
+      "security_definer": false,
+      "service_role_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "args": "",
+      "name": "set_location_insee",
+      "schema": "internal",
+      "returns": "trigger",
+      "body_md5": "9206d3399e0cc89b40f80453094032b1",
+      "settings": [
+        "search_path=pg_catalog, public, internal, pg_temp"
+      ],
+      "volatility": "v",
+      "anon_execute": false,
+      "security_definer": false,
+      "service_role_execute": false,
+      "authenticated_execute": false
+    }
+  ],
+  "migration": "supabase/migrations/20261127054746_location_insee.sql",
+  "postcheck": {
+    "locations": 1189,
+    "missing_insee": 0,
+    "unknown_insee": 0,
+    "postal_mappings": 37,
+    "inconsistent_insee": 0,
+    "objects_without_main_location": 4
+  },
+  "project_id": "ryycrdhlkmzpxwwwwupy",
+  "captured_at": "2026-11-27T05:55:41.163971+00:00",
+  "migration_installed": true,
+  "graph_update": {
+    "graph_json_changed": false,
+    "baseline_preserved": "Full production catalogue of 2026-11-06 and existing targeted supplements remain unchanged. These observed tables/functions/constraints/policies/triggers are recorded only in this body-free evidence and LOCATION_INSEE.md.",
+    "full_refresh": false
+  }
+}

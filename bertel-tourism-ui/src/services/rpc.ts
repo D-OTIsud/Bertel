@@ -1106,6 +1106,9 @@ export async function listPublicationBoard(): Promise<PublicationCard[]> {
 export const DEFAULT_REGION_CODE = 'RUN';
 
 function mapCreateObjectError(message: string): Error {
+  if (/INSEE_|MISSING_LOCATION|INVALID_POSTCODE|COMMUNE_|MISSING_REQUIRED_FIELD:.*(?:commune|code postal)/i.test(message)) {
+    return new Error('Vérifiez le code postal et choisissez une commune correspondante.');
+  }
   if (/NO_AUTH_CONTEXT|not[ _-]*authenticat/i.test(message)) {
     return new Error('Session expirée — reconnectez-vous pour créer une fiche.');
   }
@@ -1185,7 +1188,7 @@ export async function assignObjectTaxonomy(input: {
   }
 }
 
-export async function createObject(input: { type: string; name: string }): Promise<string> {
+export async function createObject(input: { type: string; name: string; city: string; postcode: string }): Promise<string> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return `DEMO-${input.type}-${Date.now()}`;
@@ -1200,6 +1203,8 @@ export async function createObject(input: { type: string; name: string }): Promi
     p_object_type: input.type,
     p_name: input.name,
     p_region_code: DEFAULT_REGION_CODE,
+    p_city: input.city.trim(),
+    p_postcode: input.postcode.trim(),
   });
 
   if (error) {

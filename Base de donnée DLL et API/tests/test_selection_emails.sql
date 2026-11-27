@@ -412,8 +412,8 @@ BEGIN
   SELECT 'EMLBIG' || lpad(g::text, 10, '0'), 'HLO', 'Gros lot ' || g, 'published', now()
   FROM generate_series(1, 205) g;
 
-  INSERT INTO object_location (object_id, city, is_main_location)
-  SELECT 'EMLBIG' || lpad(g::text, 10, '0'), 'Zzgroslot', true
+  INSERT INTO object_location (object_id, city, code_insee, is_main_location)
+  SELECT 'EMLBIG' || lpad(g::text, 10, '0'), 'Zzgroslot', '97403', true
   FROM generate_series(1, 205) g;
 
   INSERT INTO object_org_link (object_id, org_object_id, role_id)

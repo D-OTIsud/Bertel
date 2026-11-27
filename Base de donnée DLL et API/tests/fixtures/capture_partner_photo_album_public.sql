@@ -8,6 +8,9 @@ SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true);
 INSERT INTO public.object (id, object_type, name, status, is_test) VALUES
   ('HOTRUN999999AP01', 'HOT', 'Album public baseline hotel', 'published', false),
   ('ACTRUN999999AP02', 'ACT', 'Album public baseline activity', 'published', false);
+INSERT INTO public.object_location(object_id, city, postcode, code_insee, is_main_location) VALUES
+  ('HOTRUN999999AP01', 'Entre-Deux', '97414', '97403', true),
+  ('ACTRUN999999AP02', 'Entre-Deux', '97414', '97403', true);
 INSERT INTO public.media (id, object_id, media_type_id, url, title, position, is_main, is_published, visibility)
   SELECT '00000000-0000-4000-a000-00000000af01', 'HOTRUN999999AP01', id,
     'https://example.invalid/album-public/hotel.jpg', 'Public hotel photo', 1, true, true, 'public'

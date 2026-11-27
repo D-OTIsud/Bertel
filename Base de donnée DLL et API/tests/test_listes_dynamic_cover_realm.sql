@@ -22,9 +22,9 @@ BEGIN
     ('HOTRVWCOVER00001','HOT','Premier sans photo','published'),
     ('HOTRVWCOVER00002','HOT','Second avec photo','published');
   UPDATE object SET cached_main_image_url='https://example.test/second.jpg' WHERE id='HOTRVWCOVER00002';
-  INSERT INTO object_location(object_id, city, is_main_location) VALUES
-    ('HOTRVWCOVER00001','ZzListCoverReview',true),
-    ('HOTRVWCOVER00002','ZzListCoverReview',true);
+  INSERT INTO object_location(object_id, city, code_insee, is_main_location) VALUES
+    ('HOTRVWCOVER00001','ZzListCoverReview','97403',true),
+    ('HOTRVWCOVER00002','ZzListCoverReview','97403',true);
   INSERT INTO auth.users(id,email) VALUES(u,'cover-review@example.test');
   INSERT INTO app_user_profile(id,role,display_name) VALUES(u,'tourism_agent','Couverture Test')
     ON CONFLICT(id) DO UPDATE SET role=excluded.role;
@@ -45,7 +45,7 @@ BEGIN
   ASSERT current_user = 'postgres' AND auth.uid() IS NULL AND auth.role() IS NULL, 'New source fixture uses maintenance context';
   UPDATE object_list SET last_activity_at=activity WHERE id=list_id;
   INSERT INTO object(id,object_type,name,status) VALUES('HOTRVWCOVER00003','HOT','Nouveau résultat automatique','published');
-  INSERT INTO object_location(object_id,city,is_main_location) VALUES('HOTRVWCOVER00003','ZzListCoverReview',true);
+  INSERT INTO object_location(object_id,city,code_insee,is_main_location) VALUES('HOTRVWCOVER00003','ZzListCoverReview','97403',true);
   PERFORM set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);
   SET LOCAL ROLE authenticated;
   ASSERT current_user = 'authenticated' AND auth.uid() = u AND auth.role() = 'authenticated', 'List assertions require the real member context';
@@ -88,8 +88,8 @@ BEGIN
   INSERT INTO object_org_link(object_id,org_object_id,role_id,is_primary)
     VALUES('HOTRVWCOVER00000','ORGRVWCOVER00002',publisher,true);
   UPDATE object SET cached_main_image_url='https://example.test/REALM-SECRET.jpg' WHERE id='HOTRVWCOVER00000';
-  INSERT INTO object_location(object_id,city,is_main_location)
-    VALUES('HOTRVWCOVER00000','ZzListCoverReview',true);
+  INSERT INTO object_location(object_id,city,code_insee,is_main_location)
+    VALUES('HOTRVWCOVER00000','ZzListCoverReview','97403',true);
   INSERT INTO contact_channel(object_id,kind_id,value,is_public)
     VALUES('HOTRVWCOVER00000',phone_kind,'REALM-SECRET-PHONE',true);
   ASSERT (SELECT is_test FROM object WHERE id='HOTRVWCOVER00000'), 'Realm must be set by organization trigger';

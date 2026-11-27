@@ -312,7 +312,7 @@ BEGIN
     PERFORM set_config('request.jwt.claims',
       json_build_object('sub', v_creator, 'role','authenticated')::text, true);
     SET LOCAL ROLE authenticated;
-      v_new := api.rpc_create_object('HOT', 'Fiche creee dans le bac a sable', 'RUN');
+      v_new := api.rpc_create_object('HOT', 'Fiche creee dans le bac a sable', 'RUN', 'Entre-Deux', '97414');
       -- Publier est le cas qui COMPTE : un brouillon etait deja invisible avant ce
       -- chantier. Le corpus de test n'est dangereux qu'une fois publie.
       PERFORM api.rpc_publish_object(v_new);

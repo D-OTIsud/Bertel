@@ -30,8 +30,8 @@ BEGIN
   SELECT 'RSLV' || lpad(g::text, 12, '0'), 'HLO', 'Resolveur ' || g, 'published', now()
   FROM generate_series(1, 205) g;
 
-  INSERT INTO object_location (object_id, city, is_main_location)
-  SELECT 'RSLV' || lpad(g::text, 12, '0'), 'Zzresolveur', true
+  INSERT INTO object_location (object_id, city, code_insee, is_main_location)
+  SELECT 'RSLV' || lpad(g::text, 12, '0'), 'Zzresolveur', '97403', true
   FROM generate_series(1, 205) g;
 
   -- A. Le MOTEUR interne rend les 205 — EXACTEMENT, pas « plus de 200 » : un

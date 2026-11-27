@@ -66,6 +66,12 @@ BEGIN
     ('HOTRUN999999AR04','ORGRUN999999AR01',v_publisher,true),
     ('HOTRUN999999AR05','ORGRUN999999AR03',v_publisher,true);
   UPDATE public.object SET is_test=api.object_expected_is_test(id) WHERE id='HOTRUN999999AR05';
+  -- Committed witnesses obey the same canonical-location requirement as real
+  -- fiches. Keep the address neutral to the authorization assertions below.
+  INSERT INTO public.object_location(object_id, city, postcode, code_insee, is_main_location)
+  SELECT object_id, 'Entre-Deux', '97414', '97403', true
+  FROM unnest(ARRAY['HOTRUN999999AR01','HOTRUN999999AR02','HOTRUN999999AR03',
+    'HOTRUN999999AR04','HOTRUN999999AR05']) AS fixture(object_id);
   UPDATE public.object SET created_by='00000000-0000-4000-a000-00000000ae11' WHERE id IN('HOTRUN999999AR01','HOTRUN999999AR02','HOTRUN999999AR03','HOTRUN999999AR05');
   INSERT INTO public.user_org_membership(id,user_id,org_object_id,is_active) VALUES
     ('00000000-0000-4000-a000-00000000ab11','00000000-0000-4000-a000-00000000ae11','ORGRUN999999AR01',true);

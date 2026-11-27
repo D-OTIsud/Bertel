@@ -121,8 +121,10 @@ export async function launchOwnedBrowser(app, local) {
 
 export async function testEditorRaces({ local, objectId, writerId, email, password, secondAccount, realmAccount }) {
   assert.ok(process.platform === 'linux' && objectId === 'HOTRUN999999AR01', 'exact disposable Linux editor fixture required');
+  assert.equal(local.sql("SELECT count(*)=1 AND bool_and(city='Entre-Deux' AND postcode='97414' AND code_insee='97403') " +
+    "FROM public.object_location WHERE object_id='HOTRUN999999AR01' AND is_main_location IS TRUE",
+  'read the committed editor main-address fixture'), 't', 'the editor fixture already has a canonical main address');
   local.sql("BEGIN; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);" +
-    "INSERT INTO public.object_location(object_id, city, is_main_location) VALUES ('HOTRUN999999AR01','Saint-Denis',true);" +
     "INSERT INTO public.object_description(object_id, description, description_chapo, visibility) " +
     "VALUES ('HOTRUN999999AR01','Synthetic editorial description','Synthetic introduction','public'); COMMIT;",
   'add editor publication prerequisites');

@@ -572,7 +572,7 @@ ROLLBACK;
 \ir migration_partner_tombstone_feed.sql
 
 \echo '== 18c-test  la garde prouvee dans les DEUX sens, et sur la surface qui compte : l API partenaire =='
-\ir tests/test_test_org_isolation.sql
+-- Run test_test_org_isolation.sql after the final creation RPC overlay below.
 
 \echo '== 18c0-test derived realm: direct contradictions denied, authorized source transitions retained =='
 \ir tests/test_object_realm_derived_write_guard.sql
@@ -876,6 +876,16 @@ COMMIT;
 \echo '== Name suggestions: selected statuses before LIMIT, compatible legacy RPC =='
 \ir ../supabase/migrations/20261127031641_search_objects_by_name_status_filter.sql
 \ir tests/test_search_objects_by_name_status_filter.sql
+
+\echo '== Automatic and mandatory INSEE for canonical addresses =='
+\ir ../supabase/migrations/20261127054746_location_insee.sql
+\ir tests/test_location_insee.sql
+
+\echo '== Atomic fiche creation with mandatory commune and postal code =='
+\ir ../supabase/migrations/20261127061143_create_object_required_location.sql
+\ir tests/test_create_object_required_location.sql
+\ir tests/test_object_main_location_required.sql
+\ir tests/test_test_org_isolation.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

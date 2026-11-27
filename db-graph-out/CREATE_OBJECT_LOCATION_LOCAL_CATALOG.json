@@ -1,0 +1,158 @@
+{
+  "capture_scope": "source and isolated local PostgreSQL rehearsal; NOT a production catalogue refresh or deployment",
+  "source": "local loopback PostgreSQL pg_catalog metadata and isolated rehearsal evidence",
+  "server": "127.0.0.1:55439",
+  "baseline_database": "bertel_location_insee_test_20261127",
+  "migration_file": "supabase/migrations/20261127061143_create_object_required_location.sql",
+  "migration_sha256": "06f0dd6dd38abb01377da2b7c3c3b581e7e5f584e3b43f0ba6fddcbb887a4990",
+  "database": "bertel_create_location_test_20261127",
+  "triggers": [
+    {
+      "name": "object_creation_main_location_required",
+      "table": "object",
+      "enabled": "O",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER object_creation_main_location_required AFTER INSERT ON public.object DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN ((new.object_type <> 'ORG'::object_type)) EXECUTE FUNCTION internal.guard_object_main_location_insee()",
+      "initially_deferred": true
+    },
+    {
+      "name": "object_main_location_delete_required",
+      "table": "object_location",
+      "enabled": "O",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER object_main_location_delete_required AFTER DELETE ON public.object_location DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (((old.object_id IS NOT NULL) AND (old.is_main_location IS TRUE))) EXECUTE FUNCTION internal.guard_object_main_location_insee()",
+      "initially_deferred": true
+    },
+    {
+      "name": "object_main_location_update_required",
+      "table": "object_location",
+      "enabled": "O",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER object_main_location_update_required AFTER UPDATE ON public.object_location DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (((old.object_id IS NOT NULL) AND (old.is_main_location IS TRUE) AND ((new.object_id IS DISTINCT FROM old.object_id) OR (new.is_main_location IS DISTINCT FROM true)))) EXECUTE FUNCTION internal.guard_object_main_location_insee()",
+      "initially_deferred": true
+    },
+    {
+      "name": "object_type_main_location_required",
+      "table": "object",
+      "enabled": "O",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER object_type_main_location_required AFTER UPDATE ON public.object DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (((old.object_type IS DISTINCT FROM new.object_type) AND (new.object_type <> 'ORG'::object_type))) EXECUTE FUNCTION internal.guard_object_main_location_insee()",
+      "initially_deferred": true
+    }
+  ],
+  "functions": [
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "owner": "postgres",
+      "returns": "text",
+      "body_md5": "fac5ea7b4af5cb866e6819f474e2779a",
+      "settings": [
+        "search_path=pg_catalog, public, api, auth, internal, pg_temp"
+      ],
+      "arguments": "p_object_type text, p_name text, p_region_code text DEFAULT NULL::text",
+      "signature": "api.rpc_create_object(text,text,text)",
+      "volatility": "v",
+      "anon_execute": false,
+      "definition_md5": "7d1d94bcb10e15ddae77821e59f5394f",
+      "security_definer": true,
+      "default_arguments": 1,
+      "uses_no_key_update": false,
+      "service_role_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "owner": "postgres",
+      "returns": "text",
+      "body_md5": "bdafa6a7a1e20b1431ba7053fb44e4b2",
+      "settings": [
+        "search_path=pg_catalog, public, api, auth, internal, pg_temp"
+      ],
+      "arguments": "p_object_type text, p_name text, p_region_code text, p_city text, p_postcode text",
+      "signature": "api.rpc_create_object(text,text,text,text,text)",
+      "volatility": "v",
+      "anon_execute": false,
+      "definition_md5": "443e66fbcf1aec7c8aae6d559a53fba0",
+      "security_definer": true,
+      "default_arguments": 0,
+      "uses_no_key_update": false,
+      "service_role_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "owner": "postgres",
+      "returns": "trigger",
+      "body_md5": "631663516157c4cb933391f37132445c",
+      "settings": [
+        "search_path=pg_catalog, public, pg_temp"
+      ],
+      "arguments": "",
+      "signature": "internal.guard_object_main_location_insee()",
+      "volatility": "v",
+      "anon_execute": false,
+      "definition_md5": "d658c083be03995e9155c37a1b09a58f",
+      "security_definer": true,
+      "default_arguments": 0,
+      "uses_no_key_update": true,
+      "service_role_execute": false,
+      "authenticated_execute": false
+    }
+  ],
+  "captured_at": "2026-11-27T10:24:25.049039+04:00",
+  "final_counts": {
+    "locations": 1183,
+    "missing_insee": 0,
+    "objects_without_main_location": 4
+  },
+  "server_version": "17.10",
+  "rehearsal_evidence": {
+    "date": "2026-11-27",
+    "scope": "isolated local PostgreSQL only; no remote migration applied",
+    "migration": "20261127061143_create_object_required_location.sql",
+    "baseline_database": "bertel_location_insee_test_20261127",
+    "database": "bertel_create_location_test_20261127",
+    "server": "127.0.0.1:55439",
+    "migration_idempotent": true,
+    "tests": {
+      "test_create_object_required_location": "PASS",
+      "test_object_main_location_required": "PASS",
+      "test_object_initial_publication_guard": "PASS",
+      "test_test_org_isolation": "PASS",
+      "test_location_insee": "PASS",
+      "test_object_current_rights_committed_revocation": "PASS with current_rights_disposable=true"
+    },
+    "concurrency": {
+      "scenario": "Two concurrent transactions: object retype and delete/replace main location, each committing",
+      "before_fix": {
+        "owner_lock": "FOR UPDATE",
+        "retype": "40P01 deadlock",
+        "replace_main": "committed"
+      },
+      "after_fix": {
+        "owner_lock": "FOR NO KEY UPDATE",
+        "retype": "committed",
+        "replace_main": "committed"
+      },
+      "race_fixture_object_remaining": 0
+    },
+    "final_checks": {
+      "locations": 1183,
+      "missing_insee": 0,
+      "enabled_initially_deferred_guards": 4,
+      "creation_fixture_objects": 0,
+      "creation_fixture_auth_users": 0
+    },
+    "notes": [
+      "Three-argument and two-key legacy calls refuse after current authorization checks.",
+      "Creation and main location write are atomic; governed assignment failure rolls back object, links, location and history.",
+      "Global constraint guards cover direct creation, retyping and main removal without retro-validating legacy rows or institutional ORG.",
+      "The committed current-rights integration and concurrency probes execute only on this isolated local copy."
+    ]
+  },
+  "graph_update": {
+    "graph_json_changed": false,
+    "full_catalogue_regenerated": false,
+    "baseline_preserved": "Full production baseline and all existing targeted supplements remain unchanged. This file is local evidence only."
+  }
+}

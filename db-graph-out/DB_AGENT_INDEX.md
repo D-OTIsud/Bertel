@@ -137,6 +137,26 @@ précédent et [SMTP_LIST_EMAIL.md](SMTP_LIST_EMAIL.md) pour le lot SMTP.
 
 ## Artifacts
 
+Targeted live-production supplement: [LOCATION_INSEE.md](LOCATION_INSEE.md) and
+[body-free catalogue evidence](LOCATION_INSEE_CATALOG.json) record the installed
+INSEE migration `20261127054746`, observed on 27 November 2026 at
+`2026-11-27T05:55:41.163971+00:00`: postal lookup, three invoker functions,
+required/validated location INSEE FK and two location triggers. This is a partial
+capture; graph.json and the baseline counts above remain unchanged. Its aggregate
+postcheck finds 1,189 locations with no missing/unknown/inconsistent INSEE code;
+four objects still have no main location and are not assigned an invented commune.
+
+Targeted source/local-catalog supplement:
+[CREATE_OBJECT_LOCATION.md](CREATE_OBJECT_LOCATION.md) and
+[exact isolated local metadata](CREATE_OBJECT_LOCATION_LOCAL_CATALOG.json) describe
+the approved creation flow and migration `20261127061143`: atomic five-argument
+creation, fail-closed legacy signatures and four deferred non-ORG main-location
+guards. The local PostgreSQL rehearsal includes six passing SQL checks and a
+two-connection deadlock regression fixed with `FOR NO KEY UPDATE`. This migration
+is not recorded as deployed to production; global graph counts and existing
+production provenance remain unchanged.
+
+
 - [PARTNER_SELECTION_RPC.md](PARTNER_SELECTION_RPC.md) : complément live de production du 9 novembre, limité au nouveau RPC ; les autres métadonnées conservent leur provenance du catalogue 212.
 - `dbdoc/` — per-table docs + ER (tbls)
 - `db-graph-out/FUNCTIONS.md` · `POLICIES.md` · `TYPES.md` — the glue (functions/policies/enums)

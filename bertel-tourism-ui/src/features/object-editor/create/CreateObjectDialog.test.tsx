@@ -1,6 +1,8 @@
 import type { ObjectSearchResult } from '../useObjectSearch';
 
 jest.mock('../../../services/rpc', () => ({ createObject: jest.fn(), assignObjectTaxonomy: jest.fn() }));
+const mockListCreationCommunes = jest.fn();
+jest.mock('../../../services/commune-reference', () => ({ listCreationCommunes: () => mockListCreationCommunes() }));
 
 const mockListTaxonomyReferences = jest.fn();
 const mockListAccommodationFamilies = jest.fn();
@@ -94,6 +96,11 @@ beforeEach(() => {
   mockUseObjectSearch.mockReturnValue({ results: [], loading: false });
   mockListTaxonomyReferences.mockReset();
   mockListAccommodationFamilies.mockReset();
+  mockListCreationCommunes.mockReset();
+  mockListCreationCommunes.mockResolvedValue([
+    { code: '97403', name: 'Entre-Deux', postcodes: ['97414', '99998'] },
+    { code: '97422', name: 'Le Tampon', postcodes: ['97418', '97430', '99998'] },
+  ]);
   // Most dialog tests do not concern the catalogue. Keeping the request pending
   // avoids unrelated async state updates after their assertions/unmount.
   mockListTaxonomyReferences.mockImplementation(() => new Promise(() => {}));
@@ -101,9 +108,16 @@ beforeEach(() => {
 });
 
 /** Parcours NON hébergement : inchangé — une tuile de type, puis le nom. */
-function selectTypeAndName(name: string) {
+async function fillLocation(postcode = '97414') {
+  await waitFor(() => expect(screen.queryByText('Chargement du référentiel des communes…')).not.toBeInTheDocument());
+  fireEvent.change(screen.getByLabelText(/^Code postal$/), { target: { value: postcode } });
+  await waitFor(() => expect(screen.getByLabelText(/^Commune$/)).toHaveValue(postcode === '97414' ? '97403' : '97422'));
+}
+
+async function selectTypeAndName(name: string) {
   fireEvent.click(screen.getByRole('radio', { name: /^Restaurant$/i }));
   fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: name } });
+  await fillLocation();
 }
 
 /** Charge le parcours guidé avec le catalogue v2 résolu. */
@@ -125,18 +139,24 @@ async function expectGuidedCreationType(family: string, nature: string, expected
   mockCreateObject.mockResolvedValue(`${expectedType}RUN0000000999`);
   await chooseFamilyAndNature(family, nature);
   fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: `Test ${nature}` } });
+  await fillLocation();
   fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
   await waitFor(() => expect(mockCreateObject).toHaveBeenCalledWith({
     type: expectedType,
     name: `Test ${nature}`,
+    city: 'Entre-Deux',
+    postcode: '97414',
   }));
 }
 
-it('disables create until a type and a non-empty name are chosen', () => {
+it('keeps create available and reports missing fields on submit', async () => {
   render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
   const create = screen.getByRole('button', { name: /créer la fiche/i });
-  expect(create).toBeDisabled();
-  selectTypeAndName('Hôtel des Cimes');
+  expect(create).toBeEnabled();
+  fireEvent.click(create);
+  expect(mockCreateObject).not.toHaveBeenCalled();
+  expect(screen.getByText('Le code postal est obligatoire.')).toBeInTheDocument();
+  await selectTypeAndName('Hôtel des Cimes');
   expect(create).toBeEnabled();
 });
 
@@ -178,10 +198,10 @@ it('calls createObject with the chosen type+name and forwards the new id', async
   mockCreateObject.mockResolvedValue('RESRUN0000000001');
   const onCreated = jest.fn();
   render(<CreateObjectDialog open onClose={() => {}} onCreated={onCreated} />);
-  selectTypeAndName('Le Longanis');
+  await selectTypeAndName('Le Longanis');
   fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith('RESRUN0000000001'));
-  expect(mockCreateObject).toHaveBeenCalledWith({ type: 'RES', name: 'Le Longanis' });
+  expect(mockCreateObject).toHaveBeenCalledWith({ type: 'RES', name: 'Le Longanis', city: 'Entre-Deux', postcode: '97414' });
   // Parcours non hébergement : aucune taxonomie n'est posée à la création.
   expect(mockAssignObjectTaxonomy).not.toHaveBeenCalled();
 });
@@ -190,7 +210,7 @@ it('surfaces a backend error and stays open (no onCreated)', async () => {
   mockCreateObject.mockRejectedValue(new Error('Pas la permission de créer'));
   const onCreated = jest.fn();
   render(<CreateObjectDialog open onClose={() => {}} onCreated={onCreated} />);
-  selectTypeAndName('X');
+  await selectTypeAndName('X');
   fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
   expect(await screen.findByRole('alert')).toHaveTextContent(/permission de créer/i);
   expect(onCreated).not.toHaveBeenCalled();
@@ -309,11 +329,12 @@ describe("§201 — création guidée d'un hébergement", () => {
     mockCreateObject.mockResolvedValue('HPARUN0000000001');
     await chooseFamilyAndNature('Aires et haltes de plein air', 'Aire de bivouac');
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Bivouac du Piton' } });
+    await fillLocation();
     fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
 
-    await waitFor(() => expect(mockCreateObject).toHaveBeenCalledWith({ type: 'HPA', name: 'Bivouac du Piton' }));
+    await waitFor(() => expect(mockCreateObject).toHaveBeenCalledWith({ type: 'HPA', name: 'Bivouac du Piton', city: 'Entre-Deux', postcode: '97414' }));
     // Sans cette écriture, la nature choisie par l'agent serait silencieusement
-    // perdue : rpc_create_object ne prend que type/nom/région.
+    // perdue : la nature se pose après la création atomique fiche/localisation.
     await waitFor(() => expect(mockAssignObjectTaxonomy).toHaveBeenCalledWith({
       objectId: 'HPARUN0000000001', domain: 'taxonomy_hpa', code: 'bivouac_area',
     }));
@@ -331,6 +352,7 @@ describe("§201 — création guidée d'un hébergement", () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Aires et haltes de plein air' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Aire de bivouac' }));
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Bivouac du Piton' } });
+    await fillLocation();
     fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
 
     // La fiche EXISTE : re-proposer « créer » ferait fabriquer un doublon.
@@ -370,8 +392,9 @@ describe("§201 — création guidée d'un hébergement", () => {
 
     mockCreateObject.mockResolvedValue('RESRUN0000000009');
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Chez Guilaine' } });
+    await fillLocation();
     fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
-    await waitFor(() => expect(mockCreateObject).toHaveBeenCalledWith({ type: 'RES', name: 'Chez Guilaine' }));
+    await waitFor(() => expect(mockCreateObject).toHaveBeenCalledWith({ type: 'RES', name: 'Chez Guilaine', city: 'Entre-Deux', postcode: '97414' }));
     expect(mockAssignObjectTaxonomy).not.toHaveBeenCalled();
   });
 
@@ -436,14 +459,84 @@ describe('CreateObjectDialog — validation par champ (chantier 2026-08-28)', ()
     expect(screen.getByText('Choisissez un type de fiche.')).toBeInTheDocument();
   });
 
-  it('les deux reproches disparaissent quand la saisie devient valide', () => {
+  it('les deux reproches disparaissent quand la saisie devient valide', async () => {
     render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
     fireEvent.blur(screen.getByLabelText(/nom de la fiche/i));
     expect(screen.getByText('Le nom est obligatoire.')).toBeInTheDocument();
-    selectTypeAndName('Hôtel des Cimes');
+    await selectTypeAndName('Hôtel des Cimes');
     expect(screen.queryByText('Le nom est obligatoire.')).not.toBeInTheDocument();
     expect(screen.queryByText('Choisissez un type de fiche.')).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/nom de la fiche/i)).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByLabelText(/nom de la fiche/i)).toHaveAttribute('aria-invalid', 'false');
     expect(screen.getByRole('button', { name: /créer la fiche/i })).toBeEnabled();
+  });
+});
+
+describe('CreateObjectDialog — commune et code postal', () => {
+  it('proposes the commune from its postal mapping and never asks for an INSEE code', async () => {
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    await fillLocation('97418');
+    expect(screen.getByLabelText(/^Commune$/)).toHaveValue('97422');
+    expect(screen.queryByLabelText(/insee/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^Code postal$/)).toHaveAttribute('required');
+    expect(screen.getByLabelText(/^Code postal$/)).toHaveAttribute('inputmode', 'numeric');
+    expect(screen.getByLabelText(/^Code postal$/)).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText(/^Commune$/)).toHaveAttribute('required');
+  });
+
+  it('requires an explicit commune choice for a shared postcode and clears an incompatible old choice', async () => {
+    mockCreateObject.mockResolvedValue('RESRUN0000000100');
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    await selectTypeAndName('Localisation partagée');
+    fireEvent.change(screen.getByLabelText(/^Code postal$/), { target: { value: '99998' } });
+    // A previous matching choice stays valid; an empty new shared postcode never picks arbitrarily.
+    fireEvent.change(screen.getByLabelText(/^Commune$/), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
+    expect(mockCreateObject).not.toHaveBeenCalled();
+    expect(screen.getByText('Choisissez une commune correspondant au code postal.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/^Commune$/)).toHaveFocus());
+    fireEvent.change(screen.getByLabelText(/^Commune$/), { target: { value: '97422' } });
+    fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
+    await waitFor(() => expect(mockCreateObject).toHaveBeenCalledWith({
+      type: 'RES', name: 'Localisation partagée', city: 'Le Tampon', postcode: '99998',
+    }));
+  });
+
+  it('rejects an unknown postal code and focuses the field without calling creation', async () => {
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    await selectTypeAndName('Commune inconnue');
+    fireEvent.change(screen.getByLabelText(/^Code postal$/), { target: { value: '12345' } });
+    expect(screen.queryByText('Aucune commune disponible pour ce code postal.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
+    expect(mockCreateObject).not.toHaveBeenCalled();
+    expect(screen.getByText('Aucune commune disponible pour ce code postal.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/^Code postal$/)).toHaveFocus());
+    fireEvent.change(screen.getByLabelText(/^Code postal$/), { target: { value: '97430' } });
+    await waitFor(() => expect(screen.getByLabelText(/^Commune$/)).toHaveValue('97422'));
+    expect(screen.queryByText('Aucune commune disponible pour ce code postal.')).not.toBeInTheDocument();
+  });
+
+  it('allows retry after a reference failure and retains the entered name and postcode', async () => {
+    mockListCreationCommunes.mockRejectedValueOnce(new Error('Unavailable'));
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Conserver ma saisie' } });
+    fireEvent.change(screen.getByLabelText(/^Code postal$/), { target: { value: '97414' } });
+    const retry = await screen.findByRole('button', { name: 'Réessayer' });
+    fireEvent.click(retry);
+    await waitFor(() => expect(screen.getByLabelText(/^Commune$/)).toHaveValue('97403'));
+    expect(screen.getByLabelText(/nom de la fiche/i)).toHaveValue('Conserver ma saisie');
+    expect(screen.getByLabelText(/^Code postal$/)).toHaveValue('97414');
+    expect(mockListCreationCommunes).toHaveBeenCalledTimes(2);
+  });
+
+  it('resets name, postcode, commune and validation when cancelling', async () => {
+    const onClose = jest.fn();
+    render(<CreateObjectDialog open onClose={onClose} onCreated={() => {}} />);
+    await selectTypeAndName('À annuler');
+    fireEvent.click(screen.getByRole('button', { name: /^Annuler$/ }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText(/nom de la fiche/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^Code postal$/)).toHaveValue('');
+    expect(screen.getByLabelText(/^Commune$/)).toHaveValue('');
+    expect(screen.queryByText('Le code postal est obligatoire.')).not.toBeInTheDocument();
   });
 });

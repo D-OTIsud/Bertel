@@ -22,8 +22,8 @@ BEGIN
     (v_pub,   'HOT', 'P03 published', 'published'),
     (v_draft, 'HOT', 'P03 draft',     'draft');
 
-  INSERT INTO object_location (object_id, latitude, longitude) VALUES
-    (v_pub, 1.111111, 1.111111), (v_draft, 2.222222, 2.222222);
+  INSERT INTO object_location (object_id, code_insee, latitude, longitude) VALUES
+    (v_pub, '97403', 1.111111, 1.111111), (v_draft, '97403', 2.222222, 2.222222);
 
   INSERT INTO object_price (object_id, kind_id, amount) VALUES (v_pub,   v_kind, 10) RETURNING id INTO v_pub_price;
   INSERT INTO object_price (object_id, kind_id, amount) VALUES (v_draft, v_kind, 20) RETURNING id INTO v_draft_price;

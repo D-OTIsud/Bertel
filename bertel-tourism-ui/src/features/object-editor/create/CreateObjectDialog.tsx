@@ -47,6 +47,7 @@ import {
   accommodationNatureDescription,
 } from '../../../utils/accommodation-help';
 import { strictErrorMessage } from '../../../lib/strict-error-message';
+import { listCreationCommunes, type CreationCommune } from '../../../services/commune-reference';
 
 interface CreateObjectDialogProps {
   open: boolean;
@@ -279,9 +280,8 @@ function CreateTypeTile({
 }
 
 /**
- * Object-creation dialog (B1, §107): name the fiche, pick a type, then `createObject`
- * over the live RPC. It deliberately collects ONLY the two fields the RPC requires;
- * everything else is authored in the full-page editor that opens next. As the name is
+ * Object-creation dialog: name and locate the fiche, pick a type, then create the
+ * object and its INSEE-backed main location atomically through the live RPC. As the name is
  * typed, existing fiches with a close name are surfaced (type + location) so an
  * accidental duplicate is caught early; a same name elsewhere stays legitimate.
  */
@@ -290,6 +290,19 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const [type, setType] = useState('');
   const [name, setName] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
+  const [postcode, setPostcode] = useState('');
+  const [communeCode, setCommuneCode] = useState('');
+  const [postcodeTouched, setPostcodeTouched] = useState(false);
+  const [communeTouched, setCommuneTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [communes, setCommunes] = useState<CreationCommune[] | null>(null);
+  const [communesError, setCommunesError] = useState(false);
+  const [communesRetry, setCommunesRetry] = useState(0);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const postcodeRef = useRef<HTMLInputElement>(null);
+  const communeRef = useRef<HTMLSelectElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const creationInFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -302,6 +315,27 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const [guided, setGuided] = useState(false);
   const [familyCode, setFamilyCode] = useState<string | null>(null);
   const [natureSelection, setNatureSelection] = useState<{ domain: string; code: string } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setCommunes(null);
+    setCommunesError(false);
+    listCreationCommunes()
+      .then((items) => { if (!cancelled) setCommunes(items); })
+      .catch(() => { if (!cancelled) setCommunesError(true); });
+    return () => { cancelled = true; };
+  }, [open, communesRetry]);
+
+  const matchingCommunes = (communes ?? []).filter((commune) => commune.postcodes.includes(postcode.trim()));
+  const selectedCommune = matchingCommunes.find((commune) => commune.code === communeCode);
+  useEffect(() => {
+    // A late catalogue response also resolves a postal code entered while loading.
+    if (!communes) return;
+    const candidates = communes.filter((commune) => commune.postcodes.includes(postcode.trim()));
+    setCommuneCode((current) => candidates.length === 1 ? candidates[0].code
+      : candidates.some((commune) => commune.code === current) ? current : '');
+  }, [communes, postcode]);
 
   useEffect(() => {
     if (!open || taxonomies || taxonomyError) return;
@@ -351,8 +385,14 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   //  · le NOM ne se reproche qu'une fois le champ quitté (sinon on accuse un formulaire vierge) ;
   //  · le TYPE ne se reproche qu'une fois le nom saisi — c'est l'étape 2, il serait absurde de la
   //    signaler avant que l'agent ne l'ait atteinte.
-  const nameError = nameTouched ? validation.errors.name : undefined;
-  const typeError = name.trim() ? validation.errors.type : undefined;
+  const nameError = nameTouched || submitted ? validation.errors.name : undefined;
+  const typeError = name.trim() || submitted ? validation.errors.type : undefined;
+  const postcodeIssue = !postcode.trim() ? 'Le code postal est obligatoire.'
+    : !/^\d{5}$/.test(postcode.trim()) ? 'Saisissez un code postal à 5 chiffres.'
+      : communes && matchingCommunes.length === 0 ? 'Aucune commune disponible pour ce code postal.' : undefined;
+  const communeIssue = communes && !selectedCommune ? 'Choisissez une commune correspondant au code postal.' : undefined;
+  const postcodeError = postcodeTouched || submitted ? postcodeIssue : undefined;
+  const communeError = communeTouched || submitted ? communeIssue : undefined;
   const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === effectiveType))?.archetype ?? null;
   const accent = selectedArchetype ? ARCHETYPE_VISUAL[selectedArchetype] : null;
 
@@ -364,8 +404,15 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
     setType('');
     setName('');
     setNameTouched(false);
+    setPostcode('');
+    setCommuneCode('');
+    setPostcodeTouched(false);
+    setCommuneTouched(false);
+    setSubmitted(false);
+    creationInFlight.current = false;
     setError(null);
     setNotice(null);
+    setJustCreated(false);
     setBusy(false);
     setGuided(false);
     setFamilyCode(null);
@@ -393,17 +440,28 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   }
 
   async function handleCreate() {
-    if (!validation.ok || busy) return;
+    if (creationInFlight.current || busy) return;
+    setSubmitted(true);
+    if (!validation.ok || postcodeIssue || communeIssue || !selectedCommune || !communes) {
+      const invalid = validation.errors.name ? nameRef.current
+        : postcodeIssue ? postcodeRef.current : communeIssue ? communeRef.current
+          : validation.errors.type ? categoryRef.current : communeRef.current;
+      // Let React mount the associated error before moving screen-reader focus.
+      requestAnimationFrame(() => invalid?.focus());
+      return;
+    }
+    creationInFlight.current = true;
     setBusy(true);
     setError(null);
     setNotice(null);
     const pendingNature = guided ? natureSelection : null;
     let id: string;
     try {
-      id = await createObject({ type: effectiveType, name: name.trim() });
+      id = await createObject({ type: effectiveType, name: name.trim(), city: selectedCommune.name, postcode: postcode.trim() });
     } catch (err) {
       setError(strictErrorMessage(err, 'Création impossible pour le moment.'));
       setBusy(false);
+      creationInFlight.current = false;
       return;
     }
 
@@ -428,29 +486,34 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
-      <DialogContent showClose={!busy} className="max-w-2xl gap-0 overflow-hidden p-0">
+      <DialogContent showClose={!busy} className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="space-y-1 border-b border-line/70 px-6 pb-4 pt-6 text-left">
           <DialogTitle className="text-[19px] font-semibold tracking-tight text-ink">
             Créer une fiche
           </DialogTitle>
           <DialogDescription className="text-[13px] text-ink-3">
-            Nommez la fiche, puis choisissez son type. Vous complétez le reste dans l&apos;éditeur juste après.
+            Nommez et localisez la fiche, puis choisissez son type. Tous les champs sont obligatoires.
           </DialogDescription>
         </DialogHeader>
 
+        <form method="post" noValidate aria-label="Créer une fiche" className="contents" onSubmit={(event) => { event.preventDefault(); void handleCreate(); }}>
+
         {/* 1 · Name first */}
-        <div className="border-b border-line/70 px-6 py-4">
+        <div className="shrink-0 border-b border-line/70 px-6 py-4">
           <label htmlFor="create-object-name" className="mb-1.5 block text-[13px] font-semibold text-ink">
             Nom de la fiche
           </label>
           <input
             id="create-object-name"
+            name="name"
+            ref={nameRef}
             type="text"
+            required
             value={name}
             maxLength={MAX_OBJECT_NAME_LENGTH}
             onChange={(event) => setName(event.target.value)}
             onBlur={() => setNameTouched(true)}
-            aria-invalid={nameError ? true : undefined}
+            aria-invalid={Boolean(nameError)}
             aria-describedby={nameError ? 'create-object-name-error' : undefined}
             placeholder="ex. Hôtel des Cimes"
             autoComplete="off"
@@ -464,6 +527,66 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
             <p id="create-object-name-error" role="alert" className="mt-1.5 text-[12px] font-semibold text-red-600">
               {nameError}
             </p>
+          ) : null}
+
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="create-object-postcode" className="mb-1.5 block text-[13px] font-semibold text-ink">Code postal</label>
+              <input
+                id="create-object-postcode"
+                name="postcode"
+                ref={postcodeRef}
+                type="text"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                pattern="[0-9]{5}"
+                maxLength={5}
+                required
+                value={postcode}
+                onChange={(event) => { setPostcode(event.target.value); setPostcodeTouched(false); setSubmitted(false); }}
+                onBlur={() => { if (postcode) setPostcodeTouched(true); }}
+                aria-invalid={Boolean(postcodeError)}
+                aria-describedby={postcodeError ? 'create-object-postcode-error' : undefined}
+                className={'h-11 w-full rounded-xl border bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow focus:ring-2 focus:ring-lineStrong ' + (postcodeError ? 'border-red-500 focus:border-red-500' : 'border-line focus:border-ink-3')}
+              />
+              {postcodeError ? <p id="create-object-postcode-error" className="mt-1.5 text-[12px] font-semibold text-red-600">{postcodeError}</p> : null}
+            </div>
+            <div>
+              <label htmlFor="create-object-commune" className="mb-1.5 block text-[13px] font-semibold text-ink">Commune</label>
+              <select
+                id="create-object-commune"
+                name="commune"
+                ref={communeRef}
+                required
+                autoComplete="address-level2"
+                value={communeCode}
+                onChange={(event) => { setCommuneCode(event.target.value); setCommuneTouched(true); }}
+                onBlur={() => { if (communeCode) setCommuneTouched(true); }}
+                aria-invalid={Boolean(communeError)}
+                aria-describedby={communeError ? 'create-object-commune-error' : undefined}
+                aria-busy={communes === null && !communesError}
+                style={{ paddingBlock: 0, lineHeight: '20px' }}
+                className={'h-11 w-full rounded-xl border bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow focus:ring-2 focus:ring-lineStrong ' + (communeError ? 'border-red-500 focus:border-red-500' : 'border-line focus:border-ink-3')}
+              >
+                <option value="">{communes === null && !communesError ? 'Chargement…' : 'Choisir la commune'}</option>
+                {matchingCommunes.map((commune) => <option key={commune.code} value={commune.code}>{commune.name}</option>)}
+              </select>
+              {communeError ? <p id="create-object-commune-error" className="mt-1.5 text-[12px] font-semibold text-red-600">{communeError}</p> : null}
+            </div>
+          </div>
+          <p aria-live="polite" className="sr-only">{postcodeError || communeError ? `Erreur : ${postcodeError || communeError}` : ''}</p>
+          {communesError ? (
+            <p role="alert" className="mt-2 text-[12px] text-red-600">
+              Impossible de charger les communes.{' '}
+              <button type="button" className="font-semibold underline underline-offset-2" onClick={() => setCommunesRetry((value) => value + 1)}>Réessayer</button>
+            </p>
+          ) : communes?.length === 0 ? (
+            <p role="status" className="mt-2 text-[12px] text-ink-3">Aucune commune disponible. Contactez votre administrateur.</p>
+          ) : communes === null ? (
+            <p role="status" className="mt-2 text-[12px] text-ink-3">Chargement du référentiel des communes…</p>
           ) : null}
 
           {showMatches ? (
@@ -516,16 +639,16 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
         </div>
 
         {/* 2 · Type — the scrollable region (clearly the main content) */}
-        <div className="flex items-baseline justify-between px-6 pb-1.5 pt-4">
+        <div ref={categoryRef} tabIndex={-1} role="group" aria-label="Catégorie de fiche" aria-describedby={typeError ? 'create-object-type-error' : undefined} className="flex shrink-0 items-baseline justify-between px-6 pb-1.5 pt-4">
           <p className="text-[13px] font-semibold text-ink">Catégorie de fiche</p>
           {typeError ? (
-            <p role="alert" className="text-[12px] font-semibold text-red-600">
+            <p id="create-object-type-error" role="alert" className="text-[12px] font-semibold text-red-600">
               {typeError}
             </p>
           ) : null}
         </div>
-        <div className="relative min-h-0">
-          <div className="max-h-[38vh] space-y-5 overflow-y-auto px-6 pb-6 pt-1">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 max-h-[38vh] flex-1 space-y-5 overflow-y-auto px-6 pb-6 pt-1">
             {groups.map((group) => {
               const v = ARCHETYPE_VISUAL[group.archetype];
               const Icon = v.Icon;
@@ -705,7 +828,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
         </div>
 
         {/* 3 · Footer */}
-        <div className="space-y-3 border-t border-line/70 px-6 pb-6 pt-4">
+        <div className="shrink-0 space-y-3 border-t border-line/70 px-6 pb-6 pt-4">
           {error ? (
             <p
               role="alert"
@@ -735,14 +858,13 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
               Annuler
             </button>
             <button
-              type="button"
-              onClick={handleCreate}
-              disabled={!validation.ok || busy}
+              type="submit"
+              disabled={busy}
               className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-[transform,box-shadow,background-color,color] duration-150 hover:-translate-y-px hover:shadow-md active:scale-[0.98] active:translate-y-0 disabled:cursor-not-allowed"
               style={
-                validation.ok && accent
+                accent
                   ? { backgroundColor: accent.color }
-                  : { backgroundColor: '#dcd8d1', color: '#8a857c' }
+                  : { backgroundColor: '#176b6a' }
               }
             >
               {busy ? (
@@ -754,6 +876,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
             </button>
           </div>
         </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

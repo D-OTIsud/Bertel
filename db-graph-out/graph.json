@@ -58950,8 +58950,8 @@
     "security_definer": true,
     "volatility": "s",
     "dynamic_sql": false,
-    "body_md5": "d4905c8d789de044d82fe65dba4633c1",
-    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "body_md5": "af5d01057ee2cb69272c42fe9a4c7312",
+    "catalog_captured_at": "2026-11-27T03:17:12.741647+00:00",
     "execute_roles": [
      "PUBLIC",
      "postgres"

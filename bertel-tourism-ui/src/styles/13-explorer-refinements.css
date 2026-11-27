@@ -96,6 +96,7 @@
 
 /* Map Markers */
 .map-marker-pin {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -104,33 +105,114 @@
   border-radius: 50%;
   padding: 0;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: scale(1);
+  transform-origin: bottom center;
+  transition:
+    transform var(--motion-fast) var(--ease-premium-out),
+    opacity var(--motion-fast) var(--ease-premium-out);
   background: transparent;
   border: none;
   box-shadow: none;
 }
 
-.map-marker-pin:hover {
-  transform: scale(1.15) translateY(-2px);
-  z-index: 10;
+.map-marker-pin--active {
+  transform: scale(1.3);
+  filter: drop-shadow(0 3px 7px rgba(24, 49, 59, 0.45));
 }
 
-.map-marker-pin--active,
-.map-marker-pin--active:hover {
-  transform: translateY(-12px) scale(1.3);
-  transform-origin: bottom center;
-  filter: drop-shadow(0 3px 7px rgba(24, 49, 59, 0.45));
+.map-panel[data-map-preview-phase='exiting'] .map-marker-pin--active {
+  transform: scale(1);
+  transition-duration: var(--motion-exit);
+}
+
+.map-marker-pin[data-preview-overlay='true'][data-motion-phase='entering'],
+.map-marker-pin[data-preview-overlay='true'][data-motion-phase='exiting'] {
+  opacity: 0;
+}
+
+.map-marker-pin[data-preview-overlay='true'][data-motion-phase='exiting'] {
+  transition-duration: var(--motion-exit);
+  pointer-events: none;
 }
 
 .map-hover-popup {
   /* Preview actions must remain above the selection toolbar (30) and active pins (10). */
   z-index: 40;
+  opacity: 1;
+  transition: opacity var(--motion-fast) var(--ease-premium-out);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .map-marker-pin {
-    transition: none;
-  }
+.map-hover-popup--entering,
+.map-hover-popup--exiting {
+  opacity: 0;
+}
+
+.map-hover-popup--exiting {
+  transition-duration: var(--motion-exit);
+  pointer-events: none;
+}
+
+.map-hover-popup--exiting .maplibregl-popup-content,
+.map-hover-popup--exiting .mapboxgl-popup-content {
+  pointer-events: none;
+}
+
+.map-hover-popup .map-hover-card-wrap {
+  transform: scale(1);
+  transform-origin: bottom center;
+  transition: transform var(--motion-fast) var(--ease-premium-out);
+}
+
+/* Keep both actions above 44px even at the entrance's minimum scale (46 × .97). */
+.map-hover-popup .map-hover-card__cta {
+  min-height: 46px;
+}
+
+.map-hover-popup .map-hover-card__close {
+  width: 46px;
+  height: 46px;
+}
+
+.map-hover-popup--entering .map-hover-card-wrap,
+.map-hover-popup--exiting .map-hover-card-wrap {
+  transform: scale(0.97);
+}
+
+.map-hover-popup--exiting .map-hover-card-wrap {
+  transition-duration: var(--motion-exit);
+  pointer-events: none;
+}
+
+.map-hover-popup--exiting .map-hover-card-wrap * {
+  pointer-events: none;
+}
+
+.map-hover-popup.maplibregl-popup-anchor-top .map-hover-card-wrap {
+  transform-origin: top center;
+}
+
+.map-hover-popup.maplibregl-popup-anchor-top-left .map-hover-card-wrap {
+  transform-origin: top left;
+}
+
+.map-hover-popup.maplibregl-popup-anchor-top-right .map-hover-card-wrap {
+  transform-origin: top right;
+}
+
+.map-hover-popup.maplibregl-popup-anchor-bottom-left .map-hover-card-wrap {
+  transform-origin: bottom left;
+}
+
+.map-hover-popup.maplibregl-popup-anchor-bottom-right .map-hover-card-wrap {
+  transform-origin: bottom right;
+}
+
+.map-hover-popup.maplibregl-popup-anchor-left .map-hover-card-wrap {
+  transform-origin: left center;
+}
+
+.map-hover-popup.maplibregl-popup-anchor-right .map-hover-card-wrap {
+  transform-origin: right center;
 }
 
 .map-marker-pin--selected .map-marker-pin__img {
@@ -138,29 +220,77 @@
     drop-shadow(0 12px 18px rgba(24, 49, 59, 0.2));
 }
 
-.map-marker-pin__img {
+.map-marker-pin__img,
+.map-marker-pin__muted-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-premium-out);
+}
+
+.map-marker-pin__img {
+  opacity: 1;
+}
+
+.map-marker-pin__muted-img {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  /* The filter stays static; only the two image layers' opacities crossfade. */
+  filter: grayscale(1);
+}
+
+.map-marker-pin--selected .map-marker-pin__muted-img {
+  filter: grayscale(1)
+    drop-shadow(0 0 0.55rem color-mix(in srgb, var(--accent-brand) 58%, transparent))
+    drop-shadow(0 12px 18px rgba(24, 49, 59, 0.2));
+}
+
+.map-marker-pin--muted .map-marker-pin__img {
+  opacity: 0;
+}
+
+.map-marker-pin--muted .map-marker-pin__muted-img {
+  opacity: 0.6;
 }
 
 /* Explorer map: clustered results — anneau de composition par type, plus grand = plus dense */
 .map-cluster-pin {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  /* L'anneau de composition (conic-gradient) est posé EN LIGNE par cluster
-     (MapPanel). Ce fond plein n'est que le repli quand la composition n'est pas
-     résoluble (cluster sans type connu). La couleur encode le TYPE, plus le nombre. */
-  background: var(--theme-primary);
+  background: transparent;
   border: 2px solid var(--theme-surface);
   box-shadow: 0 4px 12px rgba(24, 49, 59, 0.18);
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease;
+  transform: scale(1);
+  transition: transform var(--motion-fast) var(--ease-premium-out);
+}
+
+.map-cluster-pin__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cluster-composition, var(--theme-primary));
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-premium-out);
+}
+
+.map-cluster-pin__ring--muted {
+  opacity: 0;
+  filter: grayscale(1);
+}
+
+.map-cluster-pin--muted > .map-cluster-pin__ring:not(.map-cluster-pin__ring--muted) {
+  opacity: 0;
+}
+
+.map-cluster-pin--muted > .map-cluster-pin__ring--muted {
+  opacity: 0.65;
 }
 
 /* Densité → TAILLE seulement (le nombre de fiches groupées). */
@@ -185,6 +315,8 @@
 /* Disque intérieur posé sur l'anneau — porte le compteur (mockup .cluster__inner).
    L'écart (12px) laisse voir l'anneau de composition tout autour. */
 .map-cluster-pin__count {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -197,10 +329,84 @@
   line-height: 1;
 }
 
-.map-cluster-pin:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(24, 49, 59, 0.22);
-  filter: brightness(1.04) saturate(1.03);
+.map-panel[data-map-preview-phase='exiting'] .map-marker-pin__img,
+.map-panel[data-map-preview-phase='exiting'] .map-marker-pin__muted-img,
+.map-panel[data-map-preview-phase='exiting'] .map-cluster-pin__ring {
+  transition-duration: var(--motion-exit);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .map-marker-pin:not(.map-marker-pin--active):hover,
+  .map-marker-pin--hovered:not(.map-marker-pin--active) {
+    transform: scale(1.15);
+    z-index: 10;
+  }
+
+  .map-cluster-pin:hover {
+    transform: scale(1.1);
+  }
+}
+
+@starting-style {
+  .map-hover-popup,
+  .map-marker-pin[data-preview-overlay='true'] {
+    opacity: 0;
+  }
+
+  .map-hover-popup .map-hover-card-wrap {
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-marker-pin,
+  .map-cluster-pin {
+    transform: none;
+    transition: none;
+  }
+
+  .map-marker-pin--active,
+  .map-marker-pin:not(.map-marker-pin--active):hover,
+  .map-marker-pin--hovered:not(.map-marker-pin--active),
+  .map-panel[data-map-preview-phase='exiting'] .map-marker-pin--active,
+  .map-cluster-pin:hover {
+    transform: none;
+  }
+
+  .map-marker-pin[data-preview-overlay='true'],
+  .map-marker-pin__img,
+  .map-marker-pin__muted-img,
+  .map-cluster-pin__ring {
+    transition: opacity var(--motion-instant) var(--ease-premium-out);
+  }
+
+  .map-panel[data-map-preview-phase='exiting'] .map-marker-pin__img,
+  .map-panel[data-map-preview-phase='exiting'] .map-marker-pin__muted-img,
+  .map-panel[data-map-preview-phase='exiting'] .map-cluster-pin__ring {
+    transition-duration: var(--motion-instant);
+  }
+
+  .map-hover-popup,
+  .map-hover-popup--entering,
+  .map-hover-popup--exiting {
+    opacity: 1;
+    transition: none;
+  }
+
+  .map-hover-popup .map-hover-card-wrap {
+    transform: none;
+    transition: none;
+  }
+
+  @starting-style {
+    .map-hover-popup {
+      opacity: 1;
+    }
+
+    .map-hover-popup .map-hover-card-wrap {
+      transform: none;
+    }
+  }
 }
 
 /* (.map-hover-card pointer-events lifted onto .map-hover-card-wrap.) */

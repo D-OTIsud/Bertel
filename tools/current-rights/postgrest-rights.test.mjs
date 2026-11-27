@@ -105,12 +105,15 @@ async function testInitialPublication() {
     `committed writer role: ${code}`,
   );
   const permission = () => rpc(headers('writer'), 'user_has_permission', { p_permission_code: 'publish_object' });
-  // A separate GET observes the publisher link created by the AFTER INSERT trigger.
+  // Each HTTP insert commits separately, so it cannot supply the required main
+  // location. Authorized publication and creation remain covered atomically by SQL.
   const create = (body) => local.request('/rest/v1/object', headers('writer'), body, 'POST',
     { prefer: 'return=minimal' });
-  async function verifyCreated(id, status) {
-    const inserted = await rows(headers('writer'), id);
-    assert.deepEqual(inserted.map((row) => ({ id: row.id, status: row.status })), [{ id, status }]);
+  async function missingMainLocation(response, label) {
+    assert.equal(response.status, 400, `${label} must require an atomic main location`);
+    const { code, message } = await response.json();
+    assert.equal(code, '23514', `${label} must fail integrity rather than current rights`);
+    assert.match(message, /^MAIN_LOCATION_INSEE_REQUIRED:/);
   }
   const body = {
     id: INITIAL_DRAFT, object_type: 'HOT', name: 'Synthetic initial publication', created_by: ids.writer, status: 'published',
@@ -118,8 +121,7 @@ async function testInitialPublication() {
 
   assert.equal(await json(await permission(), 'editor publication permission'), true);
   const editor = await create({ ...body, id: INITIAL_PUBLISHED });
-  assert.equal(editor.status, 201, 'current editor/publisher must create an initially published object');
-  await verifyCreated(INITIAL_PUBLISHED, 'published');
+  await missingMainLocation(editor, 'current editor/publisher insert without a main location');
 
   writerRole('contributor');
   try {
@@ -135,14 +137,14 @@ async function testInitialPublication() {
     'refused initial publication left neither object nor publisher link');
     assert.equal(noEffects, 't');
     const control = await create({ ...body, status: 'draft' });
-    assert.equal(control.status, 201, 'the same contributor payload must create a draft');
-    await verifyCreated(INITIAL_DRAFT, 'draft');
-    const publisherLinks = local.sql(`SELECT count(DISTINCT l.object_id)
-      FROM public.object_org_link l JOIN public.ref_org_role r ON r.id=l.role_id
-      WHERE l.org_object_id='ORGRUN999999AR01' AND r.code='publisher'
-        AND l.object_id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
-      'publisher links after each authorized insert');
-    assert.equal(publisherLinks, '2');
+    await missingMainLocation(control, 'current contributor draft insert without a main location');
+    const noIncompleteObjects = local.sql(`SELECT
+      NOT EXISTS (SELECT 1 FROM public.object WHERE id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}'))
+      AND NOT EXISTS (SELECT 1 FROM public.object_org_link WHERE object_id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}'))`,
+      'rejected standalone inserts left neither objects nor publisher links');
+    assert.equal(noIncompleteObjects, 't');
+    assert.deepEqual(await rows(headers('writer'), INITIAL_PUBLISHED), []);
+    assert.deepEqual(await rows(headers('writer'), INITIAL_DRAFT), []);
   } finally {
     writerRole('editor');
   }

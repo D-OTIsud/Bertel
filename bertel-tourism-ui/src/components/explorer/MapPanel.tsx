@@ -347,8 +347,10 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   const restoreMarkerFocus = useCallback((marker: HTMLButtonElement) => {
     // A promoted cluster pin is removed after its exit. Restoring focus to that
     // soon-inert node would send keyboard users back to the document body.
+    // Compact Explorer owns the fallback tab when its original pin disappeared.
+    if (!marker.isConnected) return false;
     if (marker.dataset.previewOverlay === 'true') return focusMapCanvas();
-    return focusMarker(marker) || focusMapCanvas();
+    return focusMarker(marker);
   }, [focusMapCanvas, focusMarker]);
 
   const closeHoverPopup = useCallback(() => {
@@ -358,8 +360,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
     const focusedOverlay = focused instanceof HTMLElement && focused.dataset.previewOverlay === 'true';
     dismissHoverPopup();
     if (focusInside || (trigger && trigger === focused) || focusedOverlay) {
-      if (trigger) restoreMarkerFocus(trigger);
-      else focusMapCanvas();
+      if (!trigger || !restoreMarkerFocus(trigger)) focusMapCanvas();
     }
   }, [dismissHoverPopup, focusMapCanvas, hoverPopupState, restoreMarkerFocus]);
 

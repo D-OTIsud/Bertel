@@ -308,7 +308,7 @@ describe('MapPanel — prévisualisation depuis les résultats', () => {
     expect(screen.getByTestId('map-surface')).toHaveFocus();
   });
 
-  it('utilise aussi la carte pour restaurer le focus compact quand le marqueur temporaire a disparu', () => {
+  it('laisse le panneau compact choisir son repli lorsque le marqueur temporaire a disparu', () => {
     mockClustered = true;
     const onCompactMarkerSelect = jest.fn();
     render(<><input aria-label="Autre contrôle" /><MapPanel objects={[alpha, beta]} onCompactMarkerSelect={onCompactMarkerSelect} /></>);
@@ -320,9 +320,9 @@ describe('MapPanel — prévisualisation depuis les résultats', () => {
     expect(overlayPin).not.toBeInTheDocument();
     act(() => screen.getByRole('textbox', { name: 'Autre contrôle' }).focus());
 
-    act(() => expect(onCompactMarkerSelect.mock.calls[0][1]()).toBe(true));
+    act(() => expect(onCompactMarkerSelect.mock.calls[0][1]()).toBe(false));
 
-    expect(screen.getByTestId('map-surface')).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: 'Autre contrôle' })).toHaveFocus();
     act(() => jest.advanceTimersByTime(500));
     expect(popupFor(alpha)).not.toBeInTheDocument();
   });

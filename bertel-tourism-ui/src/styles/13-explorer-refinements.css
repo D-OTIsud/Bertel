@@ -163,6 +163,16 @@
   transition: transform var(--motion-fast) var(--ease-premium-out);
 }
 
+/* Keep both actions above 44px even at the entrance's minimum scale (46 × .97). */
+.map-hover-popup .map-hover-card__cta {
+  min-height: 46px;
+}
+
+.map-hover-popup .map-hover-card__close {
+  width: 46px;
+  height: 46px;
+}
+
 .map-hover-popup--entering .map-hover-card-wrap,
 .map-hover-popup--exiting .map-hover-card-wrap {
   transform: scale(0.97);

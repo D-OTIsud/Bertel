@@ -70,12 +70,16 @@ test('links sustained result hover and selection to the actual map popup', async
       popupTransition: string; wrapTransition: string;
     } };
     (window as unknown as { mapPreviewEntryProof: typeof proof }).mapPreviewEntryProof = proof;
-    panel.addEventListener('transitionrun', (event) => {
+    const recordTransition = (event: Event) => {
       if (!(event instanceof TransitionEvent) || !(event.target instanceof Element)
-        || panel.getAttribute('data-map-preview-phase') !== 'open') return;
+        || !['entering', 'open'].includes(panel.getAttribute('data-map-preview-phase') ?? '')) return;
       if (event.target.matches('.map-hover-popup')) proof.properties.push(`popup:${event.propertyName}`);
       if (event.target.matches('.map-hover-card-wrap')) proof.properties.push(`wrap:${event.propertyName}`);
-    });
+    };
+    // CSS can dispatch the run notification before the next-frame phase reaches
+    // "open". Capture both native entry notifications before descendants can stop them.
+    panel.addEventListener('transitionrun', recordTransition, true);
+    panel.addEventListener('transitionstart', recordTransition, true);
     let scheduled = false;
     const observer = new MutationObserver(() => {
       if (scheduled || panel.getAttribute('data-map-preview-phase') !== 'open') return;
@@ -137,10 +141,13 @@ test('links sustained result hover and selection to the actual map popup', async
     const visual = element.querySelector('.map-marker-pin__muted-img, .map-cluster-pin__ring--muted')!;
     return getComputedStyle(visual).filter.includes('grayscale(1)');
   }))).toBe(true);
+  await expect.poll(() => page.evaluate(() => (window as unknown as {
+    mapPreviewEntryProof: { properties: string[] };
+  }).mapPreviewEntryProof.properties)).toEqual(expect.arrayContaining(['popup:opacity', 'wrap:transform']));
   const entryProof = await page.evaluate(() => (window as unknown as {
     mapPreviewEntryProof: { properties: string[]; sample: { popupTransition: string; wrapTransition: string } | null };
   }).mapPreviewEntryProof);
-  expect(entryProof.properties).toEqual(expect.arrayContaining(['popup:opacity', 'wrap:transform']));
+  console.log(JSON.stringify({ mapPreviewEntryProof: entryProof }));
   expect(entryProof.sample?.popupTransition).toContain('opacity');
   expect(entryProof.sample?.wrapTransition).toContain('transform');
   expect(await activePin.evaluate((element) => {

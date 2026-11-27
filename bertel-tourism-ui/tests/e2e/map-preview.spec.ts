@@ -433,7 +433,10 @@ test('map preview actions remain clickable where the real legend overlaps', asyn
   expect(legendBounds.y + legendBounds.height).toBeLessThanOrEqual(710);
   // Pan the real MapLibre canvas, keeping the marker on screen. The preview
   // then crosses the existing bottom-left legend, as observed in production.
-  const destination = { x: legendBounds.x + 135, y: legendBounds.y + 115 };
+  // The preview now clears the visible enlarged glyph by six pixels. Move the
+  // pin farther down the legend so the primary action still genuinely crosses
+  // it, preserving the original overlap and hit-target requirements.
+  const destination = { x: legendBounds.x + 135, y: legendBounds.y + 145 };
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const bounds = (await pin.boundingBox())!;
     const dx = destination.x - (bounds.x + bounds.width / 2);
@@ -463,6 +466,8 @@ test('map preview actions remain clickable where the real legend overlaps', asyn
   const open = preview.getByRole('button', { name: `Ouvrir la fiche ${name}`, exact: true });
   const close = preview.getByRole('button', { name: `Fermer l’aperçu de ${name}`, exact: true });
   await expect(open).toBeVisible();
+  // This scenario measures stacking at a fixed overlap, independently of the entry scale.
+  await expect(page.locator('.map-hover-card-wrap')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
   const openBounds = (await open.boundingBox())!;
   // Require a genuine overlap; a passing check elsewhere on the map is not
   // evidence that the legend no longer intercepts the action's hit target.

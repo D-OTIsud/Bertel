@@ -57,10 +57,10 @@ describe('ResultsList — map preview intent', () => {
     else delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
   });
 
-  it('opens only after 3 seconds of sustained interest without changing the selected card', () => {
+  it('opens only after 1 second of sustained interest without changing the selected card', () => {
     render(<ResultsList cards={[card('a')]} loading={false} />);
     fireEvent.mouseEnter(result('a'));
-    advance(2999);
+    advance(999);
     expect(preview()).toBeNull();
     advance(1);
     expect(preview()).toMatchObject({ card: { id: 'a' }, source: 'hover' });
@@ -71,29 +71,29 @@ describe('ResultsList — map preview intent', () => {
   it('cancels a brief pass and starts a fresh delay on the next result', () => {
     render(<ResultsList cards={[card('a'), card('b')]} loading={false} />);
     fireEvent.mouseEnter(result('a'));
-    advance(2500);
+    advance(800);
     fireEvent.mouseLeave(result('a'));
-    advance(3000);
+    advance(1000);
     expect(preview()).toBeNull();
     fireEvent.mouseEnter(result('a'));
-    advance(2000);
+    advance(600);
     fireEvent.mouseLeave(result('a'));
     fireEvent.mouseEnter(result('b'));
-    advance(2999);
+    advance(999);
     expect(preview()).toBeNull();
     advance(1);
     expect(preview()?.card.id).toBe('b');
   });
 
-  it('waits a full 3 seconds after the final scroll event', () => {
+  it('waits a full second after the final scroll event', () => {
     render(<ResultsList cards={[card('a')]} loading={false} />);
     const root = result('a').parentElement!;
     fireEvent.mouseEnter(result('a'));
-    advance(2900);
+    advance(900);
     fireEvent.scroll(root);
-    advance(2000);
+    advance(600);
     fireEvent.scroll(root);
-    advance(2999);
+    advance(999);
     expect(preview()).toBeNull();
     advance(1);
     expect(preview()?.card.id).toBe('a');
@@ -105,11 +105,11 @@ describe('ResultsList — map preview intent', () => {
     render(<ResultsList cards={[card('a'), card('b')]} loading={false} />);
     fireEvent.mouseEnter(result('a'));
     fireEvent.mouseMove(result('a'), { clientX: 120, clientY: 200 });
-    advance(2500);
+    advance(800);
     const hitTest = jest.fn(() => result('b').querySelector('strong') ?? result('b'));
     Object.defineProperty(document, 'elementFromPoint', { value: hitTest, configurable: true });
     fireEvent.scroll(result('a').parentElement!);
-    advance(3000);
+    advance(1000);
     expect(hitTest).toHaveBeenCalledWith(120, 200);
     expect(preview()?.card.id).toBe('b');
     fireEvent.mouseLeave(result('b'));
@@ -121,7 +121,7 @@ describe('ResultsList — map preview intent', () => {
     const root = result('a').parentElement!;
     fireEvent.mouseEnter(result('a'));
     fireEvent.mouseMove(result('a'), { clientX: 120, clientY: 200 });
-    advance(2500);
+    advance(800);
     // The browser can emit leave(A) without an enter(B) while the pointer stays in the list.
     fireEvent.mouseLeave(result('a'), { relatedTarget: root });
     Object.defineProperty(document, 'elementFromPoint', {
@@ -129,21 +129,21 @@ describe('ResultsList — map preview intent', () => {
       configurable: true,
     });
     fireEvent.scroll(root);
-    advance(2999);
+    advance(999);
     expect(preview()).toBeNull();
     advance(1);
     expect(preview()?.card.id).toBe('b');
     fireEvent.mouseLeave(root, { relatedTarget: document.body });
-    advance(3000);
+    advance(1000);
     expect(preview()).toBeNull();
   });
 
   it('does not open for a result removed while its delay is pending', () => {
     const { rerender } = render(<ResultsList cards={[card('a'), card('b')]} loading={false} />);
     fireEvent.mouseEnter(result('a'));
-    advance(2900);
+    advance(900);
     rerender(<ResultsList cards={[card('b')]} loading={false} />);
-    advance(3000);
+    advance(1000);
     expect(preview()).toBeNull();
   });
 
@@ -152,10 +152,10 @@ describe('ResultsList — map preview intent', () => {
     const equivalent = { ...card('b'), label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 1, source: 'sustainability_action', evidence_count: 1 } } as ObjectCard;
     render(<ResultsList cards={[labelled, equivalent]} loading={false} labelRankCounts={{ labelled: 1, equivalent: 1 }} />);
     fireEvent.mouseEnter(result('a'));
-    advance(2900);
+    advance(900);
     fireEvent.click(screen.getByText(/Établissements labellisés/).closest('button')!);
     expect(document.getElementById('result-card-a')).toBeNull();
-    advance(3000);
+    advance(1000);
     expect(preview()).toBeNull();
   });
 
@@ -163,11 +163,11 @@ describe('ResultsList — map preview intent', () => {
     render(<ResultsList cards={[card('a')]} loading={false} />);
     const root = result('a');
     fireEvent.focus(root);
-    advance(1000);
+    advance(300);
     const star = within(root).getByRole('button', { name: 'Ajouter a la selection' });
     fireEvent.blur(root, { relatedTarget: star });
     fireEvent.focus(star, { relatedTarget: root });
-    advance(1999);
+    advance(699);
     expect(preview()).toBeNull();
     advance(1);
     expect(preview()?.card.id).toBe('a');
@@ -187,16 +187,16 @@ describe('ResultsList — map preview intent', () => {
     expect(useExplorerStore.getState().selectedCardId).toBeNull();
     expect(useUiStore.getState().drawerObjectId).toBeNull();
     fireEvent.mouseLeave(root);
-    advance(3000);
+    advance(1000);
     expect(preview()?.source).toBe('selection');
   });
 
   it('cancels a pending preview when the list unmounts', () => {
     const { unmount } = render(<ResultsList cards={[card('a')]} loading={false} />);
     fireEvent.mouseEnter(result('a'));
-    advance(2900);
+    advance(900);
     unmount();
-    advance(3000);
+    advance(1000);
     expect(preview()).toBeNull();
   });
 });

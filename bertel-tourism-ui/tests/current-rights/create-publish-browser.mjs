@@ -89,9 +89,16 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
       WHERE l.object_id='${id}' AND l.org_object_id='ORGRUN999999AR01' AND r.code='publisher'`,
     'read new draft publisher link'), '1');
 
-    // Supply only the mandatory publication fields before the browser opens its new editor.
-    commit(`INSERT INTO public.object_location(object_id,city,is_main_location) VALUES ('${id}','Saint-Denis',true);
-      INSERT INTO public.object_description(object_id,description,description_chapo,visibility)
+    const mainLocations = JSON.parse(local.sql(
+      `SELECT coalesce(jsonb_agg(jsonb_build_object('city',city,'postcode',postcode,'code_insee',code_insee)), '[]'::jsonb)
+         FROM public.object_location WHERE object_id='${id}' AND is_main_location IS TRUE`,
+      'read the main address committed atomically by the create RPC'));
+    assert.deepEqual(mainLocations, [{ city: 'Entre-Deux', postcode: '97414', code_insee: '97403' }],
+      'creation must commit exactly one main address with its database-derived INSEE');
+
+    // The address is already committed by creation; only editorial publication
+    // prerequisites remain before the browser opens its new editor.
+    commit(`INSERT INTO public.object_description(object_id,description,description_chapo,visibility)
         VALUES ('${id}','Synthetic editorial description','Synthetic introduction','public')`,
     'prepare the new draft publication prerequisites');
   }
@@ -133,7 +140,10 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
         assert.ok(!directInsert, 'creation must use the product RPC');
         if (create) {
           await assertBrowserWriter(request, 'api');
-          assert.deepEqual(request.postDataJSON(), { p_object_type: 'HOT', p_name: initialName, p_region_code: 'RUN' });
+          assert.deepEqual(request.postDataJSON(), {
+            p_object_type: 'HOT', p_name: initialName, p_region_code: 'RUN',
+            p_city: 'Entre-Deux', p_postcode: '97414',
+          });
           assert.ok(!createAttempt, 'one creation request per gesture');
           createAttempt = (async () => {
             const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
@@ -202,6 +212,13 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
     await page.getByRole('button', { name: 'Créer une fiche', exact: true }).click();
     const createDialog = page.getByRole('dialog', { name: 'Créer une fiche' });
     await createDialog.getByLabel('Nom de la fiche', { exact: true }).fill(initialName);
+    const postcode = createDialog.getByLabel(/code postal/i);
+    const commune = createDialog.getByLabel(/^commune/i);
+    await expectUI(postcode).toBeEnabled();
+    await expectUI(commune).toHaveAttribute('aria-busy', 'false');
+    await postcode.fill('97414');
+    await expectUI(commune).toHaveValue('97403');
+    await expectUI(commune.locator('option:checked')).toHaveText('Entre-Deux');
     // The dialog falls back to the same family code if taxonomy settles first.
     await createDialog.getByRole('button', { name: /^(?:Hôtellerie|hotellerie)$/ }).click();
     await createDialog.getByRole('button', { name: 'Hôtel', exact: true }).click();

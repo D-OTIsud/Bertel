@@ -290,11 +290,16 @@ test('real prestataire photo becomes public through authorized moderation', { ti
     runFixture(local, `INSERT INTO public.actor(id,display_name) VALUES('${actorId}','Prestataire photo fictif');
       INSERT INTO public.object(id,object_type,name,status) VALUES
         ('${objectId}','HOT','${objectName}','published'),('${orgId}','ORG','${orgName}','published');
+      INSERT INTO public.object_location(object_id,city,postcode,is_main_location)
+        VALUES('${objectId}','Entre-Deux','97414',true);
       INSERT INTO public.actor_object_role(actor_id,object_id,role_id,is_primary,visibility)
       SELECT '${actorId}','${objectId}',id,true,'public' FROM public.ref_actor_role WHERE code='operator' LIMIT 1;
       INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
       SELECT '${objectId}','${orgId}',id,true FROM public.ref_org_role WHERE code='publisher';`);
     fixtureCreated = true;
+    assert.equal(local.sql(`SELECT count(*)=1 AND bool_and(city='Entre-Deux' AND postcode='97414' AND code_insee='97403')
+      FROM public.object_location WHERE object_id='${objectId}' AND is_main_location IS TRUE`), 't',
+    'the committed photo fixture must have one main address with a derived INSEE');
     for (const account of [{ userId, email, password, role: 'actor' }, { ...office, role: 'tourism_agent' }]) {
       authAttempted.push(account);
       const response = await local.request('/auth/v1/admin/users', local.service, {

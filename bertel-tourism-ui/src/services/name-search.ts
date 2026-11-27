@@ -1,6 +1,7 @@
 import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import { withAbort } from '../lib/with-abort';
+import type { ExplorerStatusFilter } from '../types/domain';
 
 /** Une fiche trouvee par son NOM — juste de quoi la reconnaitre et y aller. */
 export interface NameMatch {
@@ -28,9 +29,8 @@ interface NameMatchRow {
 
 /**
  * Recherche par NOM dans tout le corpus visible — c'est de la NAVIGATION
- * (« je veux LA fiche »), pas du filtrage : le resultat ignore volontairement
- * les filtres de l'Exploreur, sinon la fiche cherchee resterait invisible
- * derriere un filtre pose plus tot.
+ * (« je veux LA fiche »). Dans l'Explorer, seuls les statuts sélectionnés sont
+ * transmis ; les autres facettes ne limitent pas cette aide à la navigation.
  *
  * Pourquoi un service dedie plutot que le chemin existant :
  * - `api.search_objects_by_name` est un RPC LEGER (~20 ms mesure) et rend UNE
@@ -39,11 +39,15 @@ interface NameMatchRow {
  * - il ne renvoie que ce qu'il faut pour reconnaitre la fiche, donc rien a
  *   normaliser ni a deduper.
  *
- * Le PERIMETRE est auto-garde COTE SERVEUR (publie pour tous, + les brouillons
- * du perimetre etendu pour un editeur) : ce client ne resout donc AUCUN statut
- * ni perimetre — ne rien ajouter ici, ce serait une seconde source de verite.
+ * Le serveur applique les statuts AVANT la limite et garde les droits de lecture.
+ * Sans sélection fournie (palette ou autre page), null conserve tout le périmètre
+ * autorisé. Le hook Explorer utilise le même résolveur que les cartes et marqueurs.
  */
-export async function searchObjectsByName(term: string, signal?: AbortSignal): Promise<NameMatch[]> {
+export async function searchObjectsByName(
+  term: string,
+  signal?: AbortSignal,
+  statuses?: readonly ExplorerStatusFilter[] | null,
+): Promise<NameMatch[]> {
   const trimmed = term.trim();
   if (trimmed.length < NAME_MATCH_MIN_CHARS) {
     return [];
@@ -62,6 +66,7 @@ export async function searchObjectsByName(term: string, signal?: AbortSignal): P
     client.schema('api').rpc('search_objects_by_name', {
       p_term: trimmed,
       p_limit: NAME_MATCH_LIMIT,
+      p_status: statuses ?? null,
     }),
     signal,
   );

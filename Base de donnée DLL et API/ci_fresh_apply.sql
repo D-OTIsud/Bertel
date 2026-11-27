@@ -869,6 +869,14 @@ COMMIT;
 \ir ../supabase/migrations/20261126044807_object_lifecycle_reason.sql
 \ir tests/test_object_lifecycle_reason.sql
 
+\echo '== Partial establishment names: incomplete words, ranking and protected scope =='
+\ir ../supabase/migrations/20261127031632_explorer_partial_name_search.sql
+\ir tests/test_explorer_partial_name_search.sql
+
+\echo '== Name suggestions: selected statuses before LIMIT, compatible legacy RPC =='
+\ir ../supabase/migrations/20261127031641_search_objects_by_name_status_filter.sql
+\ir tests/test_search_objects_by_name_status_filter.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

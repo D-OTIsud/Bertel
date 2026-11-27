@@ -1,0 +1,96 @@
+{
+  "functions": [
+    {
+      "acl": null,
+      "cost": 100,
+      "rows": 1000,
+      "owner": "postgres",
+      "config": [
+        "search_path=pg_catalog, public, api, internal, extensions, auth, audit, crm, ref"
+      ],
+      "returns": "TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)",
+      "parallel": "u",
+      "arguments": "p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text",
+      "signature": "api.get_filtered_object_ids(jsonb,object_type[],object_status[],text)",
+      "volatility": "s",
+      "body_md5_lf": "af5d01057ee2cb69272c42fe9a4c7312",
+      "description": null,
+      "default_count": 1,
+      "security_definer": true,
+      "definition_md5_lf": "c93f74f81f373809ff1ee8b1ca06e117"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "cost": 100,
+      "rows": 1000,
+      "owner": "postgres",
+      "config": [
+        "search_path=pg_catalog, public, api, internal, extensions, auth, audit, crm, ref"
+      ],
+      "returns": "TABLE(id text, name text, object_type object_type, status object_status, city text, image_url text)",
+      "parallel": "u",
+      "arguments": "p_term text, p_limit integer DEFAULT 8",
+      "signature": "api.search_objects_by_name(text,integer)",
+      "volatility": "s",
+      "body_md5_lf": "fade5ef9cb8debfad1581ab946da4d60",
+      "description": "Concordances de noms partielles pour les clients historiques et la navigation globale. Délègue à la surcharge à trois paramètres sans filtre de statut, dans le périmètre autorisé du lecteur.",
+      "default_count": 1,
+      "security_definer": true,
+      "definition_md5_lf": "72f3d53edf1dcf7f192de1242e7b7918"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "cost": 100,
+      "rows": 1000,
+      "owner": "postgres",
+      "config": [
+        "search_path=pg_catalog, public, api, pg_temp"
+      ],
+      "returns": "TABLE(id text, name text, object_type object_type, status object_status, city text, image_url text)",
+      "parallel": "u",
+      "arguments": "p_term text, p_limit integer, p_status object_status[]",
+      "signature": "api.search_objects_by_name(text,integer,object_status[])",
+      "volatility": "s",
+      "body_md5_lf": "aed9e8eb0237acf6205975409a5ffc39",
+      "description": "Concordances de noms partiels (2 caractères minimum), insensibles aux accents/casse, espaces de saisie normalisés. Statuts filtrés avant LIMIT : NULL/{} = tous les statuts accessibles ; lecteurs published seul ; éditeurs published + draft/hidden/archived de leur périmètre étendu. Realm réel/test conservé. Surcharge sans DEFAULT pour lever toute ambiguïté PostgREST avec la signature historique.",
+      "default_count": 0,
+      "security_definer": true,
+      "definition_md5_lf": "ce03e2b36b51d0030fa94f4a07409cc9"
+    }
+  ],
+  "migrations": [
+    {
+      "name": "explorer_partial_name_search",
+      "version": "20261127031632"
+    },
+    {
+      "name": "search_objects_by_name_status_filter",
+      "version": "20261127031641"
+    }
+  ],
+  "captured_at": "2026-11-27T03:17:12.741647+00:00",
+  "project_ref": "ryycrdhlkmzpxwwwwupy",
+  "transport": "Production metadata via the Bertel Supabase MCP connection",
+  "scope": "Targeted supplement: two changed function signatures and one additive overload; no function bodies or business rows.",
+  "verification": {
+    "local_postgresql": "17.10",
+    "local_tests": [
+      "test_explorer_partial_name_search.sql",
+      "test_search_objects_by_name_status_filter.sql",
+      "test_search_objects_by_name.sql",
+      "test_explorer_name_relevance.sql",
+      "test_explorer_filtered_read_authority.sql"
+    ],
+    "replay_idempotent": true,
+    "unknown_predecessor_rejected": true,
+    "execution_attributes_preserved": true,
+    "production_readonly_assertions_passed": true,
+    "http": {
+      "filtered_overload": 200,
+      "legacy_entry": 200,
+      "partial_public_matches": 2,
+      "private_status_as_anonymous": 0
+    },
+    "new_security_advisor_notices": 0
+  }
+}

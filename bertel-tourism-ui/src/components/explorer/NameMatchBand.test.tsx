@@ -61,9 +61,17 @@ describe('NameMatchBand', () => {
     expect(useExplorerStore.getState().common.search).toBe('le jardin');
   });
 
-  it('signale les brouillons, et seulement eux', () => {
+  it('signale les brouillons sans ajouter de badge aux fiches publiées', () => {
     render(<NameMatchBand />);
     expect(screen.getAllByText('Brouillon')).toHaveLength(1);
+  });
+
+  it('identifie les fiches dépubliées et les archives', () => {
+    setMatches([{ ...HLO, status: 'hidden' }, { ...DRAFT, status: 'archived' }]);
+    render(<NameMatchBand />);
+
+    expect(screen.getByText('Hors ligne')).toBeInTheDocument();
+    expect(screen.getByText('Archivée')).toBeInTheDocument();
   });
 
   it('ne rend rien sans terme actif', () => {

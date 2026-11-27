@@ -2,7 +2,8 @@
 
 import type { NameMatch } from '../../services/name-search';
 import { NAME_MATCH_MIN_CHARS } from '../../services/name-search';
-import { useNameMatchQuery } from '../../hooks/useNameMatchQuery';
+import { useNameMatchQuery, type NameMatchScope } from '../../hooks/useNameMatchQuery';
+import { STATUS_LABELS } from '../../lib/object-status-labels';
 import { resolveTypeLabel } from '../../utils/labels';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +17,7 @@ export interface ExplorerSearchSuggestionsProps {
   onPick: (match: NameMatch) => void;
   /** Id du `role="listbox"` ; les options en dérivent (`${listboxId}-${index}`). */
   listboxId: string;
+  scope?: NameMatchScope;
 }
 
 /**
@@ -38,10 +40,11 @@ export function ExplorerSearchSuggestions({
   activeIndex,
   onPick,
   listboxId,
+  scope = 'explorer',
 }: ExplorerSearchSuggestionsProps) {
   // Menu fermé ⇒ terme vide ⇒ requête désactivée en amont (seuil de caractères) :
   // on ne consomme pas de CPU serveur pour un menu que personne ne regarde.
-  const { data: matches } = useNameMatchQuery(open ? query : '');
+  const { data: matches } = useNameMatchQuery(open ? query : '', scope);
 
   if (!shouldShowSuggestions(open, query, matches.length)) {
     return null;
@@ -86,9 +89,9 @@ export function ExplorerSearchSuggestions({
               <span className="flex min-w-0 flex-col">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate text-[13px] font-semibold text-ink">{match.name}</span>
-                  {match.status === 'draft' ? (
+                  {match.status !== 'published' && STATUS_LABELS[match.status] ? (
                     <span className="shrink-0 rounded-[5px] border border-line bg-bgTint px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                      Brouillon
+                      {STATUS_LABELS[match.status]}
                     </span>
                   ) : null}
                 </span>

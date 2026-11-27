@@ -39,7 +39,7 @@ describe('searchObjectsByName (recherche par nom — navigation)', () => {
     const matches = await searchObjectsByName('  longanis  ');
 
     expect(rpc).toHaveBeenCalledTimes(1);
-    expect(rpc).toHaveBeenCalledWith('search_objects_by_name', { p_term: 'longanis', p_limit: 8 });
+    expect(rpc).toHaveBeenCalledWith('search_objects_by_name', { p_term: 'longanis', p_limit: 8, p_status: null });
     expect(matches).toEqual([
       {
         id: 'RESRUN1',
@@ -50,6 +50,16 @@ describe('searchObjectsByName (recherche par nom — navigation)', () => {
         imageUrl: 'https://cdn/x.jpg',
       },
     ]);
+  });
+
+  it('transmet le fragment et les statuts au serveur avant sa limite de résultats', async () => {
+    rpc.mockResolvedValue({ data: [], error: null });
+
+    await searchObjectsByName('  marg  ', undefined, ['hidden']);
+
+    expect(rpc).toHaveBeenCalledWith('search_objects_by_name', {
+      p_term: 'marg', p_limit: 8, p_status: ['hidden'],
+    });
   });
 
   it('rend city et imageUrl a null quand le serveur ne les porte pas', async () => {

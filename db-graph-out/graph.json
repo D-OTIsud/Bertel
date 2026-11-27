@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 430,
   "view_count": 15,
-  "function_count": 685,
+  "function_count": 686,
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6434
+  "edge_count": 6436
  },
  "nodes": [
   {
@@ -58943,15 +58943,15 @@
    "label": "get_filtered_object_ids",
    "schema": "api",
    "domain": "api",
-   "doc": "---- 1) api.get_filtered_object_ids (corps complet §157+§162+§173) ----",
+   "doc": "---- 1) api.get_filtered_object_ids (corps complet §157+§162+§173) ---- Recherche de noms partiels dès deux caractères, y compris le dernier mot incomplet (27 novembre 2026).",
    "props": {
     "signature": "get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
     "returns": "TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)",
     "security_definer": true,
     "volatility": "s",
     "dynamic_sql": false,
-    "body_md5": "d4905c8d789de044d82fe65dba4633c1",
-    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "body_md5": "af5d01057ee2cb69272c42fe9a4c7312",
+    "catalog_captured_at": "2026-11-27T03:17:12.741647+00:00",
     "execute_roles": [
      "PUBLIC",
      "postgres"
@@ -59009,8 +59009,14 @@
      {
       "path": "Base de donnée DLL et API/restaurant_cuisine_filter.sql",
       "line": 35
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_explorer_partial_name_search.sql",
+      "line": 8
      }
-    ]
+    ],
+    "catalog_capture": "db-graph-out/NAME_SEARCH_CATALOG.json",
+    "body_md5_lf": "af5d01057ee2cb69272c42fe9a4c7312"
    }
   },
   {
@@ -70377,7 +70383,7 @@
    "label": "search_objects_by_name",
    "schema": "api",
    "domain": "api",
-   "doc": "Concordance directe par nom (spec 2026-08-26) : navigation, pas filtrage — cherche tout le corpus visible indépendamment des filtres de l'Exploreur. Périmètre auto-gardé : published pour tous, + draft du périmètre étendu pour un éditeur (COALESCE sur la sonde à trois valeurs, §204) ; archived/hidden jamais. Consommée par le menu de la barre de recherche, le bandeau de résultats et la palette ⌘K.",
+   "doc": "Concordances de noms partielles pour les clients historiques et la navigation globale. Délègue à la surcharge à trois paramètres sans filtre de statut, dans le périmètre autorisé du lecteur.",
    "props": {
     "signature": "search_objects_by_name(p_term text, p_limit integer DEFAULT 8)",
     "returns": "TABLE(id text, name text, object_type public.object_type, status public.object_status, city text, image_url text)",
@@ -70386,14 +70392,16 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/migration_search_objects_by_name.sql",
-      "line": 36
+      "path": "Base de donnée DLL et API/migration_search_objects_by_name_status_filter.sql",
+      "line": 87
      }
     ],
     "source": {
-     "path": "Base de donnée DLL et API/migration_search_objects_by_name.sql",
-     "line": 36
-    }
+     "path": "Base de donnée DLL et API/migration_search_objects_by_name_status_filter.sql",
+     "line": 87
+    },
+    "catalog_capture": "db-graph-out/NAME_SEARCH_CATALOG.json",
+    "body_md5_lf": "fade5ef9cb8debfad1581ab946da4d60"
    }
   },
   {
@@ -86853,6 +86861,33 @@
       "line": 5
      }
     ]
+   }
+  },
+  {
+   "id": "api.search_objects_by_name(p_term text, p_limit integer, p_status public.object_status[])",
+   "kind": "function",
+   "label": "search_objects_by_name",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Concordances de noms partiels (2 caractères minimum), insensibles aux accents/casse, espaces de saisie normalisés. Statuts filtrés avant LIMIT : NULL/{} = tous les statuts accessibles ; lecteurs published seul ; éditeurs published + draft/hidden/archived de leur périmètre étendu. Realm réel/test conservé. Surcharge sans DEFAULT pour lever toute ambiguïté PostgREST avec la signature historique.",
+   "props": {
+    "signature": "search_objects_by_name(p_term text, p_limit integer, p_status public.object_status[])",
+    "returns": "TABLE(id text, name text, object_type public.object_type, status public.object_status, city text, image_url text)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_search_objects_by_name_status_filter.sql",
+      "line": 16
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_search_objects_by_name_status_filter.sql",
+     "line": 16
+    },
+    "catalog_capture": "db-graph-out/NAME_SEARCH_CATALOG.json",
+    "body_md5_lf": "aed9e8eb0237acf6205975409a5ffc39"
    }
   }
  ],
@@ -136159,9 +136194,9 @@
    "kind": "reads",
    "props": {
     "inference": {
-     "method": "regex",
+     "method": "delegation",
      "confidence": "high",
-     "evidence": "JOIN object"
+     "evidence": "The historical wrapper delegates to the three-argument search reader."
     }
    }
   },
@@ -136171,9 +136206,9 @@
    "kind": "reads",
    "props": {
     "inference": {
-     "method": "regex",
+     "method": "delegation",
      "confidence": "high",
-     "evidence": "FROM object_location"
+     "evidence": "The historical wrapper delegates to the three-argument search reader."
     }
    }
   },
@@ -145771,6 +145806,30 @@
      "evidence": "FROM public.object_location"
     }
    }
+  },
+  {
+   "source": "api.search_objects_by_name(p_term text, p_limit integer, p_status public.object_status[])",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object o"
+    }
+   }
+  },
+  {
+   "source": "api.search_objects_by_name(p_term text, p_limit integer, p_status public.object_status[])",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_location ol"
+    }
+   }
   }
  ],
  "partitions": {
@@ -145955,6 +146014,12 @@
     },
     "ledger_count": 216
    }
-  ]
+  ],
+  "name_search_20261127": {
+   "captured_at": "2026-11-27T03:17:12.741647+00:00",
+   "source": "Production via Bertel Supabase MCP",
+   "artifact": "db-graph-out/NAME_SEARCH_CATALOG.json",
+   "scope": "Two changed functions and one additive overload; no other catalogue refresh."
+  }
  }
 }

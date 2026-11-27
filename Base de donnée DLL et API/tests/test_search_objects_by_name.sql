@@ -35,7 +35,7 @@ DECLARE
   v_prefix text := 'LOIRUN9999999852';  -- publié, le nom COMMENCE par la saisie
   v_infix  text := 'RESRUN9999999853';  -- publié, le nom CONTIENT la saisie
   v_draft  text := 'HLORUN9999999854';  -- BROUILLON de l'ORG, nom exact
-  v_arch   text := 'HLORUN9999999855';  -- ARCHIVÉ, nom exact — ne doit JAMAIS sortir
+  v_arch   text := 'HLORUN9999999855';  -- ARCHIVÉ sans lien d'ORG : hors périmètre
   v_role_pub uuid;
   v_editor uuid := '9e111111-1111-4111-8111-111111111111';
   v_stranger uuid := '9e222222-2222-4222-8222-222222222222';

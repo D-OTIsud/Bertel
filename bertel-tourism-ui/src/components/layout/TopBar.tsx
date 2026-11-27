@@ -96,6 +96,7 @@ export function TopBar() {
   const pageLabel = pageLabelFromPath(pathname);
   const isCrm = isCrmPath(pathname);
   const isDashboard = pathname === '/dashboard' || Boolean(pathname?.startsWith('/dashboard/'));
+  const nameMatchScope = pathname === '/explorer' || pathname?.startsWith('/explorer/') ? 'explorer' : 'global';
   const explorerSearch = useExplorerStore((state) => state.common.search);
   const setExplorerSearch = useExplorerStore((state) => state.setSearch);
   const crmSearch = useCrmSearchStore((state) => state.search);
@@ -124,7 +125,7 @@ export function TopBar() {
   const suggestionTerm = isCrm ? '' : search;
   // Même hook, même clé de requête que le composant : TanStack sert les deux depuis
   // le cache, il n'y a donc pas de second aller-retour.
-  const { data: suggestions } = useNameMatchQuery(suggestionsOpen ? suggestionTerm : '');
+  const { data: suggestions } = useNameMatchQuery(suggestionsOpen ? suggestionTerm : '', nameMatchScope);
   const suggestionsVisible = !isCrm && shouldShowSuggestions(suggestionsOpen, suggestionTerm, suggestions.length);
 
   // Remise à zéro de l'index QUAND LE TERME CHANGE, faite PENDANT LE RENDU et non
@@ -219,7 +220,10 @@ export function TopBar() {
           <Input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              if (!isCrm) setSuggestionsOpen(true);
+            }}
             onFocus={() => setSuggestionsOpen(true)}
             onBlur={closeSuggestions}
             onKeyDown={handleSearchKeyDown}
@@ -261,6 +265,7 @@ export function TopBar() {
               activeIndex={suggestionIndex}
               onPick={pickSuggestion}
               listboxId={SUGGESTIONS_LISTBOX_ID}
+              scope={nameMatchScope}
             />
           )}
         </label>

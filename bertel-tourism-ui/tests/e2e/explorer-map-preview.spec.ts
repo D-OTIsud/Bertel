@@ -34,12 +34,12 @@ test('links sustained result hover and selection to the actual map popup', async
   await expect(result).toBeVisible();
   const popup = page.locator('.map-hover-popup');
   await result.hover();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(200);
   await expect(popup).not.toBeVisible();
 
   const list = result.locator('..');
-  // Start the quiet-period checks after the real browser scroll event. Dispatching
-  // a synthetic duplicate races the later native event, which correctly restarts intent.
+  // Await the real native scroll before checking the resulting preview. Exact
+  // 999/1000 ms reset boundaries are covered with fake timers in the unit tests.
   await list.evaluate((element) => new Promise<void>((resolve) => {
     const maxScroll = element.scrollHeight - element.clientHeight;
     if (maxScroll <= 0) throw new Error('The result list must scroll for this check');
@@ -48,9 +48,7 @@ test('links sustained result hover and selection to the actual map popup', async
       ? Math.min(element.scrollTop + 15, maxScroll)
       : Math.max(element.scrollTop - 15, 0);
   }));
-  await page.waitForTimeout(1600);
-  await expect(popup).not.toBeVisible();
-  await expect(popup).toBeVisible({ timeout: 3000 });
+  await expect(popup).toBeVisible({ timeout: 2500 });
   await expect(popup.locator('.map-hover-card__name')).toHaveText('Hotel Basalte & Lagon');
   const activePin = page.locator('.map-marker-pin--active');
   await expect(activePin).toHaveCount(1);
@@ -77,7 +75,7 @@ test('links sustained result hover and selection to the actual map popup', async
   await page.keyboard.press('Escape');
   await page.mouse.move(100, 50);
   await result.focus();
-  await expect(popup).toBeVisible({ timeout: 4500 });
+  await expect(popup).toBeVisible({ timeout: 2500 });
   await expect(popup.locator('.map-hover-card__name')).toHaveText('Hotel Basalte & Lagon');
   await expect(result).toBeFocused();
   expect(errors).toEqual([]);

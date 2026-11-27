@@ -3,7 +3,7 @@ import type { ObjectCard } from '../types/domain';
 import { useExplorerMapPreviewStore } from '../store/explorer-map-preview-store';
 import { useExplorerStore } from '../store/explorer-store';
 
-const RESULT_PREVIEW_DELAY_MS = 3000;
+const RESULT_PREVIEW_DELAY_MS = 1000;
 
 /** Only sustained interest in a stationary result list opens the map preview. */
 export function useResultMapPreview(

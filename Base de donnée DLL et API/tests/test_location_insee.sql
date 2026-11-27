@@ -312,9 +312,41 @@ BEGIN
     WHERE id = '00000000-0000-4000-a000-0000001e5ee1';
     PERFORM set_config('request.jwt.claims',
       '{"sub":"00000000-0000-4000-a000-0000001e5ee1","role":"authenticated"}', true);
-    IF api.thesaurus_generation() IS NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM thesaurus.instance WHERE singleton
+      AND base_uri ~ '^https?://[^/ ]+/.+'
+      AND nullif(btrim(license), '') IS NOT NULL
+      AND nullif(btrim(attribution), '') IS NOT NULL) THEN
       PERFORM api.thesaurus_admin('configure_instance',
         '{"base_uri":"https://example.invalid/insee-test/concepts/","license":"test-fixture-only","attribution":"INSEE transactional test"}');
+    END IF;
+    -- Bootstrap real commune assignments without weakening the current editorial
+    -- policy. These contextual definitions and proper-name translations are
+    -- synthetic fixture data; the enclosing test transaction rolls them back.
+    PERFORM thesaurus.sync_sources(ARRAY['commune']);
+    INSERT INTO thesaurus.localized_field(concept_id, lang, field, value)
+    SELECT c.concept_id, locale.lang, field.name,
+      CASE WHEN field.name = 'name' THEN commune.name ELSE
+        CASE locale.lang
+          WHEN 'fr' THEN format('Commune administrative de La Réunion utilisée pour vérifier la localisation des fiches : %s, code INSEE %s.', commune.name, commune.insee_code)
+          WHEN 'en' THEN format('Administrative municipality of Reunion used to verify record locations: %s, INSEE code %s.', commune.name, commune.insee_code)
+          WHEN 'es' THEN format('Municipio administrativo de Reunión utilizado para verificar la localización de las fichas: %s, código INSEE %s.', commune.name, commune.insee_code)
+          WHEN 'de' THEN format('Verwaltungsgemeinde auf Reunion zur Prüfung der Ortszuordnung von Datensätzen: %s, INSEE-Code %s.', commune.name, commune.insee_code)
+        END
+      END
+    FROM thesaurus.concept c
+    JOIN public.ref_commune commune ON c.source_kind = 'commune'
+      AND c.source_id = commune.insee_code AND c.domain = 'commune'
+    CROSS JOIN (VALUES ('fr'), ('en'), ('es'), ('de')) AS locale(lang)
+    CROSS JOIN (VALUES ('name'), ('description')) AS field(name)
+    ON CONFLICT (concept_id, lang, field) DO NOTHING;
+    IF to_regprocedure('thesaurus.definition_errors(jsonb,jsonb,text[])') IS NOT NULL THEN
+      ASSERT NOT EXISTS (
+        SELECT 1 FROM thesaurus.concept c
+        JOIN thesaurus.vocabulary v ON v.domain = c.domain
+        CROSS JOIN LATERAL (SELECT thesaurus.concept_document(c.concept_id, false) AS doc) canonical
+        WHERE c.domain = 'commune' AND jsonb_array_length(thesaurus.definition_errors(
+          canonical.doc->'preferred_labels', canonical.doc->'definitions', v.required_languages)) > 0
+      ), 'Commune fixtures must satisfy the installed editorial definition policy';
     END IF;
     PERFORM api.thesaurus_admin('bootstrap',
       '{"domains":["commune"],"idempotency_key":"insee-test-commune-bootstrap"}');
